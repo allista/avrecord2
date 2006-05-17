@@ -1,0 +1,30 @@
+AC_INIT(configure.in)
+
+AM_CONFIG_HEADER(config.h)
+AM_INIT_AUTOMAKE(test, 0.1)
+
+AC_LANG_CPLUSPLUS
+AC_PROG_CXX
+AM_PROG_LIBTOOL
+
+dnl Checks for libraries.
+AC_CHECK_LIB(asound,
+       snd_pcm_open,
+       LIBS="$LIBS -lasound",
+       AC_MSG_ERROR([*** ALSA sound library not found!])
+)
+
+AC_CHECK_LIB(avcodec,
+       avcodec_init,
+       LIBS="$LIBS -lavcodec",
+       AC_MSG_ERROR([*** avcodec form FFmpeg library not found!])
+)
+AC_CHECK_LIB(avformat,
+       avienc_init,
+       LIBS="$LIBS -lavformat",
+       AC_MSG_ERROR([*** avformat from FFmpeg library not found!])
+)
+
+
+AC_SUBST(LIBS)
+AC_OUTPUT(Makefile src/Makefile tests/Makefile)

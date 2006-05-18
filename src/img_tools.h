@@ -43,12 +43,15 @@ void AV_Free();
 
 ///draws a text (possibly multilite) on a raw image.
 void DrawText(unsigned char *image, ///< pointer to the image buffer
-							string text,          ///< text to draw
-							uint x,                ///< x position of the left side of the first character of the "text"
-							uint y,                ///< y position of the bottom side of the last character of the "text"
-							uint width,            ///< width of the image
-							uint height,           ///< height of the image
-							bool big = false      ///< flag that shows what font to use to draw
-						 );
+              string text,          ///< text to draw
+              uint x,                ///< x position of the left side of the first character of the "text"
+              uint y,                ///< y position of the bottom side of the last character of the "text"
+              uint width,            ///< width of the image
+              uint height,           ///< height of the image
+              bool big = false      ///< flag that shows what font to use to draw
+             );
+
+///returns text width in pixels
+uint TextWidth(string text, bool big = false);
 
 #endif

@@ -1204,3 +1204,18 @@ void DrawText(unsigned char *image, string text, uint x, uint y, uint width, uin
 		lines.pop_front();
 	}
 }
+
+uint TextWidth(string text, bool big)
+{
+	int pos = 0;
+	string biggest, cur;
+	while((pos = text.find('\n')) != string::npos)
+	{
+		cur = text.substr(0,pos);
+		if(biggest.size() < cur.size()) biggest = cur;
+		text = text.substr(pos+1);
+	}
+	if(biggest.empty()) biggest = text;
+
+	return biggest.size() * 6 * (big+1);
+}

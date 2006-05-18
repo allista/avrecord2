@@ -65,11 +65,16 @@ int main(int argc, char *argv[])
 	buffer = new uint8_t[size];
 	unsigned char *img = new unsigned char[640*480*3];
 
+	time_t now;
 	for(int i = 0; i<500; i++)
 	{
-		memset(img, i, 640*480*3);
+		now = time(0);
+		string date = ctime(&now);
+		date.erase(date.size()-1);
+		memset(img, 100, 640*480*3);
 		DrawText(img, "This is a test text\n wich low left corner is located\n  in the center of the screen",
 		         320, 240, 640, 480);
+		DrawText(img, date, 635-TextWidth(date), 475, 640, 480);
 		avif.writeVFrame(img, 640, 480);
 		snd.Read(buffer, &size);
 		avif.writeAFrame(buffer, size);

@@ -204,7 +204,7 @@ bool AVIFile::setAParams(char * codec_name, int channels, int rate, int bps)
 	acodec->sample_rate   = rate;
 	//channels of audio stream
 	acodec->channels      = channels;
-	acodec->frame_size    = 1; //FIXME why framysize is 1?
+	acodec->frame_size    = 1; //it's initial value. it will be changed during codec initialization
 	acodec->strict_std_compliance = 0;
 
 	/* Now that all the parameters are set, we can open the video

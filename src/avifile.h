@@ -32,12 +32,6 @@ extern "C"
 #include "common.h"
 #include "fifo.h"
 
-///must be called befor any av operations
-static void AV_Init() { av_register_all(); }
-
-///cleans all static ffmpeg structures
-static void AV_Free() { av_free_static();  }
-
 ///encapsulates simple ffmpeg work with avi file
 class AVIFile
 {

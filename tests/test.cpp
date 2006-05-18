@@ -36,6 +36,7 @@ using namespace std;
 
 #include <sndstream.h>
 #include <avifile.h>
+#include <img_tools.h>
 
 int main(int argc, char *argv[])
 {
@@ -67,6 +68,8 @@ int main(int argc, char *argv[])
 	for(int i = 0; i<500; i++)
 	{
 		memset(img, i, 640*480*3);
+		DrawText(img, "This is a test text\n wich low left corner is located\n  in the center of the screen",
+		         320, 240, 640, 480);
 		avif.writeVFrame(img, 640, 480);
 		snd.Read(buffer, &size);
 		avif.writeAFrame(buffer, size);

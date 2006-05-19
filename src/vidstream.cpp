@@ -128,6 +128,9 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 			}
 		}
 	}
+
+	//wait for completion of all operations with video device
+	sleep(1);
 }
 
 void Vidstream::Close()
@@ -160,9 +163,116 @@ bool Vidstream::Read(unsigned char * buffer, uint bsize)
 		return false;
 	}
 
-	//copy captured image an convert it
-	memcpy(buffer, map_buffer, bsize);
+	//copy captured image and convert it if needed
+	switch(vid_mmap.format)
+	{
+		case VIDEO_PALETTE_RGB24:
+			rgb24_to_yuv420p(buffer, map_buffer, width, height);
+			break;
+		case VIDEO_PALETTE_YUV422:
+			yuv422_to_yuv420p(buffer, map_buffer, width, height);
+			break;
+		default:
+			memcpy(buffer, map_buffer, bsize);
+	}
 
 	return true;
 }
 
+double Vidstream::measureFPS(uint frames)
+{
+	if(vid_dev <= 0) return 0;
+
+	UTimer timer;
+	uint bsize = width*height*3;
+	unsigned char* buffer = new unsigned char[bsize];
+
+	timer.start();
+	for(int i=0; i<frames; i++)
+		Read(buffer, bsize);
+	timer.stop();
+
+	return frames*1e6/timer.elapsed();
+}
+
+
+//private functions
+void Vidstream::yuv422_to_yuv420p(unsigned char *dest, unsigned char *src, int w, int h) const
+{
+	unsigned char *src1, *dest1, *src2, *dest2;
+	int i, j;
+
+	/* Create the Y plane */
+	src1  = src;
+	dest1 = dest;
+	for(i = w*h; i; i--)
+	{
+		*dest++ = *src;
+		src += 2;
+	}
+
+	/* Create U and V planes */
+	src1  = src + 1;
+	src2  = src + w*2 + 1;
+	dest  = dest + w*h;
+	dest2 = dest1 + (w*h)/4;
+	for(i = h/2; i; i--)
+	{
+		for(j = w/2; j; j--)
+		{
+			*dest1 = ((int)*src1+(int)*src2)/2;
+			src1  += 2;
+			src2  += 2;
+			dest1++;
+			*dest2 = ((int)*src1+(int)*src2)/2;
+			src1  += 2;
+			src2  += 2;
+			dest2++;
+		}
+		src1 += w*2;
+		src2 += w*2;
+	}
+}
+
+void Vidstream::rgb24_to_yuv420p(unsigned char *dest, unsigned char *src, int w, int h) const
+{
+	unsigned char *y, *u, *v;
+	unsigned char *r, *g, *b;
+	int i, loop;
+
+	b = src;
+	g = b+1;
+	r = g+1;
+	y = dest;
+	u = y + w*h;
+	v = u+(w*h)/4;
+	memset(u, 0, w*h/4);
+	memset(v, 0, w*h/4);
+
+	for(loop=0; loop<h; loop++)
+	{
+		for(i=0; i<w; i+=2)
+		{
+			*y++ = (9796**r+19235**g+3736**b)>>15;
+			*u  += ((-4784**r-9437**g+14221**b)>>17)+32;
+			*v  += ((20218**r-16941**g-3277**b)>>17)+32;
+			r  += 3;
+			g  += 3;
+			b  += 3;
+			*y++ = (9796**r+19235**g+3736**b)>>15;
+			*u  += ((-4784**r-9437**g+14221**b)>>17)+32;
+			*v  += ((20218**r-16941**g-3277**b)>>17)+32;
+			r  += 3;
+			g  += 3;
+			b  += 3;
+			u++;
+			v++;
+		}
+
+		if((loop & 1) == 0)
+		{
+			u -= w/2;
+			v -= w/2;
+		}
+	}
+}

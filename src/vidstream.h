@@ -27,6 +27,7 @@
 #include <linux/videodev.h>
 
 #include "common.h"
+#include "utimer.h"
 
 ///input sources
 enum
@@ -69,6 +70,9 @@ public:
 	///grabs an image from the device and stores it in the 'buffer'
 	bool Read(unsigned char* buffer, uint bsize);
 
+	///make a simple grab benchmark to determine an average fps value
+	double measureFPS(uint frames = 10);
+
 private:
 	int  vid_dev;  ///< pointer to opened video device
 
@@ -81,6 +85,13 @@ private:
 
 	uint width;    ///< width of a grabbing image
 	uint height;   ///< height of a grabbing image
+
+	//functions
+	///converts yuv422 image to yuv420p
+	void yuv422_to_yuv420p(unsigned char *dest, unsigned char *src, int w, int h) const;
+
+	///converts rgb24 image to yuv420p
+	void rgb24_to_yuv420p(unsigned char *dest, unsigned char *src, int w, int h) const;
 };
 
 #endif

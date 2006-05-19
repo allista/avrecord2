@@ -31,6 +31,7 @@
 #include <fstream>
 #include <cstdlib>
 #include <time.h>
+#include <math.h>
 
 using namespace std;
 
@@ -38,6 +39,7 @@ using namespace std;
 #include <vidstream.h>
 #include <avifile.h>
 #include <img_tools.h>
+#include <utimer.h>
 
 int main(int argc, char *argv[])
 {
@@ -47,6 +49,8 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	UTimer timer, total;
+
 	Sndstream snd;
 	snd.Open(SND_R, SND_16BIT, 1, 44100);
 	snd.setAmp(30);
@@ -54,7 +58,11 @@ int main(int argc, char *argv[])
 	Vidstream vid;
 	vid.Open("/dev/video0", 640, 480, IN_COMPOSITE1, NORM_PAL_NC);
 
-	uint frate = uint(1e6/snd.ptime());
+	uint frate    = (uint) floor(vid.measureFPS());
+cout << "mark: " << frate << endl;
+	uint ftime    = int(1e6/frate);
+	uint duration = int(10*1e6);
+
 	AV_Init();
 	AVIFile avif;
 	avif.Init();
@@ -70,14 +78,21 @@ int main(int argc, char *argv[])
 	unsigned char *img = new unsigned char[vsize];
 
 	time_t now;
-	for(int i = 0; i<500; i++)
+	timer.start();
+	total.start();
+	while(total.elapsed() < duration)
 	{
-		now = time(0);
-		string date = ctime(&now);
-		date.erase(date.size()-1);
-		vid.Read(img, vsize);
-		DrawText(img, date, 635-TextWidth(date), 475, 640, 480);
-		avif.writeVFrame(img, 640, 480);
+		if(timer.elapsed() >= ftime)
+		{
+			timer.reset();
+			now = time(0);
+			string date = ctime(&now);
+			date.erase(date.size()-1);
+			vid.Read(img, vsize);
+			DrawText(img, date, 635-TextWidth(date), 475, 640, 480);
+			avif.writeVFrame(img, 640, 480);
+		}
+
 		snd.Read(buffer, &size);
 		avif.writeAFrame(buffer, size);
 	}

@@ -40,6 +40,8 @@ Vidstream::Vidstream()
 	tmp_buffer = NULL;
 	map_buffer = NULL;
 
+	p_frame    = -1;
+
 	width      = 0;
 	height     = 0;
 }
@@ -130,7 +132,7 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 	}
 
 	//wait for completion of all operations with video device
-	sleep(1);
+	usleep(500000);
 }
 
 void Vidstream::Close()
@@ -152,18 +154,15 @@ bool Vidstream::Read(unsigned char * buffer, uint bsize)
 {
 	if(vid_dev <= 0) return false;
 
-	if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
-	{
-		cerr << "capturing failed" << endl;
+	//prepare the next one
+	if(!prepare_frame(!p_frame))
 		return false;
-	}
-	if(ioctl(vid_dev, VIDIOCSYNC, &vid_mmap) == -1)
-	{
-		cerr << "syncing failed" << endl;
-		return false;
-	}
 
-	//copy captured image and convert it if needed
+	//capture prepared frame
+	if(!capture_frame(!p_frame))
+		return false;
+
+	//copy captured frame and convert it if needed
 	switch(vid_mmap.format)
 	{
 		case VIDEO_PALETTE_RGB24:
@@ -174,14 +173,15 @@ bool Vidstream::Read(unsigned char * buffer, uint bsize)
 			break;
 		default:
 			memcpy(buffer, map_buffer, bsize);
+			break;
 	}
-
 	return true;
 }
 
-double Vidstream::measureFPS(uint frames)
+double Vidstream::ptime(uint frames)
 {
 	if(vid_dev <= 0) return 0;
+	prepare_frame(0);
 
 	UTimer timer;
 	uint bsize = width*height*3;
@@ -192,7 +192,9 @@ double Vidstream::measureFPS(uint frames)
 		Read(buffer, bsize);
 	timer.stop();
 
-	return frames*1e6/timer.elapsed();
+	delete[] buffer;
+
+	return timer.elapsed()/frames;
 }
 
 
@@ -275,4 +277,27 @@ void Vidstream::rgb24_to_yuv420p(unsigned char *dest, unsigned char *src, int w,
 			v -= w/2;
 		}
 	}
+}
+
+bool Vidstream::prepare_frame(uint fnum)
+{
+	vid_mmap.frame  = fnum;
+	if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
+	{
+		cerr << "capturing failed" << endl;
+		return false;
+	}
+	p_frame = fnum;
+	return true;
+}
+
+bool Vidstream::capture_frame(uint fnum)
+{
+	vid_mmap.frame  = fnum;
+	if(ioctl(vid_dev, VIDIOCSYNC, &vid_mmap) == -1)
+	{
+		cerr << "syncing failed" << endl;
+		return false;
+	}
+	return true;
 }

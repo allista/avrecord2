@@ -67,11 +67,15 @@ public:
 	///closes video device
 	void Close();
 
+	///prepare double buffer to future capture.
+	///must be called strictly before first Read
+	void Prepare() { 	if(vid_dev > 0) prepare_frame(0); };
+
 	///grabs an image from the device and stores it in the 'buffer'
 	bool Read(unsigned char* buffer, uint bsize);
 
-	///make a simple grab benchmark to determine an average fps value
-	double measureFPS(uint frames = 10);
+	///make a simple grab benchmark to determine an average period duration
+	double ptime(uint frames = 10);
 
 private:
 	int  vid_dev;  ///< pointer to opened video device
@@ -83,10 +87,18 @@ private:
 	video_mbuf       vid_buffer;  ///< device video buffer
 	video_mmap       vid_mmap;    ///< video mmap
 
+	int  p_frame;  ///< last prepaired frame
+
 	uint width;    ///< width of a grabbing image
 	uint height;   ///< height of a grabbing image
 
 	//functions
+	///prepairs to capture a frame 'n'
+	bool prepare_frame(uint fnum);
+
+	///captures a frame 'n'
+	bool capture_frame(uint fnum);
+
 	///converts yuv422 image to yuv420p
 	void yuv422_to_yuv420p(unsigned char *dest, unsigned char *src, int w, int h) const;
 

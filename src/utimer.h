@@ -34,7 +34,7 @@ public:
 	~UTimer() {};
 
 	///mark current time as start point
-	void start() { gettimeofday(&_start, NULL); };
+	void start(uint offset = 0) { gettimeofday(&_start, NULL); };
 
 	///mark current time as stop point
 	void stop()  { gettimeofday(&_stop, NULL); };

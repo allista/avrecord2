@@ -41,6 +41,9 @@ using namespace std;
 #include <img_tools.h>
 #include <utimer.h>
 
+void save_frame()
+{}
+
 int main(int argc, char *argv[])
 {
 	if(argc < 2)
@@ -53,21 +56,23 @@ int main(int argc, char *argv[])
 
 	Sndstream snd;
 	snd.Open(SND_R, SND_16BIT, 1, 44100);
-	snd.setAmp(30);
+	snd.setAmp(20);
 
 	Vidstream vid;
 	vid.Open("/dev/video0", 640, 480, IN_COMPOSITE1, NORM_PAL_NC);
 
-	uint frate    = (uint) floor(vid.measureFPS());
-cout << "mark: " << frate << endl;
-	uint ftime    = int(1e6/frate);
-	uint duration = int(10*1e6);
+
+	uint vperiod  = (uint) vid.ptime();
+	uint speriod  = (uint) snd.ptime();
+	uint frate    = (uint) 1e6/speriod;
+	uint duration = int(15*1e6);
+
+	cout << "fps: " << frate << endl;
 
 	AV_Init();
 	AVIFile avif;
 	avif.Init();
-	//avif.setAParams("pcm_s16le", 1, 44100, 64000);
-	avif.setAParams("mp2", 1, 44100, 128000);
+	avif.setAParams("mp3", 1, 44100, 128000);
 	avif.setVParams("msmpeg4", 640, 480, frate, 650000, 2);
 	avif.Open(argv[1]);
 
@@ -80,9 +85,10 @@ cout << "mark: " << frate << endl;
 	time_t now;
 	timer.start();
 	total.start();
+	vid.Prepare();
 	while(total.elapsed() < duration)
 	{
-		if(timer.elapsed() >= ftime)
+		if(timer.elapsed() >= vperiod)
 		{
 			timer.reset();
 			now = time(0);
@@ -90,9 +96,8 @@ cout << "mark: " << frate << endl;
 			date.erase(date.size()-1);
 			vid.Read(img, vsize);
 			DrawText(img, date, 635-TextWidth(date), 475, 640, 480);
-			avif.writeVFrame(img, 640, 480);
 		}
-
+		avif.writeVFrame(img, 640, 480);
 		snd.Read(buffer, &size);
 		avif.writeAFrame(buffer, size);
 	}

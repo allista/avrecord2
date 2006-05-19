@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	uint vperiod  = (uint) vid.ptime();
 	uint speriod  = (uint) snd.ptime();
 	uint frate    = (uint) 1e6/speriod;
-	uint duration = int(15*1e6);
+	uint duration = int(300*1e6);
 
 	cout << "fps: " << frate << endl;
 

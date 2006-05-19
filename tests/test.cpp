@@ -35,6 +35,7 @@
 using namespace std;
 
 #include <sndstream.h>
+#include <vidstream.h>
 #include <avifile.h>
 #include <img_tools.h>
 
@@ -50,6 +51,9 @@ int main(int argc, char *argv[])
 	snd.Open(SND_R, SND_16BIT, 1, 44100);
 	snd.setAmp(30);
 
+	Vidstream vid;
+	vid.Open("/dev/video0", 640, 480, IN_COMPOSITE1, NORM_PAL_NC);
+
 	uint frate = uint(1e6/snd.ptime());
 	AV_Init();
 	AVIFile avif;
@@ -60,10 +64,10 @@ int main(int argc, char *argv[])
 	avif.Open(argv[1]);
 
 	uint8_t* buffer;
-	uint     size;
-	size   = snd.bsize();
+	uint     size = snd.bsize();
+	uint     vsize = 640*480*3;
 	buffer = new uint8_t[size];
-	unsigned char *img = new unsigned char[640*480*3];
+	unsigned char *img = new unsigned char[vsize];
 
 	time_t now;
 	for(int i = 0; i<500; i++)
@@ -71,9 +75,7 @@ int main(int argc, char *argv[])
 		now = time(0);
 		string date = ctime(&now);
 		date.erase(date.size()-1);
-		memset(img, 100, 640*480*3);
-		DrawText(img, "This is a test text\n wich low left corner is located\n  in the center of the screen",
-		         320, 240, 640, 480);
+		vid.Read(img, vsize);
 		DrawText(img, date, 635-TextWidth(date), 475, 640, 480);
 		avif.writeVFrame(img, 640, 480);
 		snd.Read(buffer, &size);
@@ -84,6 +86,7 @@ int main(int argc, char *argv[])
 	delete[] buffer;
 	avif.Close();
 	snd.Close();
+	vid.Close();
 	AV_Free();
 
 	exit(EXIT_SUCCESS);

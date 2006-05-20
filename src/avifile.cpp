@@ -197,9 +197,6 @@ bool AVIFile::setAParams(char * codec_name, int channels, int rate, int bps)
 
 	/* Set default parameters */
 	acodec->bit_rate      = bps;
-	/* frame rate = 1/time_base, so we set 1/rate */
-	acodec->time_base.num = 1;
-	acodec->time_base.den = rate;
 	//smaple rate of audio stream
 	acodec->sample_rate   = rate;
 	//channels of audio stream
@@ -310,6 +307,18 @@ bool AVIFile::Open(char * filename)
 	//if all is done...//
 	_opened = INIT_FULL;
 	return true;
+}
+
+double AVIFile::getVpts( ) const
+{
+	if(!vstream) return 0;
+	return (double)vstream->pts.val * vstream->time_base.num / vstream->time_base.den;
+}
+
+double AVIFile::getApts( ) const
+{
+	if(!astream) return 0;
+	return (double)astream->pts.val * astream->time_base.num / astream->time_base.den;
 }
 
 bool AVIFile::writeVFrame(unsigned char * img, int width, int height )

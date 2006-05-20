@@ -65,6 +65,12 @@ public:
 	///true if the file is opened
   bool opened() const { return _opened == INIT_FULL; };
 
+	///returns pts value (in seconds) of the video stream
+	double getVpts() const;
+
+	///returns pts value (in seconds) of the audio stream
+	double getApts() const;
+
 	///write video frame to the file
 	bool writeVFrame(unsigned char *img, ///< rgb image data
 	                 int width,          ///< width of the image

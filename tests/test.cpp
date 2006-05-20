@@ -52,8 +52,6 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	UTimer timer, total;
-
 	Sndstream snd;
 	snd.Open(SND_R, SND_16BIT, 1, 44100);
 	snd.setAmp(20);
@@ -64,15 +62,17 @@ int main(int argc, char *argv[])
 
 	uint vperiod  = (uint) vid.ptime();
 	uint speriod  = (uint) snd.ptime();
-	uint frate    = (uint) 1e6/speriod;
-	uint duration = int(300*1e6);
+	uint frate    = (uint) 1e6/vperiod;
+	uint duration = int(60*1e6);
+	double a_pts = 0;
+	double v_pts = 0;
 
 	cout << "fps: " << frate << endl;
 
 	AV_Init();
 	AVIFile avif;
 	avif.Init();
-	avif.setAParams("mp3", 1, 44100, 128000);
+	avif.setAParams("mp3", 1, 44100, 96000);
 	avif.setVParams("msmpeg4", 640, 480, frate, 650000, 2);
 	avif.Open(argv[1]);
 
@@ -82,24 +82,32 @@ int main(int argc, char *argv[])
 	buffer = new uint8_t[size];
 	unsigned char *img = new unsigned char[vsize];
 
+	UTimer total;
 	time_t now;
-	timer.start();
+
 	total.start();
 	vid.Prepare();
 	while(total.elapsed() < duration)
 	{
-		if(timer.elapsed() >= vperiod)
+		/* compute current audio and video time */
+		v_pts = avif.getVpts();
+		a_pts = avif.getApts();
+
+		/* write interleaved audio and video frames */
+		if(a_pts < v_pts)
 		{
-			timer.reset();
+			snd.Read(buffer, &size);
+			avif.writeAFrame(buffer, size);
+		}
+		else
+		{
 			now = time(0);
 			string date = ctime(&now);
 			date.erase(date.size()-1);
 			vid.Read(img, vsize);
 			DrawText(img, date, 635-TextWidth(date), 475, 640, 480);
+			avif.writeVFrame(img, 640, 480);
 		}
-		avif.writeVFrame(img, 640, 480);
-		snd.Read(buffer, &size);
-		avif.writeAFrame(buffer, size);
 	}
 
 	delete[] img;

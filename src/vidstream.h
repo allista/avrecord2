@@ -80,8 +80,8 @@ public:
 private:
 	int  vid_dev;  ///< pointer to opened video device
 
-	unsigned char*   tmp_buffer;  ///< temporary video buffer
-	unsigned char*   map_buffer;  ///< temporary mmap buffer
+	unsigned char*   map_buffer0; ///< mmap buffer for frame 0
+	unsigned char*   map_buffer1; ///< mmap buffer for frame 1
 	video_capability vid_cap;     ///< video capabilities
 	video_channel    vid_channel; ///< grab source and mode
 	video_mbuf       vid_buffer;  ///< device video buffer

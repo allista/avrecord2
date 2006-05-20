@@ -36,14 +36,14 @@ using namespace std;
 
 Vidstream::Vidstream()
 {
-	vid_dev    = -1;
-	tmp_buffer = NULL;
-	map_buffer = NULL;
+	vid_dev     = -1;
+	map_buffer0 = NULL;
+	map_buffer1 = NULL;
 
-	p_frame    = -1;
+	p_frame     = -1;
 
-	width      = 0;
-	height     = 0;
+	width       = 0;
+	height      = 0;
 }
 
 bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
@@ -78,13 +78,6 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 	}
 
 	//set device video buffer using norma 'read'
-	tmp_buffer = new unsigned char[width*height*3];
-	if(read(vid_dev, tmp_buffer, width*height*3) <= 0)
-	{
-		cout << "unable to read from device to set video buffer" << endl;
-		Close();
-		return false;
-	}
 	if(ioctl(vid_dev, VIDIOCGMBUF, &vid_buffer) == -1)
 	{
 		cout << "unable to set device video buffer" << endl;
@@ -92,40 +85,49 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 		return false;
 	}
 
-	//init mmap
-	map_buffer = (unsigned char*)mmap(0, vid_buffer.size, PROT_READ|PROT_WRITE, MAP_SHARED, vid_dev, 0);
-	if(int(map_buffer) == -1)
+	//init mmap buffer and pointers to the frames of doublebuffering
+	map_buffer0 = (unsigned char*) mmap(0, vid_buffer.size, PROT_READ|PROT_WRITE, MAP_SHARED, vid_dev, 0);
+
+	//check if the video device supports double buffering
+	if(vid_buffer.frames > 1)	map_buffer1 = (unsigned char*) map_buffer0 + vid_buffer.offsets[1];
+	//if not, set second frame buffer to point to the first.
+	//all will work fine, but without real doublebuffering
+	else map_buffer1 = map_buffer0;
+	if(int(map_buffer0) == -1)
 	{
 		cerr << "mmap() failed" << endl;
 		Close();
 		return false;
 	}
 
-	//setup mmap
-	vid_mmap.format = VIDEO_PALETTE_YUV420P;
-	vid_mmap.frame  = 0;
-	vid_mmap.width  = width;
-	vid_mmap.height = height;
-	if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
+	//setup pallets for each frame of doublebuffering
+	for(int i=0; i<2; i++)
 	{
-		cerr << "Faild with YUV20P, trying YUV422 palette" << endl;
-		vid_mmap.format = VIDEO_PALETTE_YUV422;;
-		/* Try again... */
+		vid_mmap.format = VIDEO_PALETTE_YUV420P;
+		vid_mmap.frame  = i;
+		vid_mmap.width  = width;
+		vid_mmap.height = height;
 		if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
 		{
-			cerr << "Failed with YUV422, trying RGB24 palette" << endl;
-			vid_mmap.format = VIDEO_PALETTE_RGB24;
+			cerr << "Faild with YUV20P, trying YUV422 palette" << endl;
+			vid_mmap.format = VIDEO_PALETTE_YUV422;;
 			/* Try again... */
 			if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
 			{
-				cerr << "Failed with RGB24, trying GREYSCALE palette" << endl;
-				vid_mmap.format = VIDEO_PALETTE_GREY;
-				/* Try one last time... */
+				cerr << "Failed with YUV422, trying RGB24 palette" << endl;
+				vid_mmap.format = VIDEO_PALETTE_RGB24;
+				/* Try again... */
 				if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
 				{
-					cerr << "Failed with all supported pallets. Unable to use this device" << endl;
-					Close();
-					return false;
+					cerr << "Failed with RGB24, trying GREYSCALE palette" << endl;
+					vid_mmap.format = VIDEO_PALETTE_GREY;
+					/* Try one last time... */
+					if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
+					{
+						cerr << "Failed with all supported pallets. Unable to use this device" << endl;
+						Close();
+						return false;
+					}
 				}
 			}
 		}
@@ -137,13 +139,10 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 
 void Vidstream::Close()
 {
-	if(int(map_buffer) > 0)
-		munmap(map_buffer, vid_buffer.size);
-	map_buffer = NULL;
-
-	if(int(tmp_buffer) > 0)
-		delete[] tmp_buffer;
-	tmp_buffer = NULL;
+	if(int(map_buffer0) > 0)
+		munmap(map_buffer0, vid_buffer.size);
+	map_buffer0 = NULL;
+	map_buffer1 = NULL;
 
 	if(vid_dev > 0)
 		close(vid_dev);
@@ -163,6 +162,7 @@ bool Vidstream::Read(unsigned char * buffer, uint bsize)
 		return false;
 
 	//copy captured frame and convert it if needed
+	unsigned char* map_buffer = (p_frame)? map_buffer0 : map_buffer1;
 	switch(vid_mmap.format)
 	{
 		case VIDEO_PALETTE_RGB24:

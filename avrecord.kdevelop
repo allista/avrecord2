@@ -21,7 +21,7 @@
       <mainprogram/>
       <directoryradio>executable</directoryradio>
       <runarguments>
-        <test></test>
+        <test/>
       </runarguments>
       <customdirectory>/</customdirectory>
       <programargs/>

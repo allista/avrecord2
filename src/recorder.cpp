@@ -102,30 +102,31 @@ bool Recorder::Init( string config_file )
 	if(!detect_motion)   print_diffs   = false;
 
 	//schedule parameters
+	time_t now = time(0);
 	string start_date = config.getOptionS("start_time");
 	if(start_date.empty()) start_time = 0;
 	else
 	{
-		tm s_date;
-		if(!strptime(start_date.c_str(), "%d.%m.%Y-%H:%M:%S", &s_date))
+		tm *s_date = localtime(&now);
+		if(!strptime(start_date.c_str(), "%d.%m.%Y-%H:%M:%S", s_date))
 		{
 			cerr << "Recorder: Init: unable to parse start time string: " << start_date << endl;
 			return false;
 		}
-		start_time = mktime(&s_date);
+		start_time = mktime(s_date);
 	}
 
 	string end_date = config.getOptionS("end_time");
 	if(end_date.empty()) end_time = 0;
 	else
 	{
-		tm e_date;
-		if(!strptime(end_date.c_str(), "%d.%m.%Y-%H:%M:%S", &e_date))
+		tm *e_date = localtime(&now);
+		if(!strptime(end_date.c_str(), "%d.%m.%Y-%H:%M:%S", e_date))
 		{
 			cerr << "Recorder: Init: unable to parse end time string: " << end_date << endl;
 			return false;
 		}
-		end_time   = mktime(&e_date);
+		end_time   = mktime(e_date);
 	}
 
 	string win_list = config.getOptionS("schedule");
@@ -377,9 +378,10 @@ bool Recorder::write_frame(unsigned char * frame, time_t now, uint diffs)
 	}
 	if(print_diffs)
 	{
-		char diffs_str[10];
+		char diffs_str[10] = {'\0'};
 		sprintf(diffs_str, "%d", diffs);
-		PrintText(frame, diffs_str, width-5-TextWidth(diffs_str), 10, width, height);
+		string str = diffs_str;
+		PrintText(frame, diffs_str,	width-5-TextWidth(diffs_str), 10, width, height);
 	}
 
 	return av_output.writeVFrame(frame, width, height);

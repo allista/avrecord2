@@ -23,24 +23,17 @@
 Fifo::Fifo(uint size)
 		: size(size)
 {
-	buffer  = new uint8_t[size];
+	buffer  = (uint8_t*)av_malloc(size);
 	r_point = buffer;
 	w_point = buffer;
 	end     = buffer + size;
-}
-
-uint Fifo::data_size() const
-{
-	if (w_point >= r_point)
-		return (w_point - r_point);
-	else
-		return (end - r_point) + (w_point - buffer);
+	dsize   = 0;
 }
 
 bool Fifo::read(uint8_t *buf, uint bsize)
 {
-	if(data_size()< bsize) return false;
-
+	if(data_size() < bsize) return false;
+	dsize -= bsize;
 	uint len;
 	while(bsize > 0)
 	{
@@ -61,6 +54,7 @@ bool Fifo::read(uint8_t *buf, uint bsize)
 
 void Fifo::write(uint8_t *buf, uint bsize)
 {
+	dsize += bsize;
 	int len;
 	while(bsize > 0)
 	{

@@ -1,18 +1,18 @@
-filename = %Y-%m-%d_%H-%M.avi
+filename = test-%Y-%m-%d_%H-%M.avi
 output_dir = ./
 detect_motion = yes
 record_on_motion = yes
 print_diffs = yes
 print_date = yes
 
-start_time = 22.05.2006-00:00:00
-end_time = 22.05.2006-04:55:00
+start_time = 22.05.2006-11:10:00
+end_time = 23.05.2006-13:00:00
 schedule =
 
 
 min_gap = 600
 min_record_time = 30
-post_motion_offset = 5;
+post_motion_offset = 10;
 
 noise_level = 4
 threshold = 55
@@ -25,11 +25,11 @@ input_mode = 3
 width = 512
 height = 384
 frame_rate = 20
-vid_bitrate = 650000
+vid_bitrate = 700000
 var_bitrate = 2
 auto_frate = yes
 
-audio_codec = mp3
+audio_codec = mp3 #pcm_s16le
 sample_rate = 44100
 aud_bitrate = 96000
 channels = 1

@@ -21,6 +21,12 @@
 #ifndef AVRECORD_COMMON_H
 #define AVRECORD_COMMON_H
 
+extern "C"
+{
+#include <ffmpeg/avformat.h>
+#include <ffmpeg/avcodec.h>
+}
+
 #include <string.h>
 #include <sys/types.h>
 typedef unsigned char uint8_t;

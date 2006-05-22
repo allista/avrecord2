@@ -165,9 +165,9 @@ bool AVIFile::setVParams(string codec_name,
 
 
 bool AVIFile::setAParams(string codec_name,
-												 uint channels,
-												 uint rate,
-												 uint bps)
+                         uint channels,
+                         uint rate,
+                         uint bps)
 {
 	if(opened() || !o_file) return false;
 
@@ -227,7 +227,7 @@ bool AVIFile::setAParams(string codec_name,
 	else _opened |= INIT_ACODEC;
 
 	/* allocate output buffer and fifo */
-	afifo   = Fifo(4 * MAX_AUDIO_PACKET_SIZE);
+	afifo   = Fifo(2 * MAX_AUDIO_PACKET_SIZE);
 	a_bsize = 4 * MAX_AUDIO_PACKET_SIZE; //taked from "ffmpeg" program (ffmpeg library)
 	abuffer = (uint8_t*)malloc(a_bsize);
 	if(!abuffer)
@@ -408,7 +408,6 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 	{
 		int frame_bytes = aframe_size();
 		uint8_t* tmp = new uint8_t[frame_bytes];
-
 		afifo.write(samples, size);
 		while(afifo.read(tmp, frame_bytes))
 		{
@@ -416,15 +415,17 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 			av_init_packet(&pkt); // init static structure
 
 			out_size = avcodec_encode_audio(acodec, abuffer, a_bsize, (short*)tmp);
-
-			//write the compressed frame in the media file
-			pkt.stream_index = astream->index;
-			if(acodec->coded_frame && acodec->coded_frame->pts != AV_NOPTS_VALUE)
-				pkt.pts = av_rescale_q(acodec->coded_frame->pts, acodec->time_base, astream->time_base);
-			pkt.flags |= PKT_FLAG_KEY;
-			pkt.data = abuffer;
-			pkt.size = out_size;
-			ret = av_interleaved_write_frame(o_file, &pkt);
+			if(out_size != 0)
+			{
+				//write the compressed frame in the media file
+				pkt.stream_index = astream->index;
+				if(acodec->coded_frame && acodec->coded_frame->pts != AV_NOPTS_VALUE)
+					pkt.pts = av_rescale_q(acodec->coded_frame->pts, acodec->time_base, astream->time_base);
+				pkt.flags |= PKT_FLAG_KEY;
+				pkt.data = abuffer;
+				pkt.size = out_size;
+				ret |= av_interleaved_write_frame(o_file, &pkt);
+			}
 		}
 		delete[] tmp;
 	}
@@ -461,14 +462,17 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 		av_init_packet(&pkt); // init static structure
 
 		out_size = avcodec_encode_audio(acodec, abuffer, size, (short*)(samples));
-		//write the compressed frame in the media file
-		pkt.stream_index = astream->index;
-		if(acodec->coded_frame && acodec->coded_frame->pts != AV_NOPTS_VALUE)
-			pkt.pts= av_rescale_q(acodec->coded_frame->pts, acodec->time_base, astream->time_base);
-		pkt.flags |= PKT_FLAG_KEY;
-		pkt.data = abuffer;
-		pkt.size = out_size;
-		ret = av_interleaved_write_frame(o_file, &pkt);
+		if(out_size != 0)
+		{
+			//write the compressed frame in the media file
+			pkt.stream_index = astream->index;
+			if(acodec->coded_frame && acodec->coded_frame->pts != AV_NOPTS_VALUE)
+				pkt.pts= av_rescale_q(acodec->coded_frame->pts, acodec->time_base, astream->time_base);
+			pkt.flags |= PKT_FLAG_KEY;
+			pkt.data = abuffer;
+			pkt.size = out_size;
+			ret |= av_interleaved_write_frame(o_file, &pkt);
+		}
 	}
 
 	if(ret != 0)

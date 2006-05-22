@@ -31,16 +31,17 @@ class Fifo
 {
 public:
 	Fifo(uint size = 0);
-	~Fifo() { delete[] buffer; };
+	~Fifo() { av_free(buffer); };
 
-	uint data_size() const;               ///< returns size of stored data
-	bool read(uint8_t* buf, uint bsize);  ///< reads data from fifo
-	                                      ///  if data_size is less than bsize, return false
-	void write(uint8_t* buf, uint bsize); ///< writes data to fifo
+	uint data_size() const { return dsize; }; ///< returns size of stored data
+	bool read(uint8_t* buf, uint bsize);      ///< reads data from fifo
+	                                          ///  if data_size is less than bsize, return false
+	void write(uint8_t* buf, uint bsize);     ///< writes data to fifo
 
 private:
 	uint8_t *buffer;  ///< fifo buffer
 	uint     size;    ///< buffer size
+	uint    dsize;    ///< size of the stored data
 	uint8_t *r_point; ///< read pointer
 	uint8_t *w_point; ///< write pointer
 	uint8_t *end;     ///< end pointer

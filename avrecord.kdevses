@@ -1,56 +1,67 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
 <!DOCTYPE KDevPrjSession>
 <KDevPrjSession>
- <DocsAndViews NumberOfDocuments="13" >
+ <DocsAndViews NumberOfDocuments="16" >
   <Doc0 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/avifile.cpp" >
-   <View0 line="206" Type="Source" />
+   <View0 line="372" Type="Source" />
   </Doc0>
-  <Doc1 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/fifo.cpp" >
-   <View0 line="18" Type="Source" />
+  <Doc1 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/sndstream.cpp" >
+   <View0 line="137" Type="Source" />
   </Doc1>
-  <Doc2 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/sndstream.cpp" >
-   <View0 line="168" Type="Source" />
+  <Doc2 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/tests/test.cpp" >
+   <View0 line="48" Type="Source" />
   </Doc2>
-  <Doc3 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/tests/test.cpp" >
-   <View0 line="67" Type="Source" />
+  <Doc3 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/avifile.h" >
+   <View0 line="35" Type="Source" />
   </Doc3>
-  <Doc4 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/avifile.h" >
-   <View0 line="32" Type="Source" />
+  <Doc4 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/vidstream.h" >
+   <View0 line="42" Type="Source" />
   </Doc4>
-  <Doc5 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/img_tools.h" >
-   <View0 line="0" Type="Source" />
+  <Doc5 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/vidstream.cpp" >
+   <View0 line="149" Type="Source" />
   </Doc5>
-  <Doc6 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/img_tools.cpp" >
-   <View0 line="23" Type="Source" />
+  <Doc6 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/recorder.h" >
+   <View0 line="135" Type="Source" />
   </Doc6>
-  <Doc7 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/sndstream.h" >
-   <View0 line="85" Type="Source" />
+  <Doc7 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/recorder.cpp" >
+   <View0 line="340" Type="Source" />
   </Doc7>
-  <Doc8 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/vidstream.h" >
-   <View0 line="76" Type="Source" />
+  <Doc8 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/configfile.h" >
+   <View0 line="46" Type="Source" />
   </Doc8>
-  <Doc9 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/vidstream.cpp" >
-   <View0 line="195" Type="Source" />
+  <Doc9 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/configfile.cpp" >
+   <View0 line="39" Type="Source" />
   </Doc9>
-  <Doc10 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/common.h" >
-   <View0 line="23" Type="Source" />
+  <Doc10 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/SpaceConstructor/src/models/loadable_model.h" >
+   <View0 line="245" Type="Source" />
   </Doc10>
-  <Doc11 NumberOfViews="1" URL="file:///home/storage/share/distributives/motion-3.2.6/video.c" >
-   <View0 line="154" Type="Source" />
+  <Doc11 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/avrecord.conf.sample" >
+   <View0 line="8" Type="Source" />
   </Doc11>
-  <Doc12 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/utimer.h" >
-   <View0 line="27" Type="Source" />
+  <Doc12 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/img_tools.cpp" >
+   <View0 line="1209" Type="Source" />
   </Doc12>
+  <Doc13 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/img_tools.h" >
+   <View0 line="23" Type="Source" />
+  </Doc13>
+  <Doc14 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/utimer.h" >
+   <View0 line="0" Type="Source" />
+  </Doc14>
+  <Doc15 NumberOfViews="1" URL="file:///home/storage/share/distributives/motion-3.2.6/alg.c" >
+   <View0 line="548" Type="Source" />
+  </Doc15>
  </DocsAndViews>
  <pluginList>
   <kdevdebugger>
-   <breakpointList/>
+   <breakpointList>
+    <breakpoint0 location="/home/simon/Hole/Workspace/Programming/avrecord/src/recorder.cpp:325" type="1" condition="" enabled="1" />
+   </breakpointList>
   </kdevdebugger>
   <kdevbookmarks>
    <bookmarks/>
   </kdevbookmarks>
   <kdevvalgrind>
-   <executable path="/home/simon/Hole/Workspace/Programming/avrecord/debug/tests/test" params="test.avi" />
+   <executable path="" params="test.avi" />
    <valgrind path="/usr/bin/valgrind" params="--tool=memcheck --tool=memcheck --tool=memcheck --tool=memcheck --leak-check=yes" />
    <calltree path="callgrind" params="--combine-dumps=yes --collect-systime=yes" />
    <kcachegrind path="kcachegrind" />

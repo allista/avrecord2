@@ -17,52 +17,46 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
-/** @author Allis*/
+/**@author Allis*/
 
-#ifndef UTIMER_H
-#define UTIMER_H
+#ifndef CONFIGFILE_H
+#define CONFIGFILE_H
 
-#include <sys/time.h>
-#include <time.h>
+#include <fstream>
+#include <string>
+#include <map>
+using namespace std;
 
 
-///implemets a standart microsecond timer
-class UTimer
+///provides loading of simple config file.
+///Format of the file is 'option = value'.
+class ConfigFile
 {
 public:
-	UTimer() { reset(); };
-	~UTimer() {};
+	ConfigFile(string fname);
+	~ConfigFile() {};
 
-	///sets start point to current time and stop time to 0
-	void start() { gettimeofday(&_start, NULL); _stop.tv_sec = 0; };
+	///returns value of the option 'opt' as bool
+	///(if there's no such option false is returned)
+	bool   getOptionB(const char* opt) const;
 
-	///sets stop point to current time
-	void pause() { if(_stop.tv_sec) return; stop(); _elapsed = elapsed(); _start = _stop; };
+	///returns value of the option 'opt' as integer
+	///(if there's no such option 0 is returned)
+	int    getOptionI(const char* opt) const;
 
-	///sets stop point to current time
-	void stop()  { if(_stop.tv_sec) return; gettimeofday(&_stop, NULL); };
+	///returns value of the option 'opt' as string
+	///(if there's no such option string("") is returned)
+	string getOptionS(const char* opt) const;
 
-	///sets start time to the current time and stop and elapsed time to 0
-	void reset() { gettimeofday(&_start, NULL); _stop.tv_sec = 0; _elapsed = 0; };
-
-	///returns differens in microseconds between start and stop or current time, if stop isn't set yet
-	uint elapsed() const
-	{
-		timeval cur;
-		if(!_stop.tv_sec)
-			gettimeofday(&cur, NULL);
-		else cur = _stop;
-
-		cur.tv_sec  = cur.tv_sec  - _start.tv_sec;
-		cur.tv_usec = cur.tv_usec - _start.tv_usec;
-
-		return _elapsed + cur.tv_sec*1000000 + cur.tv_usec;
-	};
+	operator bool() const { return !options.empty(); };
 
 private:
-	uint    _elapsed; ///< elapsed time in microseconds from the start to the last pause
-	timeval _start;   ///< start time
-	timeval _stop;    ///< stop time
+	typedef map<string,string> opt_map;
+	opt_map options; ///< map of loaded options with thier values
+
+	///reads a single line from ifstream.
+	///this function takes care about empty lines, comments and whitespaces
+	int readstr(ifstream* file, string &line);
 };
 
 #endif

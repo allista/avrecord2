@@ -1093,7 +1093,7 @@ b_bitmap b_table[sizeof(s_table)/sizeof(s_bitmap)];
 unsigned char *s_chars[ASCII_MAX];
 unsigned char *b_chars[ASCII_MAX];
 
-void init_bitmaps()
+void InitBitmaps()
 {
 	unsigned int i=0, x, y;
 
@@ -1165,18 +1165,7 @@ void draw_line(unsigned char *image, string text, uint x, uint y, uint width, bo
 
 
 //functions, declared in the header
-void AV_Init()
-{
-	av_register_all();
-	init_bitmaps();
-}
-
-
-void AV_Free()
-{	av_free_static(); }
-
-
-void DrawText(unsigned char *image, string text, uint x, uint y, uint width, uint height, bool big)
+void PrintText(unsigned char *image, string text, uint x, uint y, uint width, uint height, bool big)
 {
 	if(x >= width)  return;
 	if(y >  height) y = height;

@@ -67,12 +67,12 @@ bool AVIFile::Init( )
 }
 
 
-bool AVIFile::setVParams(char * codec_name,
-                         int  width,
-                         int  height,
-                         int  rate,
-                         int  bps,
-                         int  _vbr)
+bool AVIFile::setVParams(string codec_name,
+                         uint  width,
+                         uint  height,
+                         uint  rate,
+                         uint  bps,
+                         uint  _vbr)
 {
 	if(opened() || !o_file) return false;
 	vbr     = _vbr;
@@ -164,7 +164,10 @@ bool AVIFile::setVParams(char * codec_name,
 }
 
 
-bool AVIFile::setAParams(char * codec_name, int channels, int rate, int bps)
+bool AVIFile::setAParams(string codec_name,
+												 uint channels,
+												 uint rate,
+												 uint bps)
 {
 	if(opened() || !o_file) return false;
 
@@ -236,9 +239,9 @@ bool AVIFile::setAParams(char * codec_name, int channels, int rate, int bps)
 }
 
 
-bool AVIFile::Open(char * filename)
+bool AVIFile::Open(string filename)
 {
-	if(!filename)           return false;
+	if(!filename.size())    return false;
 	if(opened() || !o_file) return false;
 	if(!(vcodec || acodec)) return false;
 
@@ -258,7 +261,7 @@ bool AVIFile::Open(char * filename)
 	}
 
 	//store filename
-	snprintf(o_file->filename, sizeof(o_file->filename), "%s", filename);
+	snprintf(o_file->filename, sizeof(o_file->filename), "%s", filename.c_str());
 
 	/* set the output parameters (must be done even if no parameters). */
 	if(av_set_parameters(o_file, NULL) < 0)
@@ -269,9 +272,9 @@ bool AVIFile::Open(char * filename)
 	}
 
 	/* Dump the format settings.  This shows how the various streams relate to each other */
-	dump_format(o_file, 0, filename, 1);
+	dump_format(o_file, 0, filename.c_str(), 1);
 
-	if(url_fopen(&o_file->pb, filename, URL_WRONLY) < 0)
+	if(url_fopen(&o_file->pb, filename.c_str(), URL_WRONLY) < 0)
 	{
 		/* path did not exist? */
 		if(errno == ENOENT)
@@ -295,6 +298,7 @@ bool AVIFile::Open(char * filename)
 			return false;
 		}
 	}
+	else _opened |= INIT_FOPEN;
 
 	/* write the stream header, if any */
 	if(av_write_header(o_file) < 0)
@@ -305,7 +309,7 @@ bool AVIFile::Open(char * filename)
 	}
 
 	//if all is done...//
-	_opened = INIT_FULL;
+	_opened |= INIT_FULL;
 	return true;
 }
 
@@ -321,7 +325,7 @@ double AVIFile::getApts( ) const
 	return (double)astream->pts.val * astream->time_base.num / astream->time_base.den;
 }
 
-bool AVIFile::writeVFrame(unsigned char * img, int width, int height )
+bool AVIFile::writeVFrame(unsigned char * img, uint width, uint height )
 {
 	if(!opened()) return false;
 
@@ -394,7 +398,7 @@ bool AVIFile::writeVFrame(unsigned char * img, int width, int height )
 	return true;
 }
 
-bool AVIFile::writeAFrame(uint8_t * samples, int size)
+bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 {
 	if(!opened()) return false;
 	int ret      = 0;
@@ -488,10 +492,14 @@ void AVIFile::Close()
 void AVIFile::cleanup()
 {
 	//encoding streams//
-	if(_opened & INIT_VCODEC) avcodec_close(vstream->codec);
-	if(_opened & INIT_ACODEC) avcodec_close(astream->codec);
-	if(vstream) av_free(vstream);
-	if(astream) av_free(astream);
+	if(_opened & INIT_VCODEC)
+		avcodec_close(vcodec);
+	if(_opened & INIT_ACODEC)
+		avcodec_close(acodec);
+	if(vstream)
+		av_free(vstream);
+	if(astream)
+		av_free(astream);
 	vstream = NULL;
 	astream = NULL;
 	vcodec  = NULL;
@@ -518,12 +526,12 @@ void AVIFile::cleanup()
 	_opened = INIT_NONE;
 }
 
-CodecID AVIFile::get_codec_id(const char * name, int codec_type) const
+CodecID AVIFile::get_codec_id(string name, int codec_type) const
 {
 	AVCodec *codec = first_avcodec;
 	while(codec)
 	{
-		if(!strcmp(name, codec->name) && (codec->type == codec_type))
+		if((name == codec->name) && (codec->type == codec_type))
 			break;
 		codec = codec->next;
 	}

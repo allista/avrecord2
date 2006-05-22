@@ -43,27 +43,27 @@ public:
 	bool Init();
 
 	///sets parameters of the video codec
-	bool setVParams(char *codec_name,  ///< name of video codec
-	                int  width,
-	                int  height,
-	                int  rate,         ///< frames per second
-	                int  bps,          ///< bits per second
-	                int  _vbr          ///< variable bitrate
-	                ///< (0 for constant, or 2-31 for variable quality (2 is the best))
+	bool setVParams(string codec_name,  ///< name of video codec
+	                uint  width,
+	                uint  height,
+	                uint  rate,         ///< frames per second
+	                uint  bps,          ///< bits per second
+	                uint  _vbr          ///< variable bitrate
+	                                    ///< (0 for constant, or 2-31 for variable quality (2 is the best))
 	               );
 
 	///sets parameters of the audio codec
-	bool setAParams(char *codec_name,  ///< name of audio codec
-	                int channels,      ///< number of channels
-	                int rate,          ///< samples per second
-	                int bps            ///< bits per second
+	bool setAParams(string codec_name, ///< name of audio codec
+	                uint channels,      ///< number of channels
+	                uint rate,          ///< samples per second
+	                uint bps            ///< bits per second
 	               );
 
 	///opens avi file and writeout the header
-	bool Open(char *filename);
+	bool Open(string filename);
 
 	///true if the file is opened
-  bool opened() const { return _opened == INIT_FULL; };
+  bool opened() const { return _opened & INIT_FULL; };
 
 	///returns pts value (in seconds) of the video stream
 	double getVpts() const;
@@ -73,13 +73,13 @@ public:
 
 	///write video frame to the file
 	bool writeVFrame(unsigned char *img, ///< rgb image data
-	                 int width,          ///< width of the image
-	                 int height          ///< height of the image
+	                 uint width,          ///< width of the image
+	                 uint height          ///< height of the image
 	                );
 
 	///write audio frame to the file
 	bool writeAFrame(uint8_t *samples,   ///< audio data
-	                 int size            ///< audio data size in bytes
+	                 uint size            ///< audio data size in bytes
 	                );
 
 	///writes avi trailer and closes the file
@@ -118,15 +118,18 @@ private:
 	uint      a_bsize; ///< audio output buffer size
 	uint8_t  *abuffer; ///< audio output buffer
 
-	int   vbr;         ///< variable bitrate setting
+	uint   vbr;        ///< variable bitrate setting
+
 
 	//functions
 	void cleanup();    ///< cleans up all structures
 
 	///gets output codec ID according to given name and type
-	CodecID get_codec_id(const char *name, int codec_type) const;
-	uint aframe_size() const; ///< returns frame size of an audio codec if
-	///  one exests and 0 if it doesn't
+	CodecID get_codec_id(string name, int codec_type) const;
+
+	///returns frame size of an audio codec if
+	///one exests and 0 if it doesn't
+	uint aframe_size() const;
 };
 
 #endif

@@ -55,14 +55,14 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 	vid_dev = open(device, O_RDWR);
 	if(vid_dev == -1)
 	{
-		cerr << "Can't open device: " << device << endl;
+		log_message(1, "Vidstream: Can't open device: %s", device);
 		return false;
 	}
 
 	//get the capabilities
 	if(ioctl(vid_dev, VIDIOCGCAP, &vid_cap) == -1)
 	{
-		cerr << "ioctl: getting capability failed" << endl;
+		log_message(1, "ioctl: getting capability failed");
 		Close();
 		return false;
 	}
@@ -72,7 +72,7 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 	vid_channel.norm    = mode;
 	if(ioctl(vid_dev, VIDIOCSCHAN, &vid_channel) == -1)
 	{
-		cout << "ioctl: setting video channel failed" << endl;
+		log_message(1, "ioctl: setting video channel failed");
 		Close();
 		return false;
 	}
@@ -80,7 +80,7 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 	//set device video buffer using norma 'read'
 	if(ioctl(vid_dev, VIDIOCGMBUF, &vid_buffer) == -1)
 	{
-		cout << "unable to set device video buffer" << endl;
+		log_message(1, "Vidstream: unable to set device video buffer");
 		Close();
 		return false;
 	}
@@ -95,7 +95,7 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 	else map_buffer1 = map_buffer0;
 	if(int(map_buffer0) == -1)
 	{
-		cerr << "mmap() failed" << endl;
+		log_message(1, "Vidstream: mmap() failed");
 		Close();
 		return false;
 	}
@@ -109,22 +109,22 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 		vid_mmap.height = height;
 		if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
 		{
-			cerr << "Faild with YUV20P, trying YUV422 palette" << endl;
+			log_message(1, "Vidstream: Faild with YUV20P, trying YUV422 palette");
 			vid_mmap.format = VIDEO_PALETTE_YUV422;;
 			/* Try again... */
 			if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
 			{
-				cerr << "Failed with YUV422, trying RGB24 palette" << endl;
+				log_message(1, "Vidstream: Failed with YUV422, trying RGB24 palette");
 				vid_mmap.format = VIDEO_PALETTE_RGB24;
 				/* Try again... */
 				if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
 				{
-					cerr << "Failed with RGB24, trying GREYSCALE palette" << endl;
+					log_message(1, "Vidstream: Failed with RGB24, trying GREYSCALE palette");
 					vid_mmap.format = VIDEO_PALETTE_GREY;
 					/* Try one last time... */
 					if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
 					{
-						cerr << "Failed with all supported pallets. Unable to use this device" << endl;
+						log_message(1, "Vidstream: Failed with all supported pallets. Unable to use this device");
 						Close();
 						return false;
 					}
@@ -135,6 +135,7 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 
 	//wait for completion of all operations with video device
 	usleep(500000);
+	return true;
 }
 
 void Vidstream::Close()
@@ -284,7 +285,7 @@ bool Vidstream::prepare_frame(uint fnum)
 	vid_mmap.frame  = fnum;
 	if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
 	{
-		cerr << "capturing failed" << endl;
+		log_message(1, "Vidstream: capturing failed");
 		return false;
 	}
 	p_frame = fnum;
@@ -296,7 +297,7 @@ bool Vidstream::capture_frame(uint fnum)
 	vid_mmap.frame  = fnum;
 	if(ioctl(vid_dev, VIDIOCSYNC, &vid_mmap) == -1)
 	{
-		cerr << "syncing failed" << endl;
+		log_message(1, "Vidstream: syncing failed");
 		return false;
 	}
 	return true;

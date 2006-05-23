@@ -61,13 +61,13 @@ bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte)
 			break;
 
 		default:
-			fprintf(stderr, "unknown open mode\n");
+			log_message(1, "Sndstream: unknown open mode");
 			return false;
 	}
 
 	if(ret < 0)
 	{
-		fprintf(stderr, "unable to open pcm device: %s\n", snd_strerror(ret));
+		log_message(1, "Sndstream: unable to open pcm device: %s", snd_strerror(ret));
 		return false;
 	}
 
@@ -96,7 +96,7 @@ bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte)
 			break;
 
 		default:
-			fprintf(stderr, "unknown format\n");
+			log_message(1, "Sndstream: unknown format");
 			return false;
 	}
 
@@ -114,7 +114,7 @@ bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte)
 	ret = snd_pcm_hw_params(snd_dev, params);
 	if(ret < 0)
 	{
-		fprintf(stderr, "unable to set hw parameters: %s\n", snd_strerror(ret));
+		log_message(1, "Sndstream: unable to set hw parameters: %s", snd_strerror(ret));
 		exit(1);
 	}
 
@@ -123,6 +123,9 @@ bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte)
 	snd_pcm_hw_params_get_period_time(params, &_ptime, NULL);
 	framesize = snd_pcm_format_size(pcm_format, channels);
 	_bsize = frames * framesize;
+
+	//all is done
+	return true;
 }
 
 void Sndstream::Close()

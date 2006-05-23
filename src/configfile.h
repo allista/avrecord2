@@ -27,14 +27,19 @@
 #include <map>
 using namespace std;
 
+#include "common.h"
 
 ///provides loading of simple config file.
 ///Format of the file is 'option = value'.
 class ConfigFile
 {
 public:
-	ConfigFile(string fname);
+	ConfigFile(string fname = string(""));
 	~ConfigFile() {};
+
+	///sets an option
+	void   setOption(const char* opt, string val)
+	{ options[opt] = val; };
 
 	///returns value of the option 'opt' as bool
 	///(if there's no such option false is returned)

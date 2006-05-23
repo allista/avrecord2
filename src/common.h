@@ -31,4 +31,8 @@ extern "C"
 #include <sys/types.h>
 typedef unsigned char uint8_t;
 
+
+///logs given message to our logfile
+void log_message(int level, const char *fmt, ...);
+
 #endif

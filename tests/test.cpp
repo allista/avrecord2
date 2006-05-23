@@ -47,6 +47,7 @@ using namespace std;
 uint avsignal  = SIG_RECORDING;
 uint avrestart = 0;
 
+void log_message(int level, const char *fmt, ...);
 static void setup_signals(struct sigaction *sig_handler_action);
 static void sig_handler(int signo);
 
@@ -73,7 +74,8 @@ int main(int argc, char *argv[])
 		rec.RecordLoop(&avsignal);
 		rec.Close();
 
-	} while(avrestart);
+	}
+	while(avrestart);
 
 	cout << "Quiting..." << endl;
 	exit(EXIT_SUCCESS);
@@ -114,4 +116,30 @@ static void sig_handler(int signo)
 		case SIGSEGV:
 			exit(0);
 	}
+}
+
+void log_message(int level, const char *fmt, ...)
+{
+	int     n;
+	char    buf[1024];
+	va_list ap;
+
+	//Next add timstamp and level prefix
+	time_t now = time(0);
+	n  = strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S ", localtime(&now));
+	n += snprintf(buf + n, sizeof(buf), "[%s] ", level? "ERROR" : "INFO");
+
+	//Next add the user's message
+	va_start(ap, fmt);
+	n += vsnprintf(buf + n, sizeof(buf) - n, fmt, ap);
+
+	//newline for printing to the file
+	strcat(buf, "\n");
+
+	//output...
+	if(level)	cerr << buf; //log to stderr
+	else cout << buf; //log to stdout
+
+	//Clean up the argument list routine
+	va_end(ap);
 }

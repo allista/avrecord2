@@ -1,7 +1,7 @@
 AC_INIT(configure.in)
 
 AM_CONFIG_HEADER(config.h)
-AM_INIT_AUTOMAKE(test, 0.1)
+AM_INIT_AUTOMAKE(avrecord, 0.1)
 
 AC_LANG_CPLUSPLUS
 AC_PROG_CXX
@@ -24,7 +24,6 @@ AC_CHECK_LIB(avformat,
        LIBS="$LIBS -lavformat",
        AC_MSG_ERROR([*** avformat from FFmpeg library not found!])
 )
-
 
 AC_SUBST(LIBS)
 AC_OUTPUT(Makefile src/Makefile tests/Makefile)

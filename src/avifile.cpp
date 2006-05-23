@@ -53,7 +53,7 @@ bool AVIFile::Init( )
 	o_file = (AVFormatContext*)av_mallocz(sizeof(AVFormatContext));
 	if(!o_file)
 	{
-		cerr << "AVIFile: Memory error while allocating output media context" << endl;
+		log_message(1, "AVIFile: Memory error while allocating output media context");
 		cleanup();
 		return false;
 	}
@@ -86,7 +86,7 @@ bool AVIFile::setVParams(string codec_name,
 		vstream = av_new_stream(o_file, 0);
 		if(!vstream)
 		{
-			cerr << "AVIFile: av_new_stream - could not alloc stream" << endl;
+			log_message(1, "AVIFile: av_new_stream - could not alloc stream");
 			cleanup();
 			return false;
 		}
@@ -94,7 +94,7 @@ bool AVIFile::setVParams(string codec_name,
 	else
 	{
 		/* We did not get a proper video codec. */
-		cerr << "AVIFile: Failed to obtain a proper video codec";
+		log_message(1, "AVIFile: Failed to obtain a proper video codec");
 		cleanup();
 		return false;
 	}
@@ -132,7 +132,7 @@ bool AVIFile::setVParams(string codec_name,
 	AVCodec *codec = avcodec_find_encoder(vcodec->codec_id);
 	if(!codec)
 	{
-		cerr << "AVIFile: Codec not found" << endl;
+		log_message(1, "AVIFile: Codec not found");
 		cleanup();
 		return false;
 	}
@@ -140,7 +140,7 @@ bool AVIFile::setVParams(string codec_name,
 	/* open the codec */
 	if(avcodec_open(vcodec, codec) < 0)
 	{
-		cerr << "AVIFile: avcodec_open - could not open codec" << endl;
+		log_message(1, "AVIFile: avcodec_open - could not open codec");
 		cleanup();
 		return false;
 	}
@@ -154,7 +154,7 @@ bool AVIFile::setVParams(string codec_name,
 		vbuffer = (uint8_t*)malloc(v_bsize);
 		if(!vbuffer)
 		{
-			cerr << "AVIFile: can't allocate video output buffer" << endl;
+			log_message(1, "AVIFile: can't allocate video output buffer");
 			cleanup();
 			return false;
 		}
@@ -180,7 +180,7 @@ bool AVIFile::setAParams(string codec_name,
 		astream = av_new_stream(o_file, 0);
 		if(!astream)
 		{
-			cerr << "AVIFile: av_new_stream - could not alloc stream" << endl;
+			log_message(1, "AVIFile: av_new_stream - could not alloc stream");
 			cleanup();
 			return false;
 		}
@@ -188,7 +188,7 @@ bool AVIFile::setAParams(string codec_name,
 	else
 	{
 		/* We did not get a proper video codec. */
-		cerr << "AVIFile: Failed to obtain a proper audio codec";
+		log_message(1, "AVIFile: Failed to obtain a proper audio codec");
 		cleanup();
 		return false;
 	}
@@ -212,7 +212,7 @@ bool AVIFile::setAParams(string codec_name,
 	AVCodec *codec = avcodec_find_encoder(acodec->codec_id);
 	if (!codec)
 	{
-		cerr << "AVIFile: Codec not found" << endl;
+		log_message(1, "AVIFile: Codec not found");
 		cleanup();
 		return false;
 	}
@@ -220,7 +220,7 @@ bool AVIFile::setAParams(string codec_name,
 	/* open the codec */
 	if(avcodec_open(acodec, codec) < 0)
 	{
-		cerr << "AVIFile: avcodec_open - could not open codec" << endl;
+		log_message(1, "AVIFile: avcodec_open - could not open codec");
 		cleanup();
 		return false;
 	}
@@ -232,10 +232,13 @@ bool AVIFile::setAParams(string codec_name,
 	abuffer = (uint8_t*)malloc(a_bsize);
 	if(!abuffer)
 	{
-		cerr << "AVIFile: can't allocate video output buffer" << endl;
+		log_message(1, "AVIFile: can't allocate video output buffer");
 		cleanup();
 		return false;
 	}
+
+	//all is fine
+	return true;
 }
 
 
@@ -266,34 +269,35 @@ bool AVIFile::Open(string filename)
 	/* set the output parameters (must be done even if no parameters). */
 	if(av_set_parameters(o_file, NULL) < 0)
 	{
-		cerr << "AVIFile: ffmpeg av_set_parameters error: Invalid output format parameters" << endl;
+		log_message(1, "AVIFile: ffmpeg av_set_parameters error: Invalid output format parameters");
 		cleanup();
 		return false;
 	}
 
+#ifdef DEBUG_VERSION
 	/* Dump the format settings.  This shows how the various streams relate to each other */
 	dump_format(o_file, 0, filename.c_str(), 1);
+#endif
 
 	if(url_fopen(&o_file->pb, filename.c_str(), URL_WRONLY) < 0)
 	{
 		/* path did not exist? */
 		if(errno == ENOENT)
 		{
-			cerr << "AVIFile: cannot create output file -- directory not found";
+			log_message(1, "AVIFile: cannot create output file -- directory not found");
 			cleanup();
 			return false;
 		}
 		/* Permission denied */
 		else if (errno ==  EACCES)
 		{
-			cerr << "url_fopen - error opening file " << filename
-			<< "\n... check access rights to target directory" << endl;
+			log_message(1, "AVIFile: url_fopen - error opening file %s Check access rights to target directory", filename.c_str());
 			cleanup();
 			return false;
 		}
 		else
 		{
-			cerr << "Error opening file " << filename << endl;
+			log_message(1, "AVIFile: Error opening file %s", filename.c_str());
 			cleanup();
 			return false;
 		}
@@ -303,7 +307,7 @@ bool AVIFile::Open(string filename)
 	/* write the stream header, if any */
 	if(av_write_header(o_file) < 0)
 	{
-		cerr << "AVIFile: cannot write stream header." << endl;
+		log_message(1, "AVIFile: cannot write stream header.");
 		cleanup();
 		return false;
 	}
@@ -338,7 +342,7 @@ bool AVIFile::writeVFrame(unsigned char * img, uint width, uint height )
 	AVFrame *picture = avcodec_alloc_frame();
 	if(!picture)
 	{
-		cerr << "AVIFile: avcodec_alloc_frame - could not alloc frame" << endl;
+		log_message(1, "AVIFile: avcodec_alloc_frame - could not alloc frame");
 		return false;
 	}
 
@@ -391,7 +395,7 @@ bool AVIFile::writeVFrame(unsigned char * img, uint width, uint height )
 
 	if(ret != 0)
 	{
-		cerr << "AVIFile: Error while writing video frame" << endl;
+		log_message(1, "AVIFile: Error while writing video frame");
 		return false;
 	}
 
@@ -476,7 +480,7 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 
 	if(ret != 0)
 	{
-		cerr << "AVIFile: Error while writing audio frame" << endl;
+		log_message(1, "AVIFile: Error while writing audio frame");
 		return false;
 	}
 
@@ -485,7 +489,7 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 
 void AVIFile::Close()
 {
-	cout << "Closing avi file..." << endl;
+	log_message(0, "AVIFile: Closing avi file...");
 	if(!opened()) return;
 	av_write_trailer(o_file);
 	cleanup();

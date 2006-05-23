@@ -22,7 +22,6 @@
 using namespace std;
 
 #include "recorder.h"
-#include "configfile.h"
 #include "img_tools.h"
 
 
@@ -78,11 +77,17 @@ Recorder::Recorder()
 	recording        = false;
 }
 
-bool Recorder::Init( string config_file )
+
+
+bool Recorder::Init(string config_file)
 {
 	ConfigFile config(config_file);
-	if(!config)	cerr << "Recorder: Init: bad config file. Using default settings." << endl;
+	if(!config)	log_message(1, "Recorder: Init: bad config file. Using default settings.");
+	return Init(config);
+}
 
+bool Recorder::Init(const ConfigFile &config)
+{
 	//configuration//
 	fname_format = config.getOptionS("filename");
 	if(fname_format.empty()) fname_format = "%Y-%m-%d_%H%M.avi";
@@ -110,7 +115,7 @@ bool Recorder::Init( string config_file )
 		tm *s_date = localtime(&now);
 		if(!strptime(start_date.c_str(), "%d.%m.%Y-%H:%M:%S", s_date))
 		{
-			cerr << "Recorder: Init: unable to parse start time string: " << start_date << endl;
+			log_message(1, "Recorder: Init: unable to parse start time string: %s", start_date.c_str());
 			return false;
 		}
 		start_time = mktime(s_date);
@@ -123,7 +128,7 @@ bool Recorder::Init( string config_file )
 		tm *e_date = localtime(&now);
 		if(!strptime(end_date.c_str(), "%d.%m.%Y-%H:%M:%S", e_date))
 		{
-			cerr << "Recorder: Init: unable to parse end time string: " << end_date << endl;
+			log_message(1, "Recorder: Init: unable to parse end time string: %s", end_date.c_str());
 			return false;
 		}
 		end_time   = mktime(e_date);
@@ -188,14 +193,14 @@ bool Recorder::Init( string config_file )
 
 	if(!a_source.Open(SND_R, SND_16BIT, channels, sample_rate))
 	{
-		cerr << "Recorder: Init: unable to open soundstream" << endl;
+		log_message(1, "Recorder: Init: unable to open soundstream");
 		Close();
 		return false;
 	}
 
 	if(!v_source.Open("/dev/video0", width, height, input_source, input_mode))
 	{
-		cerr << "Recorder: Init: unable to open videostream" << endl;
+		log_message(1, "Recorder: Init: unable to open videostream");
 		Close();
 		return false;
 	}
@@ -212,7 +217,7 @@ bool Recorder::Init( string config_file )
 	        !av_output.setVParams(video_codec, width, height, frame_rate, vid_bitrate, var_bitrate) ||
 	        !av_output.Open(generate_fname()))
 	{
-		cerr << "Recorder: Init: unable to open output file" << endl;
+		log_message(1, "Recorder: Init: unable to open output file");
 		Close();
 		return false;
 	}
@@ -235,6 +240,7 @@ bool Recorder::Init( string config_file )
 
 	//////////////
 	inited = true;
+	return inited;
 }
 
 void Recorder::Close( )
@@ -331,7 +337,7 @@ bool Recorder::RecordLoop( uint * signal )
 				else record_timer.start();
 				silence_timer.reset();
 
- 				write_frame(v_buffer1, time(0), diffs);
+				write_frame(v_buffer1, time(0), diffs);
 				write_frame(v_buffer0, time(0), diffs);
 			}
 		}
@@ -367,8 +373,7 @@ string Recorder::generate_fname()
 {
 	char name[256];
 	time_t now = time(0);
-	tm *tm_now = localtime(&now);
-	strftime(name, 256, fname_format.c_str(), tm_now);
+	strftime(name, 256, fname_format.c_str(), localtime(&now));
 	return string(output_dir + name);
 }
 
@@ -444,7 +449,7 @@ uint Recorder::fast_diff( unsigned char * old_img, unsigned char * new_img )
 	{
 		/* using a temp variable is 12% faster */
 		register unsigned char curdiff= abs(int(*old_img)-int(*new_img));
-		if(curdiff > noise_level)	diffs++;
+		if(curdiff > noise_level*512/(1 + *old_img + *new_img))	diffs++;
 		old_img+=step;
 		new_img+=step;
 	}

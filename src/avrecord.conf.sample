@@ -1,5 +1,16 @@
-filename = avi-%Y-%m-%d_%H-%M.avi
-output_dir = ./
+###############################################
+#         avrecord configuration file         #
+###############################################
+
+#defines path and name for logfile
+log_file = /etc/avrecord/avrecord.log
+
+#defines name template for output movies
+filename = movie-%Y-%m-%d_%H-%M.avi
+
+#defines output directory were generated movies will be saved
+output_dir = /home/storage/simon/motion-output/
+
 detect_motion = yes
 record_on_motion = yes
 print_diffs = yes
@@ -9,15 +20,13 @@ start_time = 23.05.2006-07:30:00
 end_time = 24.05.2006-09:30:00
 schedule =
 
-
 min_gap = 300
 min_record_time = 30
 post_motion_offset = 30;
 
-noise_level = 4
-threshold = 50
+noise_level = 2
+threshold = 25
 noise_reduction_level = 1
-
 
 video_codec = msmpeg4
 input_source = 1

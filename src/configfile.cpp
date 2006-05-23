@@ -32,7 +32,7 @@ ConfigFile::ConfigFile(string fname)
 	ifstream *file = new ifstream(fname.c_str(), ios::in);
 	if(!file->is_open())
 	{
-		cerr << "ConfigFile: Can't open file: " << fname << endl;
+		log_message(1, "ConfigFile: Can't open file: %s", fname.c_str());
 		return;
 	}
 	file->seekg(0);

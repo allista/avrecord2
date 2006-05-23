@@ -33,6 +33,7 @@ using namespace std;
 #include "vidstream.h"
 #include "avifile.h"
 #include "utimer.h"
+#include "configfile.h"
 
 
 ///signals for main loop
@@ -51,6 +52,9 @@ public:
 
 	///initializes the recorder using given configuration file
 	bool Init(string config_file);
+
+	///initializes the recorder using given config object
+	bool Init(const ConfigFile &config);
 
 	///cleans all up
 	void Close();

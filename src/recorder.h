@@ -44,6 +44,9 @@ enum
     SIG_CHANGE_FILE
 };
 
+
+///This class gathers all input/output classes together
+///and provides very simple interface for recording
 class Recorder
 {
 public:
@@ -84,52 +87,56 @@ private:
 
 
 	//configuration//
-	string   output_dir;                ///<
-	string   fname_format;              ///<
+	string   output_dir;                ///< output directory
+	string   fname_format;              ///< template for filename to record to
 
 	//flags
-	bool     detect_motion;             ///<
-	bool     record_on_motion;          ///<
-	bool     print_diffs;               ///<
-	bool     print_date;                ///<
+	bool     detect_motion;             ///< if true, do motion detection
+	bool     record_on_motion;          ///< if true, record only when motion is detected
+	bool     print_diffs;               ///< if true, print number of motion pixels to the image
+	bool     print_date;                ///< if true, print current date to the image
 
 	//schedule parameters
 	typedef  pair<tm,tm>    t_window;   ///< defines a time window
 	typedef  list<t_window> schedule;   ///< simple schedule
 
-	time_t   start_time;                ///<
-	time_t   end_time;                  ///<
-	schedule rec_schedule;              ///<
+	time_t   start_time;                ///< defines time, when recording will be started
+	time_t   end_time;                  ///< defines time, when recording will be finished
+	schedule rec_schedule;              ///< list of timestamp pairs.
+	                                    ///< If not empty, record only when current time is between any pair.
 
 	//motion detection parameters
-	bool     recording;                 ///<
-	uint     min_gap;                   ///<
-	uint     min_record_time;           ///<
-	uint     post_motion_offset;        ///<
+	bool     recording;                 ///< true, if recording now
+	uint     min_gap;                   ///< time of no_motion that is required for starting new movie file
+	uint     min_record_time;           ///< movie duratioin that is required for starting new movie file
+	uint     post_motion_offset;        ///< when ther's no motion, continue recordig during this time
 
-	UTimer   record_timer;              ///<
-	UTimer   silence_timer;             ///<
+	UTimer   record_timer;              ///< timer, that measures current file duration
+	UTimer   silence_timer;             ///< timer, that measures no_motion time
 
-	uint     noise_level;               ///<
-	uint     threshold;                 ///<
-	uint     noise_reduction_level;     ///<
+	uint     noise_level;               ///< when detecting a motion, difference between two pixels is
+	                                    ///< compared with this value
+	uint     threshold;                 ///< we detect a motion when number of motion pixels is grater
+	                                    ///< than this value
+	uint     noise_reduction_level;     ///< shows, how many times we need to erode captured image to
+	                                    ///< remove a noise
 
 	//audio/video parameters
-	string   video_codec;               ///<
-	uint     input_source;              ///<
-	uint     input_mode;                ///<
-	uint     width;                     ///<
-	uint     height;                    ///<
-	uint     frame_rate;                ///<
-	uint     vid_bitrate;               ///<
-	uint     var_bitrate;               ///<
-	bool     auto_frate;                ///<
+	string   video_codec;               ///< name of video codec
+	uint     input_source;              ///< see the Vidstream class for explanations
+	uint     input_mode;                ///< see the Vidstream class for explanations
+	uint     width;                     ///< width of the image
+	uint     height;                    ///< haight of the image
+	uint     frame_rate;                ///< frames per second
+	uint     vid_bitrate;               ///< bits per second
+	uint     var_bitrate;               ///< quantizer value
+	bool     auto_frate;                ///< if true, automaticaly measure frame rate during initialization
 
-	string   audio_codec;               ///<
-	uint     sample_rate;               ///<
-	uint     aud_bitrate;               ///<
-	uint     channels;                  ///<
-	uint     amp_level;                 ///<
+	string   audio_codec;               ///< name of audio codec
+	uint     sample_rate;               ///< samples per second
+	uint     aud_bitrate;               ///< bits per second
+	uint     channels;                  ///< number of audio channel
+	uint     amp_level;                 ///< amplification level
 	/////////////////
 
 

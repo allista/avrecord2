@@ -1,45 +1,131 @@
-###############################################
-#         avrecord configuration file         #
-###############################################
+##################################################################
+#                 avrecord configuration file                    #
+##################################################################
 
+
+#######filenames settings#########################################
+#
 #defines path and name for logfile
-log_file = /etc/avrecord/avrecord.log
-
-#defines name template for output movies
-filename = movie-%Y-%m-%d_%H-%M.avi
+log_file   = /etc/avrecord/avrecord.log
 
 #defines output directory were generated movies will be saved
-output_dir = /home/storage/simon/motion-output/
+output_dir =
 
-detect_motion = yes
-record_on_motion = yes
-print_diffs = yes
-print_date = yes
+#defines name template for output movies
+filename   = movie-%Y-%m-%d_%H-%M.avi
+#
+##################################################################
 
-start_time = 23.05.2006-07:30:00
-end_time = 24.05.2006-09:30:00
-schedule =
 
-min_gap = 300
-min_record_time = 30
-post_motion_offset = 30;
+#######video parameters###########################################
+#
+#name of video codec
+video_codec  = msmpeg4 #see ffmpeg -formats for details
 
-noise_level = 2
-threshold = 25
-noise_reduction_level = 1
-
-video_codec = msmpeg4
+#0 (TV), 1 (COMPOSITE1), 2 (COMPOSITE2), 3 (SVIDEO)
 input_source = 1
-input_mode = 3
-width = 512
-height = 384
-frame_rate = 20
-vid_bitrate = 700000
-var_bitrate = 2
-auto_frate = yes
 
-audio_codec = mp3 #pcm_s16le
-sample_rate = 44100
-aud_bitrate = 96000
-channels = 1
+#The video norm to use (only for video capture and TV tuner cards)
+#Values: 0 (PAL), 1 (NTSC), 2 (SECAM), 3 (PAL NC no colour)
+input_mode   = 3
+
+#width of the image
+width        = 512
+
+#haight of the image
+height       = 384
+
+#frames per second
+frame_rate   = 20
+
+#bits per second (not kilobits!!!)
+vid_bitrate  = 700000
+
+#quantizer value for variable bitrate
+#0 for constant bitrate, 2-31 for variable with different
+#quality (2 -- is the best, 31 -- is the worst)
+var_bitrate  = 2
+
+#if true, automaticaly measure frame rate during initialization
+#this option is recomended =)
+auto_frate   = yes
+#
+##################################################################
+
+
+#######audio parameters###########################################
+#
+#name of audio codec
+audio_codec  = mp3 #see ffmpeg -formats for details
+
+#samples per second
+sample_rate  = 44100
+
+#bits per second (not kilobits!!!)
+aud_bitrate  = 96000
+
+#number of audio channel
+channels     = 1
+
+#each audio sample will be multiplied on this value
 amplification_level = 20
+#
+##################################################################
+
+
+#######flags #####################################################
+#
+#if true, do motion detection
+detect_motion    = no
+
+#if true, record only when motion is detected
+record_on_motion = no
+
+#if true, print number of motion pixels to the image
+print_diffs      = no
+
+#if true, print current date to the image
+print_date       = no
+##################################################################
+
+
+#######schedule settings##########################################
+#
+#defines time, when recording will be started
+start_time = #dd.mm.yyyy-hh:mm:ss
+
+#defines time, when recording will be finished
+end_time   = #dd.mm.yyyy-hh:mm:ss
+
+#list of timestamp pairs.
+#If not empty, record only when current time is between any pair.
+schedule   = #hh:mm:ss-hh:mm:ss;hh:mm:ss-hh:mm:ss;...
+#
+##################################################################
+
+
+#######motion detection parameters################################
+#
+#time of no_motion that is required for starting new movie file
+min_gap            = 300 #in seconds
+
+#movie duratioin that is required for starting new movie file
+min_record_time    = 30  #in minutes
+
+#when ther's no motion, continue recordig during this time
+post_motion_offset = 30  #in seconds
+
+
+#when detecting a motion, difference between two pixels is
+#compared with this value
+noise_level = 2
+
+#we detect a motion when number of motion pixels is grater
+#than this value
+threshold   = 25
+
+#shows, how many times we need to erode captured image to
+#remove a noise
+noise_reduction_level = 1
+#
+##################################################################

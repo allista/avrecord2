@@ -140,13 +140,13 @@ void Sndstream::Close()
 	params  = NULL;
 }
 
-uint Sndstream::Read(void* buffer, uint* size)
+uint Sndstream::Read(void* buffer, uint size)
 {
 	if(!opened() || dev_mode != SND_R) return false;
-	if(*size < _bsize)
+	if(size < _bsize)
 	{
-		fprintf(stderr, "read buffer too small - needed %d bytes buffer\n", _bsize);
-		return false;
+		log_message(1, "Sndstream: read buffer too small - needed %d bytes buffer", _bsize);
+		return 0;
 	}
 
 	int ret = false;
@@ -154,45 +154,45 @@ uint Sndstream::Read(void* buffer, uint* size)
 	if (ret == -EPIPE)
 	{
 		/* EPIPE means overrun */
-		fprintf(stderr, "overrun occurred\n");
+		log_message(1, "Sndstream: overrun occurred");
 		snd_pcm_prepare(snd_dev);
-		return false;
+		return size;
 	}
 	else if(ret < 0)
 	{
-		fprintf(stderr, "error from read: %s\n", snd_strerror(ret));
-		return false;
+		log_message(1, "Sndstream: error from read: %s", snd_strerror(ret));
+		return 0;
 	}
 	else if(ret < (int)frames)
 	{
-		fprintf(stderr, "short read, read %d frames\n", ret);
-		*size = ret*framesize;
+		log_message(1, "Sndstream: short read, read %d frames", ret);
+		size = ret*framesize;
 	}
 
-	amplify(buffer, *size);
+	amplify(buffer, size);
 
-	return ret*channels;
+	return size;
 }
 
-uint Sndstream::Write(void* buffer, uint* size)
+uint Sndstream::Write(void* buffer, uint size)
 {
 	if(!opened() || dev_mode != SND_W) return false;
 
-	int ret = snd_pcm_writei(snd_dev, buffer, *size/framesize);
+	int ret = snd_pcm_writei(snd_dev, buffer, size/framesize);
 	if(ret == -EPIPE)
 	{
 		/* EPIPE means underrun */
-		fprintf(stderr, "underrun occurred\n");
+		log_message(1, "Sndstream: underrun occurred");
 		snd_pcm_prepare(snd_dev);
 		return false;
 	}
 	else if(ret < 0)
 	{
-		fprintf(stderr, "error from writei: %s\n", snd_strerror(ret));
+		log_message(1, "Sndstream: error from writei: %s", snd_strerror(ret));
 		return false;
 	}
 
-	return ret*channels;
+	return ret*framesize;
 }
 
 void Sndstream::amplify(void* buffer, uint bsize)

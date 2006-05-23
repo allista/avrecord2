@@ -404,7 +404,7 @@ bool AVIFile::writeVFrame(unsigned char * img, uint width, uint height )
 
 bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 {
-	if(!opened()) return false;
+	if(!opened() || !size) return false;
 	int ret      = 0;
 	int out_size = 0;
 

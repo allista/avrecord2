@@ -63,14 +63,12 @@ public:
 
 
 	/// reads data from soundstram.
-	/// number of readed samples is returned
-	/// number of readed bytes is storen in 'size'
-	uint Read(void* buffer, uint* size);
+	/// number of readed bytes is returned
+	uint Read(void* buffer, uint size);
 
 	/// writes data to soundstream.
-	/// number of written samples is returned
-	/// number of written bytes is storen in 'size'
-	uint Write(void* buffer, uint* size);
+	/// number of written bytes is returned
+	uint Write(void* buffer, uint size);
 
 
 	///sets ampliffication level of READED data

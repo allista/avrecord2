@@ -207,6 +207,7 @@ bool Recorder::Init(const ConfigFile &config)
 
 	a_source.setAmp(amp_level);
 	if(auto_frate) frame_rate = uint(1e6/v_source.ptime());
+	v_source.Prepare();
 
 	if(print_diffs || print_date)
 		InitBitmaps();
@@ -284,9 +285,10 @@ bool Recorder::RecordLoop( uint * signal )
 {
 	if(!inited) return false;
 
-	uint   diffs  = 0;
-	double v_pts  = 0;
-	double a_pts  = 0;
+	uint    diffs = 0;
+	double  v_pts = 0;
+	double  a_pts = 0;
+	uint a_readed = 0;
 	time_t now;
 
 	while(*signal != SIG_QUIT)
@@ -347,8 +349,8 @@ bool Recorder::RecordLoop( uint * signal )
 			a_pts = av_output.getApts();
 			if(a_pts < v_pts)
 			{
-				a_source.Read(a_buffer, &a_bsize);
-				av_output.writeAFrame(a_buffer, a_bsize);
+				a_readed = a_source.Read(a_buffer, a_bsize);
+				av_output.writeAFrame(a_buffer, a_readed);
 			}
 			else
 			{

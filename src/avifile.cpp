@@ -413,7 +413,6 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 		{
 			AVPacket pkt;
 			av_init_packet(&pkt); // init static structure
-
 			out_size = avcodec_encode_audio(acodec, abuffer, a_bsize, (short*)tmp);
 			if(out_size != 0)
 			{
@@ -486,6 +485,7 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 
 void AVIFile::Close()
 {
+	cout << "Closing avi file..." << endl;
 	if(!opened()) return;
 	av_write_trailer(o_file);
 	cleanup();
@@ -495,19 +495,21 @@ void AVIFile::Close()
 //private functions
 void AVIFile::cleanup()
 {
-	//encoding streams//
+	//encoders//
 	if(_opened & INIT_VCODEC)
 		avcodec_close(vcodec);
 	if(_opened & INIT_ACODEC)
 		avcodec_close(acodec);
+	vcodec  = NULL;
+	acodec  = NULL;
+
+	//output streams//
 	if(vstream)
 		av_free(vstream);
 	if(astream)
 		av_free(astream);
 	vstream = NULL;
 	astream = NULL;
-	vcodec  = NULL;
-	acodec  = NULL;
 
 	//file//
 	if(o_file)

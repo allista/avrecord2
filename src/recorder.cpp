@@ -283,7 +283,7 @@ bool Recorder::RecordLoop( uint * signal )
 	double a_pts  = 0;
 	time_t now;
 
-	while(*signal)
+	while(*signal != SIG_QUIT)
 	{
 		now = time(0);
 
@@ -301,17 +301,23 @@ bool Recorder::RecordLoop( uint * signal )
 		if(!time_in_window(now))
 		{ sleep(1); continue; }
 
+		if(*signal == SIG_CHANGE_FILE)
+		{
+			av_output.Close();
+			av_output.Init();
+			av_output.setAParams(audio_codec, channels, sample_rate, aud_bitrate);
+			av_output.setVParams(video_codec, width, height, frame_rate, vid_bitrate, var_bitrate);
+			av_output.Open(generate_fname());
+			*signal = SIG_RECORDING;
+		}
+
 		if(record_on_motion && !recording)
 		{
-			if(silence_timer.elapsed() > min_gap &&
-			        record_timer.elapsed() > min_record_time)
+			if(silence_timer.elapsed() > min_gap && record_timer.elapsed() > min_record_time)
 			{
-				av_output.Close();
-				av_output.Init();
-				av_output.setAParams(audio_codec, channels, sample_rate, aud_bitrate);
-				av_output.setVParams(video_codec, width, height, frame_rate, vid_bitrate, var_bitrate);
-				av_output.Open(generate_fname());
+				*signal = SIG_CHANGE_FILE;
 				silence_timer.reset();
+				continue;
 			}
 
 			capture_frame();

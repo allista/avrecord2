@@ -35,6 +35,14 @@ using namespace std;
 #include "utimer.h"
 
 
+///signals for main loop
+enum
+{
+    SIG_RECORDING,
+    SIG_QUIT,
+    SIG_CHANGE_FILE
+};
+
 class Recorder
 {
 public:

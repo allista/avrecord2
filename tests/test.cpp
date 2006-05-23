@@ -32,6 +32,7 @@
 #include <cstdlib>
 #include <time.h>
 #include <math.h>
+#include <signal.h>
 
 using namespace std;
 
@@ -43,18 +44,74 @@ using namespace std;
 #include <configfile.h>
 #include <recorder.h>
 
+uint avsignal  = SIG_RECORDING;
+uint avrestart = 0;
+
+static void setup_signals(struct sigaction *sig_handler_action);
+static void sig_handler(int signo);
+
 int main(int argc, char *argv[])
 {
 	//testing section//
 	///////////////////
 
+	struct sigaction sig_handler_action;
+	setup_signals(&sig_handler_action);
+
 	Recorder rec;
-	rec.Init("../../avrecord.conf.sample");
+	do
+	{
+		if(avrestart)
+		{
+			cout << "Restarting..." << endl;
+			avsignal  = SIG_RECORDING;
+			avrestart = 0;
+			sleep(5);
+		}
 
-	uint signal = 1;
-	rec.RecordLoop(&signal);
+		rec.Init("../../avrecord.conf.sample");
+		rec.RecordLoop(&avsignal);
+		rec.Close();
 
-	rec.Close();
+	} while(avrestart);
 
+	cout << "Quiting..." << endl;
 	exit(EXIT_SUCCESS);
+}
+
+static void setup_signals(struct sigaction *sig_handler_action)
+{
+	sig_handler_action->sa_flags = SA_RESTART;
+	sig_handler_action->sa_handler = sig_handler;
+	sigemptyset(&sig_handler_action->sa_mask);
+
+	//Enable automatic zombie reaping//
+	sigaction(SIGALRM, sig_handler_action, NULL);
+	sigaction(SIGHUP,  sig_handler_action, NULL);
+	sigaction(SIGINT,  sig_handler_action, NULL);
+	sigaction(SIGQUIT, sig_handler_action, NULL);
+	sigaction(SIGTERM, sig_handler_action, NULL);
+	sigaction(SIGUSR1, sig_handler_action, NULL);
+}
+
+static void sig_handler(int signo)
+{
+	switch(signo)
+	{
+		case SIGALRM:
+			//avsignal  = SIG_; //what else can we do? =)
+			break;
+		case SIGUSR1:
+			avsignal  = SIG_CHANGE_FILE;
+			break;
+		case SIGHUP:
+			avrestart = 1;
+		case SIGINT:
+		case SIGQUIT:
+		case SIGTERM:
+			avsignal  = SIG_QUIT;
+			break;
+		case SIGSEGV:
+			exit(0);
+	}
 }

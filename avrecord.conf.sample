@@ -1,21 +1,21 @@
-filename = test-%Y-%m-%d_%H-%M.avi
+filename = avi-%Y-%m-%d_%H-%M.avi
 output_dir = ./
 detect_motion = yes
 record_on_motion = yes
 print_diffs = yes
 print_date = yes
 
-start_time = 22.05.2006-11:10:00
-end_time = 23.05.2006-13:00:00
+start_time = 23.05.2006-07:30:00
+end_time = 24.05.2006-09:30:00
 schedule =
 
 
-min_gap = 600
+min_gap = 300
 min_record_time = 30
-post_motion_offset = 10;
+post_motion_offset = 30;
 
 noise_level = 4
-threshold = 55
+threshold = 50
 noise_reduction_level = 1
 
 

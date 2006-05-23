@@ -1,18 +1,18 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
 <!DOCTYPE KDevPrjSession>
 <KDevPrjSession>
- <DocsAndViews NumberOfDocuments="17" >
+ <DocsAndViews NumberOfDocuments="18" >
   <Doc0 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/avifile.cpp" >
-   <View0 line="238" Type="Source" />
+   <View0 line="117" Type="Source" />
   </Doc0>
   <Doc1 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/avifile.h" >
-   <View0 line="111" Type="Source" />
+   <View0 line="35" Type="Source" />
   </Doc1>
   <Doc2 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/recorder.h" >
-   <View0 line="40" Type="Source" />
+   <View0 line="49" Type="Source" />
   </Doc2>
   <Doc3 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/recorder.cpp" >
-   <View0 line="86" Type="Source" />
+   <View0 line="225" Type="Source" />
   </Doc3>
   <Doc4 NumberOfViews="1" URL="file:///home/storage/share/distributives/motion-3.2.6/alg.c" >
    <View0 line="9" Type="Source" />
@@ -48,11 +48,14 @@
    <View0 line="191" Type="Source" />
   </Doc14>
   <Doc15 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/sndstream.cpp" >
-   <View0 line="210" Type="Source" />
+   <View0 line="142" Type="Source" />
   </Doc15>
   <Doc16 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/img_tools.cpp" >
    <View0 line="1200" Type="Source" />
   </Doc16>
+  <Doc17 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/sndstream.h" >
+   <View0 line="48" Type="Source" />
+  </Doc17>
  </DocsAndViews>
  <pluginList>
   <kdevdebugger>

@@ -291,6 +291,11 @@ bool Recorder::RecordLoop( uint * signal )
 	uint a_readed = 0;
 	time_t now;
 
+	//capture the first frame for motion detection
+	if(detect_motion)
+	{ capture_frame(); measure_motion(); }
+
+	//main record loop
 	while(*signal != SIG_QUIT)
 	{
 		now = time(0);

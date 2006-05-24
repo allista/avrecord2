@@ -49,6 +49,21 @@ var_bitrate  = 2
 #if true, automaticaly measure frame rate during initialization
 #this option is recomended =)
 auto_frate   = yes
+
+#Picture brightness (0-100) (leave empty to use current capture card settings)
+brightness =
+
+#Picture contrast (0-100) (leave empty to use current capture card settings)
+contrast   =
+
+#Picture hue (0-100) (colour only) (leave empty to use current capture card settings)
+hue        =
+
+#Picture colour (0-100) (colour only) (leave empty to use current capture card settings)
+color      =
+
+#Picture whiteness (0-100) (greyscale only) (leave empty to use current capture card settings)
+witeness   =
 #
 ##################################################################
 

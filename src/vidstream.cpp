@@ -138,6 +138,34 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 	return true;
 }
 
+void Vidstream::setPicParams( int br, int cont, int hue, int col, int wit )
+{
+	if(vid_dev <= 0) return;
+
+	video_picture pic;
+
+	//get current params
+	if(ioctl(vid_dev, VIDIOCGPICT, &pic) == -1)
+	{
+		log_message(1, "Vidstream: setPicParams: Faild to get current picture params");
+		return;
+	}
+
+	//change params
+	if(br  >=0) pic.brightness = br;   //Picture brightness
+	if(hue >=0) pic.hue        = hue;  //Picture hue (colour only)
+	if(col >=0) pic.colour     = col;  //Picture colour (colour only)
+	if(cont>=0) pic.contrast   = cont; //Picture contrast
+	if(wit >=0) pic.whiteness  = wit;  //Picture whiteness (greyscale only)
+
+	//set current params
+	if(ioctl(vid_dev, VIDIOCSPICT, &pic) == -1)
+	{
+		log_message(1, "Vidstream: setPicParams: Faild to set new picture params");
+		return;
+	}
+}
+
 void Vidstream::Close()
 {
 	if(int(map_buffer0) > 0)

@@ -64,6 +64,14 @@ public:
 						int mode   = NORM_DEFAULT ///< grab mode
 					 );
 
+	///sets picture parameters (color, hue, brightness, contrast...)
+	void setPicParams(int br,       ///< Picture brightness
+										int cont,     ///< Picture contrast
+										int hue = -1, ///< Picture hue (colour only)
+										int col = -1, ///< Picture colour (colour only)
+										int wit = -1  ///< Picture whiteness (greyscale only)
+									 );
+
 	///closes video device
 	void Close();
 

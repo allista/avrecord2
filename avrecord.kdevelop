@@ -22,7 +22,7 @@
       <directoryradio>executable</directoryradio>
       <runarguments>
         <test/>
-        <avrecord/>
+        <avrecord>-n -c avrecord.conf</avrecord>
       </runarguments>
       <customdirectory>/</customdirectory>
       <programargs/>

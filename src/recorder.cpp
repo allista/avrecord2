@@ -90,7 +90,7 @@ bool Recorder::Init(const ConfigFile &config)
 {
 	//configuration//
 	fname_format = config.getOptionS("filename");
-	if(fname_format.empty()) fname_format = "%Y-%m-%d_%H%M.avi";
+	if(fname_format.empty()) fname_format = "%Y-%m-%d_%H-%M.avi";
 
 	output_dir   = config.getOptionS("output_dir");
 	if(output_dir.empty()) output_dir = "./";
@@ -178,6 +178,22 @@ bool Recorder::Init(const ConfigFile &config)
 	channels              = config.getOptionI("channels");
 	amp_level             = config.getOptionI("amplification_level");
 
+	//picture parameters (used only during initialization)
+	int brightness = (config.getOptionS("brightness").size())?
+			int(65535 * config.getOptionI("brightness")/100.0) : -1;
+
+	int contrast   = (config.getOptionS("contrast").size())?
+			int(65535 * config.getOptionI("contrast")/100.0)   : -1;
+
+	int hue        = (config.getOptionS("hue").size())?
+			int(65535 * config.getOptionI("hue")/100.0)        : -1;
+
+	int color      = (config.getOptionS("color").size())?
+			int(65535 * config.getOptionI("color")/100.0)      : -1;
+
+	int witeness   = (config.getOptionS("whiteness").size())?
+			int(65535 * config.getOptionI("witeness")/100.0)   : -1;
+
 	//audio/video DEFAULT parameters
 	if(video_codec.empty()) video_codec = "msmpeg4";
 	if(!width)              width       = 640;
@@ -198,6 +214,7 @@ bool Recorder::Init(const ConfigFile &config)
 		Close();
 		return false;
 	}
+	a_source.setAmp(amp_level);
 
 	if(!v_source.Open("/dev/video0", width, height, input_source, input_mode))
 	{
@@ -205,8 +222,7 @@ bool Recorder::Init(const ConfigFile &config)
 		Close();
 		return false;
 	}
-
-	a_source.setAmp(amp_level);
+	v_source.setPicParams(brightness, contrast, hue, color, witeness);
 	if(auto_frate) frame_rate = uint(1e6/v_source.ptime());
 	v_source.Prepare();
 

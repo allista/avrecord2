@@ -147,6 +147,7 @@ bool Recorder::Init(const ConfigFile &config)
 			strptime(win.substr(0,wpos).c_str(), "%H:%M:%S", &start);
 			strptime(win.substr(wpos+1).c_str(), "%H:%M:%S", &end);
 			if(start < end)	rec_schedule.push_front(t_window(start, end));
+			else log_message(1, "Recorder: Init: schedule: time window %s is discarded, because end point is earlyer the the start one.", win);
 			win_list = win_list.substr(pos+1);
 		}
 	}

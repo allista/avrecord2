@@ -147,7 +147,7 @@ bool Recorder::Init(const ConfigFile &config)
 			strptime(win.substr(0,wpos).c_str(), "%H:%M:%S", &start);
 			strptime(win.substr(wpos+1).c_str(), "%H:%M:%S", &end);
 			if(start < end)	rec_schedule.push_front(t_window(start, end));
-			else log_message(1, "Recorder: Init: schedule: time window %s is discarded, because end point is earlyer the the start one.", win);
+			else log_message(1, "Recorder: Init: schedule: time window %s is discarded, because end point is earlyer the the start one.", win.c_str());
 			win_list = win_list.substr(pos+1);
 		}
 	}
@@ -180,19 +180,19 @@ bool Recorder::Init(const ConfigFile &config)
 
 	//picture parameters (used only during initialization)
 	int brightness = (config.getOptionS("brightness").size())?
-			int(65535 * config.getOptionI("brightness")/100.0) : -1;
+	                 int(65535 * config.getOptionI("brightness")/100.0) : -1;
 
 	int contrast   = (config.getOptionS("contrast").size())?
-			int(65535 * config.getOptionI("contrast")/100.0)   : -1;
+	                 int(65535 * config.getOptionI("contrast")/100.0)   : -1;
 
 	int hue        = (config.getOptionS("hue").size())?
-			int(65535 * config.getOptionI("hue")/100.0)        : -1;
+	                 int(65535 * config.getOptionI("hue")/100.0)        : -1;
 
 	int color      = (config.getOptionS("color").size())?
-			int(65535 * config.getOptionI("color")/100.0)      : -1;
+	                 int(65535 * config.getOptionI("color")/100.0)      : -1;
 
 	int witeness   = (config.getOptionS("whiteness").size())?
-			int(65535 * config.getOptionI("witeness")/100.0)   : -1;
+	                 int(65535 * config.getOptionI("witeness")/100.0)   : -1;
 
 	//audio/video DEFAULT parameters
 	if(video_codec.empty()) video_codec = "msmpeg4";
@@ -329,7 +329,15 @@ bool Recorder::RecordLoop( uint * signal )
 		}
 
 		if(!time_in_window(now))
-		{ sleep(1); continue; }
+		{
+			if(recording)
+			{
+				recording = false;
+				record_timer.pause();
+			}
+			sleep(1);
+			continue;
+		}
 
 		if(*signal == SIG_CHANGE_FILE)
 		{
@@ -383,7 +391,10 @@ bool Recorder::RecordLoop( uint * signal )
 				write_frame(v_buffer0, now, diffs);
 
 				if(silence_timer.elapsed() > post_motion_offset)
+				{
 					recording = false;
+					record_timer.pause();
+				}
 			}
 		}
 

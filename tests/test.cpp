@@ -54,28 +54,35 @@ static void sig_handler(int signo);
 int main(int argc, char *argv[])
 {
 	//testing section//
+	UTimer test;
+	test.start();
+	sleep(1);
+	test.pause();
+	cout << test.elapsed() << endl;
+	sleep(1);
+	cout << test.elapsed() << endl;
 	///////////////////
 
-	struct sigaction sig_handler_action;
-	setup_signals(&sig_handler_action);
-
-	Recorder rec;
-	do
-	{
-		if(avrestart)
-		{
-			cout << "Restarting..." << endl;
-			avsignal  = SIG_RECORDING;
-			avrestart = 0;
-			sleep(5);
-		}
-
-		rec.Init("../../avrecord.conf.sample");
-		rec.RecordLoop(&avsignal);
-		rec.Close();
-
-	}
-	while(avrestart);
+// 	struct sigaction sig_handler_action;
+// 	setup_signals(&sig_handler_action);
+//
+// 	Recorder rec;
+// 	do
+// 	{
+// 		if(avrestart)
+// 		{
+// 			cout << "Restarting..." << endl;
+// 			avsignal  = SIG_RECORDING;
+// 			avrestart = 0;
+// 			sleep(5);
+// 		}
+//
+// 		rec.Init("../../avrecord.conf.sample");
+// 		rec.RecordLoop(&avsignal);
+// 		rec.Close();
+//
+// 	}
+// 	while(avrestart);
 
 	cout << "Quiting..." << endl;
 	exit(EXIT_SUCCESS);

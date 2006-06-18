@@ -347,18 +347,18 @@ static void print_usage()
 
 void log_message(int level, const char *fmt, ...)
 {
-	int     n;
+	int     n = 0;
 	char    buf[1024];
 	va_list ap;
 
 	//Next add timstamp and level prefix
 	time_t now = time(0);
-	n  = strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S ", localtime(&now));
-	n += snprintf(buf + n, sizeof(buf), "[%s] ", level? "ERROR" : "INFO");
+	n += strftime(buf+n, sizeof(buf)-n, "%Y-%m-%d %H:%M:%S ", localtime(&now));
+	n += snprintf(buf+n, sizeof(buf)-n, "[%s] ", level? "ERROR" : "INFO");
 
 	//Next add the user's message
 	va_start(ap, fmt);
-	n += vsnprintf(buf + n, sizeof(buf) - n, fmt, ap);
+	n += vsnprintf(buf+n, sizeof(buf)-n, fmt, ap);
 
 	//newline for printing to the file
 	strcat(buf, "\n");

@@ -355,6 +355,8 @@ bool Recorder::RecordLoop( uint * signal )
 			{
 				*signal = SIG_CHANGE_FILE;
 				silence_timer.reset();
+				record_timer.reset();
+				record_timer.pause();
 				continue;
 			}
 
@@ -364,9 +366,7 @@ bool Recorder::RecordLoop( uint * signal )
 			if(diffs) //record previous and current frames
 			{
 				recording = true;
-				if(record_timer.elapsed() > min_record_time)
-					record_timer.reset();
-				else record_timer.start();
+				record_timer.start();
 				silence_timer.reset();
 
 				write_frame(v_buffer1, time(0), diffs);

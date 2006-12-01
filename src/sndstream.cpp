@@ -199,17 +199,19 @@ void Sndstream::amplify(void* buffer, uint bsize)
 {
 	if(amp_level == 1) return;
 
+	char* cb  = NULL;
+	short* sb = NULL;
 	uint size = 0;
 	switch(format)
 	{
 		case SND_8BIT:
-			char* cb  = (char*)buffer;
+			cb  = (char*)buffer;
 			size = bsize/sizeof(char);
 			for(int i = 0; i < size; i++)
 				cb[i] = char(cb[i] * amp_level);
 			break;
 		case SND_16BIT:
-			short* sb = (short*)buffer;
+			sb  = (short*)buffer;
 			size = bsize/sizeof(short);
 			for(int i = 0; i < size; i++)
 				sb[i] = short(sb[i] * amp_level);

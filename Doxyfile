@@ -80,7 +80,7 @@ WARN_LOGFILE           =
 #---------------------------------------------------------------------------
 # configuration options related to the input files
 #---------------------------------------------------------------------------
-INPUT                  = /home/simon/Hole/Workspace/Programming/avrecord
+INPUT                  = /home/simon/Workspace/Programming/avrecord
 FILE_PATTERNS          = *.c \
                          *.cc \
                          *.cxx \

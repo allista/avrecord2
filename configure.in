@@ -20,7 +20,7 @@ AC_CHECK_LIB(avcodec,
        AC_MSG_ERROR([*** avcodec form FFmpeg library not found!])
 )
 AC_CHECK_LIB(avformat,
-       avienc_init,
+       av_free,
        LIBS="$LIBS -lavformat",
        AC_MSG_ERROR([*** avformat from FFmpeg library not found!])
 )

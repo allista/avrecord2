@@ -17,6 +17,7 @@
 *   Free Software Foundation, Inc.,                                       *
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 ***************************************************************************/
+#include <limits.h>
 #include <math.h>
 #include <iostream>
 using namespace std;
@@ -35,7 +36,11 @@ Sndstream::Sndstream()
 	channels  = 0;
 	dev_mode  = 0;
 
-	amp_level = 1;
+	amp_level  = 1;
+	sig_offset = 0;
+	threshold  = -1;
+	level_func = SND_LIN;
+	noise_level = 0;
 
 	_bsize    = 0;
 	_ptime    = 0;
@@ -48,6 +53,7 @@ bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte)
 	rate     = rte;
 	channels = chans;
 	dev_mode = mode;
+	sig_offset = 0;
 
 	/* Open PCM device. */
 	switch(dev_mode)
@@ -138,6 +144,7 @@ void Sndstream::Close()
 
 	snd_dev = NULL;
 	params  = NULL;
+	sig_offset = 0;
 }
 
 uint Sndstream::Read(void* buffer, uint size)
@@ -156,7 +163,7 @@ uint Sndstream::Read(void* buffer, uint size)
 		/* EPIPE means overrun */
 		log_message(1, "Sndstream: overrun occurred");
 		snd_pcm_prepare(snd_dev);
-		return size;
+		return 0;
 	}
 	else if(ret < 0)
 	{
@@ -197,24 +204,81 @@ uint Sndstream::Write(void* buffer, uint size)
 
 void Sndstream::amplify(void* buffer, uint bsize)
 {
-	if(amp_level == 1) return;
-
-	char* cb  = NULL;
+	char*  cb = NULL;
 	short* sb = NULL;
-	uint size = 0;
+	uint   size   = 0;
+	double max    = 0;
+
 	switch(format)
 	{
 		case SND_8BIT:
 			cb  = (char*)buffer;
 			size = bsize/sizeof(char);
+
+			if(!sig_offset)
+			{
+				for(int i = 0; i < size; i++)
+					sig_offset += cb[i]; sig_offset /= size;
+#ifdef DEBUG_VERSION
+				log_message(0, "Sndstream: signal offset is: %d", sig_offset);
+#endif
+			}
+
 			for(int i = 0; i < size; i++)
-				cb[i] = char(cb[i] * amp_level);
+			{
+				cb[i]  = char((cb[i] - sig_offset) * amp_level);
+				if(threshold >= 0) if(abs(cb[i]) > max) max = abs(cb[i]);
+			}
+			if(threshold >= 0) max = level(max, CHAR_MAX);
+
 			break;
+
+
 		case SND_16BIT:
 			sb  = (short*)buffer;
 			size = bsize/sizeof(short);
+
+			if(!sig_offset)
+			{
+				for(int i = 0; i < size; i++)
+					sig_offset += sb[i]; sig_offset /= size;
+#ifdef DEBUG_VERSION
+				log_message(0, "Sndstream: signal offset is: %d", sig_offset);
+#endif
+			}
+
 			for(int i = 0; i < size; i++)
-				sb[i] = short(sb[i] * amp_level);
+			{
+				sb[i]   = short((sb[i] - sig_offset) * amp_level);
+				if(threshold >= 0) if(abs(sb[i]) > max) max = abs(sb[i]);
+			}
+			if(threshold >= 0) max = level(max, SHRT_MAX);
+
 			break;
+	}
+
+	noise_level = (max > threshold)? uint(max) : 0;
+}
+
+double Sndstream::level( double sample, double max )
+{
+	switch(level_func)
+	{
+		case SND_LIN:
+			return sample * 1000 / max;
+		case SND_RT2:
+			return sqrt(sample / max)*1000;
+		case SND_RT4:
+			return sqrt(sqrt(sample / max))*1000;
+		case SND_RT8:
+			return sqrt(sqrt(sqrt(sample / max)))*1000;
+		case SND_PWR2:
+			return ldexp(sample / max, 2)*1000;
+		case SND_PWR4:
+			return ldexp(sample / max, 4)*1000;
+		case SND_PWR8:
+			return ldexp(sample / max, 8)*1000;
+		default:
+			return sample * 1000 / max;
 	}
 }

@@ -67,6 +67,7 @@ Recorder::Recorder()
 	detect_motion    = false;
 	record_on_motion = false;
 	print_diffs      = false;
+	print_level      = false;
 	print_date       = false;
 
 	//schedule parameters
@@ -99,11 +100,15 @@ bool Recorder::Init(const ConfigFile &config)
 
 	//flags
 	detect_motion    = config.getOptionB("detect_motion");
+	detect_noise     = config.getOptionB("detect_noise");
 	record_on_motion = config.getOptionB("record_on_motion");
+	record_on_noise  = config.getOptionB("record_on_noise");
 	print_diffs      = config.getOptionB("print_diffs");
+	print_level      = config.getOptionB("print_level");
 	print_date       = config.getOptionB("print_date");
 
 	if(record_on_motion) detect_motion = true;
+	if(record_on_noise)  detect_noise  = true;
 	if(!detect_motion)   print_diffs   = false;
 
 	//schedule parameters
@@ -161,6 +166,9 @@ bool Recorder::Init(const ConfigFile &config)
 	threshold             = config.getOptionI("threshold");
 	noise_reduction_level = config.getOptionI("noise_reduction_level");
 
+	snd_noise_level_func  = config.getOptionI("snd_noise_level_func");
+	snd_noise_threshold   = config.getOptionI("snd_noise_threshold");
+
 	//audio/video parameters
 	video_codec           = config.getOptionS("video_codec");
 	input_source          = config.getOptionI("input_source");
@@ -215,6 +223,11 @@ bool Recorder::Init(const ConfigFile &config)
 		return false;
 	}
 	a_source.setAmp(amp_level);
+	if(detect_noise)
+	{
+		a_source.setFun(snd_noise_level_func);
+		a_source.setLev(snd_noise_threshold);
+	}
 
 	if(!v_source.Open("/dev/video0", width, height, input_source, input_mode))
 	{
@@ -226,7 +239,7 @@ bool Recorder::Init(const ConfigFile &config)
 	if(auto_frate) frame_rate = uint(1e6/v_source.ptime());
 	v_source.Prepare();
 
-	if(print_diffs || print_date)
+	if(print_diffs || print_level || print_date)
 		InitBitmaps();
 
 	av_register_all();
@@ -303,6 +316,7 @@ bool Recorder::RecordLoop( uint * signal )
 	if(!inited) return false;
 
 	uint    diffs = 0;
+	uint    level = 0;
 	double  v_pts = 0;
 	double  a_pts = 0;
 	uint a_readed = 0;
@@ -311,6 +325,10 @@ bool Recorder::RecordLoop( uint * signal )
 	//capture the first frame for motion detection
 	if(detect_motion)
 	{ capture_frame(); measure_motion(); }
+
+	//capture the first sound block for noise detection
+	if(detect_noise)
+		a_source.Read(a_buffer, a_bsize);
 
 	//main record loop
 	while(*signal != SIG_QUIT)
@@ -349,7 +367,7 @@ bool Recorder::RecordLoop( uint * signal )
 			*signal = SIG_RECORDING;
 		}
 
-		if(record_on_motion && !recording)
+		if((record_on_motion || record_on_noise) && !recording)
 		{
 			if(silence_timer.elapsed() > min_gap && record_timer.elapsed() > min_record_time)
 			{
@@ -360,17 +378,26 @@ bool Recorder::RecordLoop( uint * signal )
 				continue;
 			}
 
-			capture_frame();
-			diffs = measure_motion();
+			if(detect_noise)
+			{
+				a_source.Read(a_buffer, a_bsize);
+				level = a_source.Noise();
+			}
+			if(detect_motion)
+			{
+				capture_frame();
+				diffs = measure_motion();
+			}
 
-			if(diffs) //record previous and current frames
+			if((detect_motion && diffs) ||
+				 (detect_noise  && level)) //record previous and current frames
 			{
 				recording = true;
 				record_timer.start();
 				silence_timer.reset();
 
-				write_frame(v_buffer1, time(0), diffs);
-				write_frame(v_buffer0, time(0), diffs);
+				write_frame(v_buffer1, time(0), diffs, level);
+				write_frame(v_buffer0, time(0), diffs, level);
 			}
 		}
 		else //record frames
@@ -380,6 +407,9 @@ bool Recorder::RecordLoop( uint * signal )
 			if(a_pts < v_pts)
 			{
 				a_readed = a_source.Read(a_buffer, a_bsize);
+				if(detect_noise)
+					if(level = a_source.Noise())
+						silence_timer.reset();
 				av_output.writeAFrame(a_buffer, a_readed);
 			}
 			else
@@ -388,7 +418,7 @@ bool Recorder::RecordLoop( uint * signal )
 				if(detect_motion)
 					if(diffs = measure_motion())
 						silence_timer.reset();
-				write_frame(v_buffer0, now, diffs);
+				write_frame(v_buffer0, now, diffs, level);
 
 				if(silence_timer.elapsed() > post_motion_offset)
 				{
@@ -412,7 +442,7 @@ string Recorder::generate_fname()
 	return string(output_dir + name);
 }
 
-bool Recorder::write_frame(unsigned char * frame, time_t now, uint diffs)
+bool Recorder::write_frame(unsigned char * frame, time_t now, uint diffs, uint level)
 {
 	if(!inited) return false;
 
@@ -428,6 +458,14 @@ bool Recorder::write_frame(unsigned char * frame, time_t now, uint diffs)
 		sprintf(diffs_str, "%d", diffs);
 		string str = diffs_str;
 		PrintText(frame, diffs_str,	width-5-TextWidth(diffs_str), 10, width, height);
+	}
+
+	if(print_level)
+	{
+		char level_str[10] = {'\0'};
+		sprintf(level_str, "%d", level);
+		string str = level_str;
+		PrintText(frame, level_str,	width-5-TextWidth(level_str), 20, width, height);
 	}
 
 	return av_output.writeVFrame(frame, width, height);

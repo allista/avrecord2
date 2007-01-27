@@ -91,9 +91,14 @@ private:
 	string   fname_format;              ///< template for filename to record to
 
 	//flags
+	bool     detect_noise;              ///< if true, do noise detection
 	bool     detect_motion;             ///< if true, do motion detection
-	bool     record_on_motion;          ///< if true, record only when motion is detected
+	bool     record_on_motion;          ///< if true, record only when motion (or noise, if
+                                    	///< correspondig flag is set) is detected
+	bool     record_on_noise;           ///< if true, record only when noise (or motion, if
+                                    	///< correspondig flag is set) is detected
 	bool     print_diffs;               ///< if true, print number of motion pixels to the image
+	bool     print_level;               ///< if true, print sound noise level
 	bool     print_date;                ///< if true, print current date to the image
 
 	//schedule parameters
@@ -120,6 +125,12 @@ private:
 	                                    ///< than this value
 	uint     noise_reduction_level;     ///< shows, how many times we need to erode captured image to
 	                                    ///< remove a noise
+
+	uint     snd_noise_level_func;      ///< function for sound noise level calculation: 0 - linear (default)
+                                    	///< 1 - 2pwr root, 2 - 4pwr root, 3 - 8pwr root.
+	uint     snd_noise_threshold;       ///< we detect sound noise when noise level calculated with
+                                    	///< "noise_level_function" is grater than this value (0 - 1000)
+
 
 	//audio/video parameters
 	string   video_codec;               ///< name of video codec
@@ -163,7 +174,7 @@ private:
 	uint measure_motion();
 
 	///write video frame to av_output
-	bool write_frame(unsigned char *frame, time_t now, uint diffs);
+	bool write_frame(unsigned char *frame, time_t now, uint diffs, uint level);
 
 	///generates avi filename according fname_format
 	string generate_fname();

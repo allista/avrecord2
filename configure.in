@@ -1,11 +1,15 @@
 AC_INIT(configure.in)
 
+AC_CANONICAL_SYSTEM
+
 AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE(avrecord, 0.1)
+
 
 AC_LANG_CPLUSPLUS
 AC_PROG_CXX
 AM_PROG_LIBTOOL
+
 
 dnl Checks for libraries.
 AC_CHECK_LIB(asound,

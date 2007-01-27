@@ -1,64 +1,25 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
 <!DOCTYPE KDevPrjSession>
 <KDevPrjSession>
- <DocsAndViews NumberOfDocuments="19" >
-  <Doc0 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/avifile.cpp" >
+ <DocsAndViews NumberOfDocuments="6" >
+  <Doc0 NumberOfViews="1" URL="file:///home/simon/Workspace/Programming/avrecord/src/sndstream.h" >
    <View0 Type="Source" />
   </Doc0>
-  <Doc1 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/avifile.h" >
+  <Doc1 NumberOfViews="1" URL="file:///home/simon/Workspace/Programming/avrecord/src/sndstream.cpp" >
    <View0 Type="Source" />
   </Doc1>
-  <Doc2 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/recorder.h" >
+  <Doc2 NumberOfViews="1" URL="file:///home/simon/Workspace/Programming/avrecord/src/recorder.cpp" >
    <View0 Type="Source" />
   </Doc2>
-  <Doc3 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/recorder.cpp" >
+  <Doc3 NumberOfViews="1" URL="file:///home/simon/Workspace/Programming/avrecord/debug/avrecord.conf" >
    <View0 Type="Source" />
   </Doc3>
-  <Doc4 NumberOfViews="1" URL="file:///home/storage/share/distributives/motion-3.2.6/alg.c" >
+  <Doc4 NumberOfViews="1" URL="file:///home/simon/Workspace/Programming/avrecord/src/recorder.h" >
    <View0 Type="Source" />
   </Doc4>
-  <Doc5 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/fifo.cpp" >
-   <View0 Type="Source" />
+  <Doc5 NumberOfViews="1" URL="file:///home/simon/Workspace/Programming/avrecord/src/avrecord.conf.sample" >
+   <View0 line="0" Type="Source" />
   </Doc5>
-  <Doc6 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/fifo.h" >
-   <View0 Type="Source" />
-  </Doc6>
-  <Doc7 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/common.h" >
-   <View0 Type="Source" />
-  </Doc7>
-  <Doc8 NumberOfViews="1" URL="file:///home/storage/share/distributives/ffmpeg/ffmpeg.c" >
-   <View0 Type="Source" />
-  </Doc8>
-  <Doc9 NumberOfViews="1" URL="file:///home/storage/share/distributives/motion-3.2.6/motion.c" >
-   <View0 Type="Source" />
-  </Doc9>
-  <Doc10 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/tests/test.cpp" >
-   <View0 Type="Source" />
-  </Doc10>
-  <Doc11 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/main.cpp" >
-   <View0 Type="Source" />
-  </Doc11>
-  <Doc12 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/avrecord.conf.sample" >
-   <View0 Type="Source" />
-  </Doc12>
-  <Doc13 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/vidstream.h" >
-   <View0 Type="Source" />
-  </Doc13>
-  <Doc14 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/vidstream.cpp" >
-   <View0 Type="Source" />
-  </Doc14>
-  <Doc15 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/sndstream.cpp" >
-   <View0 Type="Source" />
-  </Doc15>
-  <Doc16 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/img_tools.cpp" >
-   <View0 Type="Source" />
-  </Doc16>
-  <Doc17 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/sndstream.h" >
-   <View0 Type="Source" />
-  </Doc17>
-  <Doc18 NumberOfViews="1" URL="file:///home/simon/Hole/Workspace/Programming/avrecord/src/utimer.h" >
-   <View0 line="12" Type="Source" />
-  </Doc18>
  </DocsAndViews>
  <pluginList>
   <kdevdebugger>
@@ -68,7 +29,7 @@
    <bookmarks/>
   </kdevbookmarks>
   <kdevvalgrind>
-   <executable path="/home/simon/Hole/Workspace/Programming/avrecord/optimized/src/avrecord" params="test.avi" />
+   <executable path="" params="test.avi" />
    <valgrind path="/usr/bin/valgrind" params="--tool=memcheck --tool=memcheck --tool=memcheck --tool=memcheck --tool=memcheck --leak-check=yes" />
    <calltree path="/usr/bin/valgrind" params="--tool=callgrind --combine-dumps=yes --collect-systime=yes" />
    <kcachegrind path="kcachegrind" />

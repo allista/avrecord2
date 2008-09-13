@@ -1,27 +1,26 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
 <!DOCTYPE KDevPrjSession>
 <KDevPrjSession>
- <DocsAndViews NumberOfDocuments="4" >
-  <Doc0 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/avrecord/src/libavtools/vidstream.h" >
+ <DocsAndViews NumberOfDocuments="5" >
+  <Doc0 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/buffer-ring.h" >
    <View0 Encoding="" Type="Source" />
   </Doc0>
-  <Doc1 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/avrecord/src/libavtools/vidstream.cpp" >
+  <Doc1 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/recorder.h" >
    <View0 Encoding="" Type="Source" />
   </Doc1>
-  <Doc2 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/avrecord/src/libavtools/sndstream.cpp" >
-   <View0 Encoding="" line="253" Type="Source" />
+  <Doc2 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/buffer-ring.cpp" >
+   <View0 Encoding="" Type="Source" />
   </Doc2>
-  <Doc3 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/avrecord/src/libavtools/sndstream.h" >
-   <View0 Encoding="" line="63" Type="Source" />
+  <Doc3 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/avrtuner/monitorthread.cpp" >
+   <View0 Encoding="" Type="Source" />
   </Doc3>
+  <Doc4 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/avrecord.conf" >
+   <View0 Encoding="" line="148" Type="Source" />
+  </Doc4>
  </DocsAndViews>
  <pluginList>
   <kdevdebugger>
-   <breakpointList>
-    <breakpoint0 location="/home/simon/Workspace/Programming/avrecord/src/libavtools/avifile.cpp:233" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
-     <tracedExpressions/>
-    </breakpoint0>
-   </breakpointList>
+   <breakpointList/>
    <showInternalCommands value="0" />
   </kdevdebugger>
   <kdevastyle>

@@ -15,10 +15,10 @@
     <ignoreparts/>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description></description>
-    <versioncontrol></versioncontrol>
+    <description/>
+    <versioncontrol/>
     <projectname>avrecord</projectname>
-    <defaultencoding></defaultencoding>
+    <defaultencoding/>
   </general>
   <kdevautoproject>
     <general>
@@ -45,8 +45,8 @@
         <avrecord>-c avrecord.conf</avrecord>
       </debugarguments>
       <cwd>
-        <avrtuner>/home/allis/Workspace/Programming/avrecord</avrtuner>
-        <avrecord>/home/allis/Workspace/Programming/avrecord</avrecord>
+        <avrtuner>/home/allis/Workspace/Programming/AVRecord2/</avrtuner>
+        <avrecord>/home/allis/Workspace/Programming/AVRecord2/</avrecord>
       </cwd>
       <globaldebugarguments/>
       <globalcwd/>
@@ -164,10 +164,10 @@
     <general>
       <dbgshell>libtool</dbgshell>
       <programargs>-c ../avrecord.conf</programargs>
-      <gdbpath></gdbpath>
-      <configGdbScript></configGdbScript>
-      <runShellScript></runShellScript>
-      <runGdbScript></runGdbScript>
+      <gdbpath/>
+      <configGdbScript/>
+      <runShellScript/>
+      <runGdbScript/>
       <breakonloadinglibs>true</breakonloadinglibs>
       <separatetty>false</separatetty>
       <floatingtoolbar>false</floatingtoolbar>
@@ -252,7 +252,7 @@
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet></prefixGet>
+      <prefixGet/>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>

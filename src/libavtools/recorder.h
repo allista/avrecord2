@@ -30,6 +30,7 @@
 using namespace std;
 
 #include "common.h"
+#include "buffer-ring.h"
 #include "sndstream.h"
 #include "vidstream.h"
 #include "avifile.h"
@@ -57,6 +58,7 @@ class _void_mutex
 		bool tryLock() { return true; };
 };
 
+
 ///This class gathers all input/output classes together
 ///and provides very simple interface for recording or just
 ///listenning signals. This is a template class wich is determinated
@@ -80,13 +82,9 @@ public:
 
 
 	///Main record loop (the 'signal' is used to handle recording
-	///process from outside the class)
-	bool RecordLoop(uint *signal);
-
-	///Idle loop only captures signals for viewing. No recording is pergormed.
-	///(the 'signal' is used to handle recording process from outside the class)
-	bool IdleLoop(uint *signal);
-
+	///process from outside the class, the 'idle' indicates, is writing to file to be made)
+	bool RecordLoop(uint *signal, bool idle = false);
+	bool IdleLoop(uint *signal) { return RecordLoop(signal, true); };
 
 	///trys to lock recorder's mutex
 	void lock() { mutex.lock(); };
@@ -106,11 +104,11 @@ public:
 
 	///returns last video buffer (NOTE: you must enclose call of this
 	///function with lock()-unlock() pair)
-	const unsigned char *getVBuffer() const { return v_buffer0; };
+	const unsigned char *getVBuffer() const { return v_buffer->rbuffer(); };
 
 	///returns previous motion buffer (with highlighted diff-pixels)
 	///(NOTE: you must enclose call of this function with lock()-unlock() pair)
-	const unsigned char *getMBuffer() const { return (detect_motion)? m_buffer1 : v_buffer0; };
+	const unsigned char *getMBuffer() const { return (detect_motion)? *m_buffer : *v_buffer; };
 
 	///returns size of video buffer
 	uint getVBSize() const { return v_bsize; };
@@ -122,25 +120,23 @@ public:
 	uint getHeight() const { return height; };
 
 private:
-	bool            inited;    ///< true if all is inited
+	bool            inited;			///< true if all is inited
 
-	_mutex          mutex;     ///< mutex, that serializes access to some info and video-audio buffers
+	_mutex          mutex;			///< mutex, that serializes access to some info and video-audio buffers
 
-	Sndstream       a_source;  ///< audio source (soundcard)
-	Vidstream       v_source;  ///< video source (video capture card)
-	AVIFile         av_output; ///< output file
+	Sndstream       a_source;		///< audio source (soundcard)
+	Vidstream       v_source;		///< video source (video capture card)
+	AVIFile         av_output;	///< output file
 
-	uint            a_bsize;   ///< size of audio buffer
-	unsigned char * a_buffer;  ///< sound buffer
+	BufferRing	*		a_buffer;		///< sound buffer ring
+	unsigned int		a_bsize;		///< sound buffer size
 
-	uint            v_bsize;   ///< size of video buffers
-	unsigned char * v_buffer0; ///< image buffer 0
-	unsigned char * v_buffer1; ///< image buffer 1
+	BufferRing	*		v_buffer;		///< video buffer ring
+	unsigned int		v_bsize;		///< video buffer size
 
-	unsigned char * m_buffer0; ///< image buffer 0 for motion detection
-	unsigned char * m_buffer1; ///< image buffer 1 for motion detection
+	BufferRing *		m_buffer;	///< image buffer ring for motion detection
 
-	unsigned char * erode_tmp; ///< temporary buffer to use with erode function
+	unsigned char * erode_tmp;	///< temporary buffer to use with erode function
 
 
 	//configuration//
@@ -172,6 +168,8 @@ private:
 	uint     min_gap;                   ///< time of no_motion that is required for starting new movie file
 	uint     min_record_time;           ///< movie duratioin that is required for starting new movie file
 	uint     post_motion_offset;        ///< when ther's no motion, continue recordig during this time
+	uint     latency;										///< number of buffers to write befor the one on which motion was detected
+	uint     audio_latency;							///< number of audio buffers equal in duration to the latency number of video frames
 
 	UTimer   record_timer;              ///< timer, that measures current file duration
 	UTimer   silence_timer;             ///< timer, that measures no_motion time
@@ -182,6 +180,7 @@ private:
 	                                    ///< than this value
 	uint     diff_step;                 ///< step in pixels that is used when difference between
                                     	///< frames is measured
+	uint     frames_step;								///< step in frames between the two compared ones
 	uint     noise_reduction_level;     ///< shows, how many times we need to erode captured image to
 	                                    ///< remove a noise
 
@@ -235,14 +234,20 @@ private:
 	///checks if current time is in any time window of schedule
 	bool time_in_window(time_t now);
 
-	///captures video frame and stores it in current video buffer
+	///captures video frame and stores it in video buffer ring
 	bool capture_frame();
+
+	///captures audio frame and stores it in audio buffer ring
+	void capture_sound();
 
 	///detects motion using current captured frame and previous one
 	uint measure_motion();
 
-	///write video frame to av_output
-	bool write_frame(unsigned char *frame, time_t now, uint diffs, uint level);
+	///writes video frame to av_output
+	bool write_frame(time_t now, uint diffs, uint level);
+
+	///writes sound frame to av_output
+	bool write_sound();
 
 	///generates avi filename according fname_format
 	string generate_fname();
@@ -265,19 +270,12 @@ static bool operator< (const tm &x, const tm &y)
 	    x.tm_hour*3600 + x.tm_min*60 + x.tm_sec <
 	    y.tm_hour*3600 + y.tm_min*60 + y.tm_sec;
 }
+
 static bool operator<=(const tm &x, const tm &y)
 {
 	return
 	    x.tm_hour*3600 + x.tm_min*60 + x.tm_sec <=
 	    y.tm_hour*3600 + y.tm_min*60 + y.tm_sec;
-}
-
-//simple swap of two pointers
-static void _swap(unsigned char * &x, unsigned char * &y)
-{
-	unsigned char * tmp = x;
-	x = y;
-	y = tmp;
 }
 
 
@@ -288,11 +286,9 @@ BaseRecorder<_mutex>::BaseRecorder()
 
 	a_buffer         = NULL;
 
-	v_buffer0        = NULL;
-	v_buffer1        = NULL;
+	v_buffer         = NULL;
 
-	m_buffer0        = NULL;
-	m_buffer1        = NULL;
+	m_buffer         = NULL;
 
 	erode_tmp        = NULL;
 
@@ -321,6 +317,7 @@ bool BaseRecorder<_mutex>::Init(string config_file)
 		log_message(1, "Recorder: Init: bad config file. Using default settings.");
 	return Init(config);
 }
+
 
 template<class _mutex>
 bool BaseRecorder<_mutex>::Init(const ConfigFile &config)
@@ -400,7 +397,7 @@ bool BaseRecorder<_mutex>::Init(const ConfigFile &config)
 			if(start < end)
 				rec_schedule.push_front(t_window(start, end));
 			else
-				log_message(1, "Recorder: Init: schedule: time window %s is discarded, because end point is earlyer the the start one.", win.c_str());
+				log_message(1, "Recorder: Init: schedule: time window %s is discarded, because end point is earlyer then the start one.", win.c_str());
 			win_list = win_list.substr(pos+1);
 		}
 	}
@@ -409,10 +406,12 @@ bool BaseRecorder<_mutex>::Init(const ConfigFile &config)
 	min_gap               = config.getOptionI("min_gap")            * 1000000;
 	min_record_time       = config.getOptionI("min_record_time")    * 1000000 * 60;
 	post_motion_offset    = config.getOptionI("post_motion_offset") * 1000000;
+	latency								= config.getOptionI("latency");
 
 	noise_level           = config.getOptionI("noise_level");
 	threshold             = config.getOptionI("threshold");
 	diff_step             = config.getOptionI("pixels_step");
+	frames_step           = config.getOptionI("frames_step");
 	noise_reduction_level = config.getOptionI("noise_reduction_level");
 
 	snd_noise_level_func  = config.getOptionI("snd_noise_level_func");
@@ -505,18 +504,17 @@ bool BaseRecorder<_mutex>::Init(const ConfigFile &config)
 	av_register_all();
 
 	lock();
-	a_bsize   = a_source.bsize();
-	a_buffer  = new unsigned char[a_bsize];
+	if(latency < 2) latency = 2;
+	audio_latency	= uint(latency*(1e6/frame_rate)/a_source.ptime()+1);
+	a_bsize   		= a_source.bsize();
+	a_buffer  		= new BufferRing(a_bsize, audio_latency);
 
-	v_bsize   = v_source.bsize();
-	v_buffer0 = new unsigned char[v_bsize];
-	v_buffer1 = new unsigned char[v_bsize];
+	v_bsize   		= v_source.bsize();
+	v_buffer			= new BufferRing(v_bsize, latency);
 
+	if(frames_step < 1) frames_step = 1;
 	if(detect_motion)
-	{
-		m_buffer0 = new unsigned char[v_bsize];
-		m_buffer1 = new unsigned char[v_bsize];
-	}
+		m_buffer = new BufferRing(v_bsize, frames_step+2);
 	unlock();
 
 	if(noise_reduction_level)
@@ -527,6 +525,7 @@ bool BaseRecorder<_mutex>::Init(const ConfigFile &config)
 	return inited;
 }
 
+
 template<class _mutex>
 void BaseRecorder<_mutex>::Close( )
 {
@@ -535,22 +534,16 @@ void BaseRecorder<_mutex>::Close( )
 
 	mutex.tryLock();
 	if(a_buffer)
-		delete[] a_buffer;
-	a_buffer  = NULL;
+		delete a_buffer;
+	a_buffer = NULL;
 
-	if(v_buffer0)
-		delete[] v_buffer0;
-	if(v_buffer1)
-		delete[] v_buffer1;
-	v_buffer0 = NULL;
-	v_buffer1 = NULL;
+	if(v_buffer)
+		delete v_buffer;
+	v_buffer = NULL;
 
-	if(m_buffer0)
-		delete[] m_buffer0;
-	if(m_buffer1)
-		delete[] m_buffer1;
-	m_buffer0 = NULL;
-	m_buffer1 = NULL;
+	if(m_buffer)
+		delete m_buffer;
+	m_buffer = NULL;
 
 	if(erode_tmp)
 		delete[] erode_tmp;
@@ -568,11 +561,14 @@ void BaseRecorder<_mutex>::Close( )
 
 
 template<class _mutex>
-bool BaseRecorder<_mutex>::RecordLoop( uint * signal )
+bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 {
 	if(!inited)	return false;
 
-	if(!av_output.Init() ||
+	//initialize output file
+	if(idle)
+		log_message(0, "Recorder: IdleLoop: starting recording simulation.");
+	else if(!av_output.Init() ||
 	   !av_output.setAParams(audio_codec, channels, sample_rate, aud_bitrate) ||
 	   !av_output.setVParams(video_codec, width, height, frame_rate, vid_bitrate, var_bitrate) ||
 	   !av_output.Open(generate_fname()))
@@ -582,12 +578,12 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal )
 		return false;
 	}
 
+	double  frame_time	= 1.0/frame_rate;
 	double  v_pts = 0;
 	double  a_pts = 0;
-	uint a_readed = 0;
-	time_t now;
+	time_t  now;
 
-	//capture the first frame for motion detection
+	//capture the first video frame for motion detection
 	lock();
 	if(detect_motion)
 	{
@@ -597,16 +593,16 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal )
 
 	//capture the first sound block for noise detection
 	if(detect_noise)
-		a_source.Read(a_buffer, a_bsize);
+		capture_sound();
 	unlock();
-
-//UTimer test; test.start(); //FIXME
 
 	//main record loop
 	while(*signal != SIG_QUIT)
 	{
 		now = time(0);
 
+
+		//check if present time between start time and stop time
 		switch(check_time(now))
 		{
 			case  0:
@@ -618,6 +614,8 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal )
 				goto exit_loop;
 		}
 
+
+		//check if present time is in schedule
 		if(!time_in_window(now))
 		{
 			if(recording)
@@ -629,23 +627,58 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal )
 			continue;
 		}
 
+
+		//changing the file
 		if(*signal == SIG_CHANGE_FILE)
 		{
-			av_output.Close();
-			if(!av_output.Init() ||
-				 !av_output.setAParams(audio_codec, channels, sample_rate, aud_bitrate) ||
-				 !av_output.setVParams(video_codec, width, height, frame_rate, vid_bitrate, var_bitrate) ||
-				 !av_output.Open(generate_fname()))
+			//but first, write latency buffer to the old one
+			while(!v_buffer->empty())
 			{
-				log_message(1, "Recorder: Init: unable to open output file");
-				Close();
-				return false;
+				if(detect_noise)
+					last_noise_level = a_source.Noise();
+				if(!idle)
+				{
+					write_sound();
+					a_pts = av_output.getApts();
+					v_pts = av_output.getVpts();
+				}
+				else
+				{
+					a_pts += a_source.ptime()*(a_buffer->rsize()/a_bsize)/1e6;
+					a_buffer->pop();
+				}
+
+				if(v_pts < a_pts || a_buffer->empty())
+				{
+					if(detect_motion)	last_diffs = measure_motion();
+					if(!idle) write_frame(now, last_diffs, last_noise_level);
+					else { v_pts += frame_time; v_buffer->pop(); }
+				}
 			}
+
+
+			//close the old and initialize the new one
+			if(!idle)
+			{
+				av_output.Close();
+				if(!av_output.Init() ||
+						!av_output.setAParams(audio_codec, channels, sample_rate, aud_bitrate) ||
+						!av_output.setVParams(video_codec, width, height, frame_rate, vid_bitrate, var_bitrate) ||
+						!av_output.Open(generate_fname()))
+				{
+					log_message(1, "Recorder: Init: unable to open output file");
+					Close();
+					return false;
+				}
+			}
+			else log_message(0, "Recorder: IdleLoop: switched to next file");
 			*signal = SIG_RECORDING;
 		}
 
+
+		//recording or waiting for motion or noise
 		lock();
-		if((record_on_motion || record_on_noise) && !recording)
+		if((record_on_motion || record_on_noise) && !recording) //just listen
 		{
 			if(silence_timer.elapsed() > min_gap && record_timer.elapsed() > min_record_time)
 			{
@@ -657,141 +690,18 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal )
 				continue;
 			}
 
-			a_readed = a_source.Read(a_buffer, a_bsize);
-			capture_frame();
+			capture_sound();
 			if(record_on_noise)
 				last_noise_level = a_source.Noise();
-			if(record_on_motion)
-				last_diffs = measure_motion();
+			a_pts += a_source.ptime()*(a_buffer->rsize()/a_bsize)/1e6;
 
-			if((record_on_motion && last_diffs) ||
-			   (record_on_noise  && last_noise_level)) //record previous and current frames
-			{
-				recording = true;
-				record_timer.start();
-				silence_timer.reset();
-
-				av_output.writeAFrame(a_buffer, a_readed);
-				write_frame(v_buffer1, time(0), last_diffs, last_noise_level);
-				write_frame(v_buffer0, time(0), last_diffs, last_noise_level);
-			}
-		}
-		else //record frames
-		{
-			a_readed = a_source.Read(a_buffer, a_bsize);
-			if(detect_noise)
-			{
-				last_noise_level = a_source.Noise();
-				if(record_on_noise && last_noise_level)
-					silence_timer.reset();
-			}
-			av_output.writeAFrame(a_buffer, a_readed);
-
-			a_pts = av_output.getApts();
-			v_pts = av_output.getVpts();
 			if(v_pts < a_pts)
 			{
-				//uint start = test.elapsed();
 				capture_frame();
-				if(detect_motion)
-				{
+				if(record_on_motion)
 					last_diffs = measure_motion();
-					if(record_on_motion && last_diffs)
-						silence_timer.reset();
-				}
-				write_frame(v_buffer0, now, last_diffs, last_noise_level);
+				v_pts += frame_time;
 			}
-
-			if((record_on_motion || record_on_noise) &&
-					silence_timer.elapsed() > post_motion_offset)
-			{
-				recording = false;
-				record_timer.pause();
-			}
-		}
-		unlock();
-
-next_loop:
-		continue;
-	}
-
-exit_loop:
-	return true;
-}
-
-template<class _mutex>
-bool BaseRecorder<_mutex>::IdleLoop( uint * signal )
-{
-
-	if(!inited)	return false;
-	log_message(0, "Recorder: IdleLoop: starting recording simulation.");
-
-	uint a_readed = 0;
-	time_t now;
-	double v_pts = 0;
-	double a_pts = 0;
-	double frame_time = 1.0/frame_rate;
-
-	//capture the first frame for motion detection
-	lock();
-	if(detect_motion)
-	{
-		capture_frame();
-		measure_motion();
-	}
-
-	//capture the first sound block for noise detection
-	if(detect_noise)
-		a_source.Read(a_buffer, a_bsize);
-	unlock();
-
-	//main record loop
-	while(*signal != SIG_QUIT)
-	{
-		now = time(0);
-
-		switch(check_time(now))
-		{
-			case  0:
-				break;
-			case -1:
-				sleep(1);
-				goto next_loop;
-			case  1:
-				goto exit_loop;
-		}
-
-		if(!time_in_window(now))
-		{
-			if(recording)
-			{
-				recording = false;
-				record_timer.pause();
-			}
-			sleep(1);
-			continue;
-		}
-
-		lock();
-		if((record_on_motion || record_on_noise) && !recording)
-		{
-			if(silence_timer.elapsed() > min_gap && record_timer.elapsed() > min_record_time)
-			{
-				*signal = SIG_RECORDING;
-				silence_timer.reset();
-				record_timer.reset();
-				record_timer.pause();
-				unlock();
-				log_message(0, "Recorder: IdleLoop: switching to next file");
-				continue;
-			}
-
-			a_source.Read(a_buffer, a_bsize);
-			capture_frame();
-			if(record_on_noise)
-				last_noise_level = a_source.Noise();
-			if(record_on_motion)
-				last_diffs = measure_motion();
 
 			if((record_on_motion && last_diffs) ||
 			   (record_on_noise  && last_noise_level))
@@ -799,19 +709,30 @@ bool BaseRecorder<_mutex>::IdleLoop( uint * signal )
 				recording = true;
 				record_timer.start();
 				silence_timer.reset();
-				log_message(0, "Recorder: IdleLoop: motion or noise detected. Start recording.");
+				if(idle) log_message(0, "Recorder: IdleLoop: motion or noise detected. Start recording.");
 			}
 		}
-		else //capture frames
+		else //record frames
 		{
-			a_readed = a_source.Read(a_buffer, a_bsize);
+			capture_sound();
 			if(detect_noise)
 			{
 				last_noise_level = a_source.Noise();
 				if(record_on_noise && last_noise_level)
 					silence_timer.reset();
 			}
-			a_pts += a_source.ptime()*(a_readed/a_bsize)/1e6;
+			if(!idle)
+			{
+				write_sound();
+				a_pts = av_output.getApts();
+				v_pts = av_output.getVpts();
+			}
+			else
+			{
+				a_pts += a_source.ptime()*(a_buffer->rsize()/a_bsize)/1e6;
+				a_buffer->pop();
+			}
+
 
 			if(v_pts < a_pts)
 			{
@@ -822,15 +743,17 @@ bool BaseRecorder<_mutex>::IdleLoop( uint * signal )
 					if(record_on_motion && last_diffs)
 						silence_timer.reset();
 				}
-				v_pts += frame_time;
+				if(!idle) write_frame(now, last_diffs, last_noise_level);
+				else { v_pts += frame_time; v_buffer->pop(); }
 			}
+
 
 			if((record_on_motion || record_on_noise) &&
 					silence_timer.elapsed() > post_motion_offset)
 			{
 				recording = false;
 				record_timer.pause();
-				log_message(0, "Recorder: IdleLoop: no motion or noise. Pause recording.");
+				if(idle) log_message(0, "Recorder: IdleLoop: no motion or noise. Pause recording.");
 			}
 		}
 		unlock();
@@ -839,10 +762,10 @@ next_loop:
 		continue;
 	}
 
-	log_message(0, "Recorder: IdleLoop: end of recording simulation.");
 exit_loop:
 	return true;
 }
+
 
 template<class _mutex>
 string BaseRecorder<_mutex>::generate_fname()
@@ -853,56 +776,84 @@ string BaseRecorder<_mutex>::generate_fname()
 	return string(output_dir + name);
 }
 
+
 template<class _mutex>
-bool BaseRecorder<_mutex>::write_frame(unsigned char * frame, time_t now, uint diffs, uint level)
+bool BaseRecorder<_mutex>::write_frame(time_t now, uint diffs, uint level)
 {
-	if(!inited)
-		return false;
+	if(!inited || v_buffer->empty())	return false;
+
 	if(print_date)
 	{
 		string date = ctime(&now);
 		date.erase(date.size()-1);
-		PrintText(frame, date, width-5-TextWidth(date), height-5, width, height);
+		PrintText(*v_buffer, date, width-5-TextWidth(date), height-5, width, height);
 	}
 	if(print_diffs)
 	{
 		char diffs_str[10] = {'\0'};
 		sprintf(diffs_str, "%d", diffs);
-		PrintText(frame, diffs_str,	width-5-TextWidth(diffs_str), 10, width, height);
+		PrintText(*v_buffer, diffs_str,	width-5-TextWidth(diffs_str), 10, width, height);
 	}
 	if(print_level)
 	{
 		char level_str[10] = {'\0'};
 		sprintf(level_str, "%d", level);
-		PrintText(frame, level_str,	width-5-TextWidth(level_str), 20, width, height);
+		PrintText(*v_buffer, level_str,	width-5-TextWidth(level_str), 20, width, height);
 	}
 
-	return av_output.writeVFrame(frame, width, height);
+	bool err = av_output.writeVFrame(*v_buffer, width, height);
+	v_buffer->pop();
+	return err;
 }
+
 
 template<class _mutex>
-uint BaseRecorder<_mutex>::measure_motion( )
+bool BaseRecorder<_mutex>::write_sound()
 {
-	if(!inited || !detect_motion)
-		return false;
-	_swap(m_buffer0, m_buffer1);
-	memcpy(m_buffer0, v_buffer0, v_bsize);
+	if(!inited || a_buffer->empty())	return false;
 
-	for(int i = noise_reduction_level; i > 0; i--)
-		erode(m_buffer0);
-
-	return fast_diff(m_buffer1, m_buffer0);
+	bool err = av_output.writeAFrame(*a_buffer, a_buffer->rsize());
+	a_buffer->pop();
+	return err;
 }
+
 
 template<class _mutex>
 bool BaseRecorder<_mutex>::capture_frame()
 {
-	if(!inited)
-		return false;
+	if(!inited)	return false;
 
-	_swap(v_buffer0, v_buffer1);
-	return v_source.Read(v_buffer0, v_bsize);
+	bool err = v_source.Read(v_buffer->wbuffer(), v_bsize);
+	v_buffer->push(v_bsize);
+	return err;
 }
+
+
+template<class _mutex>
+void BaseRecorder<_mutex>::capture_sound()
+{
+	if(!inited) return;
+
+	unsigned int a_readed = a_source.Read(a_buffer->wbuffer(), a_bsize);
+	a_buffer->push(a_readed);
+}
+
+
+template<class _mutex>
+uint BaseRecorder<_mutex>::measure_motion( )
+{
+	if(!inited || !detect_motion || v_buffer->empty()) return 0;
+
+	memcpy(m_buffer->wbuffer(), *v_buffer, v_bsize);
+	for(int i = noise_reduction_level; i > 0; i--)
+		erode(m_buffer->wbuffer());
+	m_buffer->push();
+
+	if(m_buffer->filled_size() <= frames_step) return 1000;
+
+	return fast_diff(*m_buffer, (*m_buffer)[-frames_step]);
+}
+
 
 template<class _mutex>
 bool BaseRecorder<_mutex>::time_in_window(time_t now)
@@ -919,6 +870,7 @@ bool BaseRecorder<_mutex>::time_in_window(time_t now)
 	return ret;
 }
 
+
 template<class _mutex>
 int  BaseRecorder<_mutex>::check_time(time_t now)
 {
@@ -930,6 +882,7 @@ int  BaseRecorder<_mutex>::check_time(time_t now)
 			return  1;
 	return 0;
 }
+
 
 template<class _mutex>
 uint BaseRecorder<_mutex>::fast_diff( unsigned char * old_img, unsigned char * new_img )
@@ -951,6 +904,7 @@ uint BaseRecorder<_mutex>::fast_diff( unsigned char * old_img, unsigned char * n
 	diffs -= threshold;
 	return (uint) (diffs<0)? 0 : diffs;
 }
+
 
 template<class _mutex>
 int BaseRecorder<_mutex>::erode(unsigned char * img)

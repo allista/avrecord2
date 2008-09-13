@@ -1,0 +1,16 @@
+Begin3
+Title:          avrtuner -- Some description
+Version:        0.1
+Entered-date:   
+Description:    
+Keywords:       KDE Qt
+Author:         Allis Tauri <allista@gmail.com>
+Maintained-by:  Allis Tauri <allista@gmail.com>
+Home-page:      
+Alternate-site: 
+Primary-site:   ftp://ftp.kde.org/pub/kde/unstable/apps/utils
+                xxxxxx  avrtuner-0.1.tar.gz
+                xxx     avrtuner-0.1.lsm
+Platform:       Linux. Needs KDE
+Copying-policy: GPL
+End

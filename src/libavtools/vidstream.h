@@ -23,8 +23,13 @@
 #ifndef VIDSTREAM_H
 #define VIDSTREAM_H
 
+typedef unsigned long long __u64;
+typedef long long __s64;
 #include <sys/mman.h>
 #include <linux/videodev.h>
+
+#include <vector>
+using namespace std;
 
 #include "common.h"
 #include "utimer.h"
@@ -46,7 +51,54 @@ enum
     NORM_NTSC     = 1,
     NORM_SECAM    = 2,
 		NORM_PAL_NC   = 3,
+		NORM_PAL_M		= 4,
+		NORM_PAL_N		= 5,
+		NORM_NTSC_JP	= 6,
+		NORM_PAL_60		= 7,
+
     NORM_DEFAULT  = 0
+};
+
+static const char *pallets[] =
+{
+	"PALLET UNDEFINED",
+	"VIDEO_PALETTE_GREY",			/* 1 Linear greyscale */
+	"VIDEO_PALETTE_HI240",		/* 2 High 240 cube (BT848) */
+	"VIDEO_PALETTE_RGB565",		/* 3 565 16 bit RGB */
+	"VIDEO_PALETTE_RGB24", 		/* 4 24bit RGB */
+	"VIDEO_PALETTE_RGB32", 		/* 5 32bit RGB */
+	"VIDEO_PALETTE_RGB555", 	/* 6 555 15bit RGB */
+	"VIDEO_PALETTE_YUV422", 	/* 7 YUV422 capture */
+	"VIDEO_PALETTE_YUYV", 		/* 8 */
+	"VIDEO_PALETTE_UYVY", 		/* 9 The great thing about standards is ... */
+	"VIDEO_PALETTE_YUV420", 	/* 10 */
+	"VIDEO_PALETTE_YUV411", 	/* 11 YUV411 capture */
+	"VIDEO_PALETTE_RAW", 			/* 12 RAW capture (BT848) */
+	"VIDEO_PALETTE_YUV422P",	/* 13 YUV 4:2:2 Planar */
+	"VIDEO_PALETTE_YUV411P",	/* 14 YUV 4:1:1 Planar */
+	"VIDEO_PALETTE_YUV420P",	/* 15 YUV 4:2:0 Planar */
+	"VIDEO_PALETTE_YUV410P",	/* 16 YUV 4:1:0 Planar */
+};
+
+static const uint used_pallets[] =
+{
+	0,
+	1,
+	0,
+ 	0,
+	4,
+  0,
+	0,
+	7,
+ 	0,
+	0,
+ 	0,
+	0,
+ 	0,
+	0,
+ 	0,
+ 	15,
+ 	0
 };
 
 ///encapsulates simple grabbing work with v4l device
@@ -57,61 +109,60 @@ public:
 	~Vidstream() { Close(); };
 
 	///opens a video device
-	bool Open(char *device, ///< name of the video device to open
-						uint w = 640, ///< width of captured images
-						uint h = 480, ///< height of captured images
+	bool Open(const char *device,       ///< name of the video device to open
+						uint w = 640,             ///< width of captured images
+						uint h = 480,             ///< height of captured images
 						int source = IN_DEFAULT,  ///< grab source
 						int mode   = NORM_DEFAULT ///< grab mode
 					 );
 
 	///sets picture parameters (color, hue, brightness, contrast...)
-	void setPicParams(int br,       ///< Picture brightness
-										int cont,     ///< Picture contrast
-										int hue = -1, ///< Picture hue (colour only)
-										int col = -1, ///< Picture colour (colour only)
-										int wit = -1  ///< Picture whiteness (greyscale only)
+	void setPicParams(uint br,       ///< Picture brightness
+										uint cont,     ///< Picture contrast
+										uint hue = -1, ///< Picture hue (colour only)
+										uint col = -1, ///< Picture colour (colour only)
+										uint wit = -1  ///< Picture whiteness (greyscale only)
 									 );
 
 	///closes video device
 	void Close();
 
-	///prepare double buffer to future capture.
-	///must be called strictly before first Read
-	void Prepare() { 	if(vid_dev > 0) prepare_frame(0); };
-
 	///grabs an image from the device and stores it in the 'buffer'
 	bool Read(unsigned char* buffer, uint bsize);
 
 	///make a simple grab benchmark to determine an average period duration
-	double ptime(uint frames = 10);
+	uint ptime(uint frames = 25);
+
+	///returns required video buffer size according to used pallet
+	uint bsize() const { return b_size; };
 
 private:
 	int  vid_dev;  ///< pointer to opened video device
 
-	unsigned char*   map_buffer0; ///< mmap buffer for frame 0
-	unsigned char*   map_buffer1; ///< mmap buffer for frame 1
+	vector<unsigned char*> map_buffers; ///< mmap buffers
+	int                    p_frame;     ///< last prepaired frame
+
 	video_capability vid_cap;     ///< video capabilities
 	video_channel    vid_channel; ///< grab source and mode
 	video_mbuf       vid_buffer;  ///< device video buffer
 	video_mmap       vid_mmap;    ///< video mmap
 
-	int  p_frame;  ///< last prepaired frame
-
 	uint width;    ///< width of a grabbing image
 	uint height;   ///< height of a grabbing image
+	uint b_size;   ///< pallet speciffic size of video buffer
 
 	//functions
 	///prepairs to capture a frame 'n'
-	bool prepare_frame(uint fnum);
+	bool prepare_frame(int fnum);
 
 	///captures a frame 'n'
-	bool capture_frame(uint fnum);
+	bool capture_frame(int fnum);
 
 	///converts yuv422 image to yuv420p
-	void yuv422_to_yuv420p(unsigned char *dest, unsigned char *src, int w, int h) const;
+	static void yuv422_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h);
 
 	///converts rgb24 image to yuv420p
-	void rgb24_to_yuv420p(unsigned char *dest, unsigned char *src, int w, int h) const;
+	static void rgb24_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h);
 };
 
 #endif

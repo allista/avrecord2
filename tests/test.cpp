@@ -34,6 +34,9 @@
 #include <math.h>
 #include <signal.h>
 
+#include <qthread.h>
+#include <qmutex.h>
+
 using namespace std;
 
 #include <sndstream.h>
@@ -51,6 +54,74 @@ void log_message(int level, const char *fmt, ...);
 static void setup_signals(struct sigaction *sig_handler_action);
 static void sig_handler(int signo);
 
+class Thread1 : public QThread
+{
+	public:
+		void stop()
+		{
+			_mutex.unlock();
+			terminate();
+		};
+
+		void lock() { _mutex.lock(); };
+		void unlock() { _mutex.unlock(); };
+
+	protected:
+		void run()
+		{
+			while(true)
+			{
+
+				log_message(0, "Thread1: locking...");
+				_mutex.lock();
+				log_message(0, "Thread1: locked");
+				int i = 0;
+				i++;
+				msleep(3);
+				log_message(0, "Thread1: unlocking...\n");
+				_mutex.unlock();
+				usleep(5);
+			}
+		};
+
+	private:
+		QMutex _mutex;
+};
+
+class Thread2 : public QThread
+{
+	public:
+		void stop()
+		{
+			thread.unlock();
+			thread.stop();
+			thread.wait();
+			terminate();
+		};
+
+	protected:
+		void run()
+		{
+			thread.start();
+			int total = 100;
+			while(total--)
+			{
+				log_message(0, "Thread2: locking...");
+				thread.lock();
+				log_message(0, "Thread2: locked");
+				int i = 0;
+				i++;
+				log_message(0, "Thread2: unlocking...\n");
+				thread.unlock();
+				msleep(7);
+			}
+			stop();
+		};
+
+	private:
+		Thread1 thread;
+};
+
 int main(int argc, char *argv[])
 {
 	//testing section//
@@ -62,6 +133,11 @@ int main(int argc, char *argv[])
 	sleep(1);
 	cout << test.elapsed() << endl;
 	///////////////////
+
+	Thread2 thread;
+
+	thread.start();
+	thread.wait();
 
 // 	struct sigaction sig_handler_action;
 // 	setup_signals(&sig_handler_action);
@@ -144,8 +220,8 @@ void log_message(int level, const char *fmt, ...)
 	strcat(buf, "\n");
 
 	//output...
-	if(level)	cerr << buf; //log to stderr
-	else cout << buf; //log to stdout
+	if(level)	cerr << buf << flush; //log to stderr
+	else cout << buf << flush; //log to stdout
 
 	//Clean up the argument list routine
 	va_end(ap);

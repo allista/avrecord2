@@ -68,7 +68,8 @@ public:
 	bool Open(int  mode  = SND_R,     ///< i/o mode
 	          uint fmt   = SND_16BIT, ///< pcm format
 	          uint chans = 2,         ///< number of channels
-	          uint rte   = 44100      ///< samples per second
+	          uint rte   = 44100,     ///< samples per second
+						uint desired_frames = 0 ///< desired number of frames per capture operation
 	         );
 
 	void Close(); ///< closes soundstream
@@ -121,13 +122,13 @@ private:
 	uint   channels;             ///< number of channels
 	double amp_level;            ///< ampliffication level
 	double sig_offset;           ///< vertical signal offset
-	uint   threshold;            ///< signal threshold for "record on noise"
+	int    threshold;            ///< signal threshold for "record on noise"
 	int    level_func;           ///< math function for level calculations
 	uint   noise_level;          ///< level of detected noise
 
 	snd_pcm_uframes_t frames;    ///< number of frames in a single read period
 	uint  framesize;             ///< size of one frame in bytes
-	uint _bsize;                 ///< size of a single read period in bytes
+	snd_pcm_uframes_t _bsize;    ///< size of a single read period in bytes
 	uint _ptime;                 ///< time width of a read period in microseconds
 };
 

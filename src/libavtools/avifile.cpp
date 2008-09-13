@@ -118,7 +118,13 @@ bool AVIFile::setVParams(string codec_name,
 	vcodec->gop_size       = 12;
 	/* Set the picture format - need in ffmpeg starting round April-May 2005 */
 	vcodec->pix_fmt = PIX_FMT_YUV420P;
-	if(vbr) vcodec->flags |= CODEC_FLAG_QSCALE;
+	if(vbr)
+	{
+		vcodec->flags |= CODEC_FLAG_QSCALE;
+		vcodec->bit_rate_tolerance = bps/20;
+		vcodec->qmin = (vbr-2 < 2)? 2 : vbr-2;
+		vcodec->qmax = (vbr+2 > 31)? 31 : vbr+2;
+	}
 
 	/* Set codec specific parameters. */
 	/* some formats want stream headers to be separate */
@@ -174,7 +180,7 @@ bool AVIFile::setAParams(string codec_name,
 	/* Setup audio codec id */
 	o_file->oformat->audio_codec = get_codec_id(codec_name, CODEC_TYPE_AUDIO);
 
-	/* Create a new video stream and initialize the codecs */
+	/* Create a new audio stream and initialize the codecs */
 	if(o_file->oformat->audio_codec != CODEC_ID_NONE)
 	{
 		astream = av_new_stream(o_file, 0);
@@ -187,7 +193,7 @@ bool AVIFile::setAParams(string codec_name,
 	}
 	else
 	{
-		/* We did not get a proper video codec. */
+		/* We did not get a proper audio codec. */
 		log_message(1, "AVIFile: Failed to obtain a proper audio codec");
 		cleanup();
 		return false;
@@ -199,7 +205,7 @@ bool AVIFile::setAParams(string codec_name,
 	acodec->codec_type = CODEC_TYPE_AUDIO;
 
 	/* Set default parameters */
-	acodec->bit_rate      = bps;
+	acodec->bit_rate      				= bps;
 	//smaple rate of audio stream
 	acodec->sample_rate   = rate;
 	//channels of audio stream
@@ -227,7 +233,12 @@ bool AVIFile::setAParams(string codec_name,
 	else _opened |= INIT_ACODEC;
 
 	/* allocate output buffer and fifo */
-	afifo   = Fifo(2 * MAX_AUDIO_PACKET_SIZE);
+	if(acodec->frame_size > 1)
+	{
+		a_fsize = acodec->frame_size * 2 * acodec->channels;
+		afifo   = Fifo<uint8_t>(2 * MAX_AUDIO_PACKET_SIZE);
+	}
+
 	a_bsize = 4 * MAX_AUDIO_PACKET_SIZE; //taked from "ffmpeg" program (ffmpeg library)
 	abuffer = (uint8_t*)malloc(a_bsize);
 	if(!abuffer)
@@ -407,15 +418,14 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 	if(!opened() || !size) return false;
 	int ret      = 0;
 	int out_size = 0;
+	AVPacket pkt;
 
 	if(acodec->frame_size > 1)
 	{
-		int frame_bytes = aframe_size();
-		uint8_t* tmp = new uint8_t[frame_bytes];
+		uint8_t* tmp = new uint8_t[a_fsize];
 		afifo.write(samples, size);
-		while(afifo.read(tmp, frame_bytes))
+		while(afifo.read(tmp, a_fsize))
 		{
-			AVPacket pkt;
 			av_init_packet(&pkt); // init static structure
 			out_size = avcodec_encode_audio(acodec, abuffer, a_bsize, (short*)tmp);
 			if(out_size != 0)
@@ -429,6 +439,7 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 				pkt.size = out_size;
 				ret |= av_interleaved_write_frame(o_file, &pkt);
 			}
+			av_free_packet(&pkt);
 		}
 		delete[] tmp;
 	}
@@ -461,9 +472,7 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 				break;
 		}
 
-		AVPacket pkt;
 		av_init_packet(&pkt); // init static structure
-
 		out_size = avcodec_encode_audio(acodec, abuffer, size, (short*)(samples));
 		if(out_size != 0)
 		{
@@ -476,6 +485,7 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 			pkt.size = out_size;
 			ret |= av_interleaved_write_frame(o_file, &pkt);
 		}
+		av_free_packet(&pkt);
 	}
 
 	if(ret != 0)
@@ -489,8 +499,8 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 
 void AVIFile::Close()
 {
-	log_message(0, "AVIFile: Closing avi file...");
 	if(!opened()) return;
+	log_message(0, "AVIFile: Closing avi file...");
 	av_write_trailer(o_file);
 	cleanup();
 }
@@ -546,10 +556,4 @@ CodecID AVIFile::get_codec_id(string name, int codec_type) const
 		codec = codec->next;
 	}
 	return (codec)? codec->id : CODEC_ID_NONE;
-}
-
-uint AVIFile::aframe_size() const
-{
-	if(!opened() || !acodec) return 0;
-	return acodec->frame_size * 2 * acodec->channels;
 }

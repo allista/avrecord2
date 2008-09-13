@@ -28,6 +28,7 @@
 #include <sys/ioctl.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include <iostream>
 using namespace std;
@@ -37,16 +38,14 @@ using namespace std;
 Vidstream::Vidstream()
 {
 	vid_dev     = -1;
-	map_buffer0 = NULL;
-	map_buffer1 = NULL;
 
-	p_frame     = -1;
+	p_frame     = 0;
 
 	width       = 0;
 	height      = 0;
 }
 
-bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
+bool Vidstream::Open(const char * device, uint w, uint h, int source, int mode)
 {
 	width  = w;
 	height = h;
@@ -70,6 +69,7 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 	//setup grab source and mode
 	vid_channel.channel = source;
 	vid_channel.norm    = mode;
+	vid_channel.type		= VIDEO_TYPE_CAMERA;
 	if(ioctl(vid_dev, VIDIOCSCHAN, &vid_channel) == -1)
 	{
 		log_message(1, "ioctl: setting video channel failed");
@@ -77,7 +77,7 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 		return false;
 	}
 
-	//set device video buffer using norma 'read'
+	//set device video buffer using normal 'read'
 	if(ioctl(vid_dev, VIDIOCGMBUF, &vid_buffer) == -1)
 	{
 		log_message(1, "Vidstream: unable to set device video buffer");
@@ -85,60 +85,93 @@ bool Vidstream::Open(char * device, uint w, uint h, int source, int mode)
 		return false;
 	}
 
-	//init mmap buffer and pointers to the frames of doublebuffering
-	map_buffer0 = (unsigned char*) mmap(0, vid_buffer.size, PROT_READ|PROT_WRITE, MAP_SHARED, vid_dev, 0);
-
-	//check if the video device supports double buffering
-	if(vid_buffer.frames > 1)	map_buffer1 = (unsigned char*) map_buffer0 + vid_buffer.offsets[1];
-	//if not, set second frame buffer to point to the first.
-	//all will work fine, but without real doublebuffering
-	else map_buffer1 = map_buffer0;
-	if(int(map_buffer0) == -1)
+	//init mmap buffer and pointers to the frames of multibuffering
+	map_buffers = vector<unsigned char*>(vid_buffer.frames);
+	map_buffers[0] = (unsigned char*) mmap(0, vid_buffer.size, PROT_READ|PROT_WRITE, MAP_SHARED, vid_dev, 0);
+	if(int(map_buffers[0]) == -1)
 	{
 		log_message(1, "Vidstream: mmap() failed");
 		Close();
 		return false;
 	}
+	for(int i=1; i<map_buffers.size(); i++)
+		map_buffers[i] = (unsigned char*) map_buffers[0] + vid_buffer.offsets[i];
 
-	//setup pallets for each frame of doublebuffering
-	for(int i=0; i<2; i++)
+	//setup pallet
+	vid_mmap.frame  = 0;
+	vid_mmap.width  = width;
+	vid_mmap.height = height;
+	int pallet			= 0;
+	if(mode == NORM_PAL_NC && used_pallets[VIDEO_PALETTE_GREY])
 	{
-		vid_mmap.format = VIDEO_PALETTE_YUV420P;
-		vid_mmap.frame  = i;
-		vid_mmap.width  = width;
-		vid_mmap.height = height;
+		pallet = VIDEO_PALETTE_GREY;
+		vid_mmap.format = used_pallets[VIDEO_PALETTE_GREY];
 		if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
 		{
-			log_message(1, "Vidstream: Faild with YUV20P, trying YUV422 palette");
-			vid_mmap.format = VIDEO_PALETTE_YUV422;;
-			/* Try again... */
-			if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
-			{
-				log_message(1, "Vidstream: Failed with YUV422, trying RGB24 palette");
-				vid_mmap.format = VIDEO_PALETTE_RGB24;
-				/* Try again... */
-				if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
-				{
-					log_message(1, "Vidstream: Failed with RGB24, trying GREYSCALE palette");
-					vid_mmap.format = VIDEO_PALETTE_GREY;
-					/* Try one last time... */
-					if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
-					{
-						log_message(1, "Vidstream: Failed with all supported pallets. Unable to use this device");
-						Close();
-						return false;
-					}
-				}
-			}
+			log_message(1, "Vidstream: Faild setting %s palette...", pallets[vid_mmap.format]);
+			pallet = 0;
 		}
+	}
+	if(!pallet) for(pallet = 16; pallet > 0; pallet--)
+	{
+		vid_mmap.format = used_pallets[pallet];
+		if(!vid_mmap.format) continue;
+		if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
+		{
+			log_message(1, "Vidstream: Faild setting %s palette...", pallets[vid_mmap.format]);
+			continue;
+		}
+		else break;
+	}
+	if(!pallet) { Close(); return false; }
+
+	switch (vid_mmap.format)
+	{
+		case VIDEO_PALETTE_YUV420P:
+			b_size = (width*height*3)/2;
+			break;
+		case VIDEO_PALETTE_YUV422:
+			b_size = (width*height*2);
+			break;
+		case VIDEO_PALETTE_RGB24:
+			b_size = (width*height*3);
+			break;
+		case VIDEO_PALETTE_RGB32:
+			b_size = (width*height*4);
+			break;
+
+		case VIDEO_PALETTE_HI240:
+		case VIDEO_PALETTE_RGB565:
+		case VIDEO_PALETTE_RGB555:
+		case VIDEO_PALETTE_YUYV:
+		case VIDEO_PALETTE_UYVY:
+		case VIDEO_PALETTE_YUV420:
+		case VIDEO_PALETTE_YUV411:
+		case VIDEO_PALETTE_RAW:
+		case VIDEO_PALETTE_YUV422P:
+		case VIDEO_PALETTE_YUV411P:
+		case VIDEO_PALETTE_YUV410P:
+			b_size = (width*height*3);
+			break;
+
+		case VIDEO_PALETTE_GREY:
+			b_size = width*height;
+			break;
+
+		default: b_size = (width*height*3);
 	}
 
 	//wait for completion of all operations with video device
 	usleep(500000);
+
+	//make test capture in order to "heat up" capturing interface =)
+	ptime(map_buffers.size());
+
+	//all is done
 	return true;
 }
 
-void Vidstream::setPicParams( int br, int cont, int hue, int col, int wit )
+void Vidstream::setPicParams( uint br, uint cont, uint hue, uint col, uint wit )
 {
 	if(vid_dev <= 0) return;
 
@@ -152,11 +185,11 @@ void Vidstream::setPicParams( int br, int cont, int hue, int col, int wit )
 	}
 
 	//change params
-	if(br  >=0) pic.brightness = br;   //Picture brightness
-	if(hue >=0) pic.hue        = hue;  //Picture hue (colour only)
-	if(col >=0) pic.colour     = col;  //Picture colour (colour only)
-	if(cont>=0) pic.contrast   = cont; //Picture contrast
-	if(wit >=0) pic.whiteness  = wit;  //Picture whiteness (greyscale only)
+	pic.brightness = br;   //Picture brightness
+	pic.hue        = hue;  //Picture hue (colour only)
+	pic.colour     = col;  //Picture colour (colour only)
+	pic.contrast   = cont; //Picture contrast
+	pic.whiteness  = wit;  //Picture whiteness (greyscale only)
 
 	//set current params
 	if(ioctl(vid_dev, VIDIOCSPICT, &pic) == -1)
@@ -168,10 +201,9 @@ void Vidstream::setPicParams( int br, int cont, int hue, int col, int wit )
 
 void Vidstream::Close()
 {
-	if(int(map_buffer0) > 0)
-		munmap(map_buffer0, vid_buffer.size);
-	map_buffer0 = NULL;
-	map_buffer1 = NULL;
+	if(int(map_buffers[0])  != -1)
+		munmap(map_buffers[0], vid_buffer.size);
+	map_buffers.clear();
 
 	if(vid_dev > 0)
 		close(vid_dev);
@@ -182,16 +214,36 @@ bool Vidstream::Read(unsigned char * buffer, uint bsize)
 {
 	if(vid_dev <= 0) return false;
 
+	/* Block signals during IOCTL */
+	sigset_t  set, old;
+	sigemptyset (&set);
+	sigaddset (&set, SIGCHLD);
+	sigaddset (&set, SIGALRM);
+	sigaddset (&set, SIGUSR1);
+	sigaddset (&set, SIGTERM);
+	sigaddset (&set, SIGHUP);
+	pthread_sigmask (SIG_BLOCK, &set, &old);
+
 	//prepare the next one
-	if(!prepare_frame(!p_frame))
+	if(!prepare_frame(p_frame))
+	{
+		pthread_sigmask (SIG_UNBLOCK, &old, NULL);
 		return false;
+	}
 
 	//capture prepared frame
-	if(!capture_frame(!p_frame))
+	uint c_frame = p_frame;
+	if(!capture_frame(c_frame))
+	{
+		pthread_sigmask (SIG_UNBLOCK, &old, NULL);
 		return false;
+	}
+
+	/*undo the signal blocking*/
+	pthread_sigmask (SIG_UNBLOCK, &old, NULL);
 
 	//copy captured frame and convert it if needed
-	unsigned char* map_buffer = (p_frame)? map_buffer0 : map_buffer1;
+	unsigned char* map_buffer = map_buffers[c_frame];
 	switch(vid_mmap.format)
 	{
 		case VIDEO_PALETTE_RGB24:
@@ -207,18 +259,39 @@ bool Vidstream::Read(unsigned char * buffer, uint bsize)
 	return true;
 }
 
-double Vidstream::ptime(uint frames)
+bool Vidstream::prepare_frame(int fnum)
+{
+	if(--fnum < 0) fnum = map_buffers.size()-1;
+	vid_mmap.frame = fnum;
+	if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
+	{
+		log_message(1, "Vidstream: capturing failed");
+		return false;
+	}
+	return true;
+}
+
+bool Vidstream::capture_frame(int fnum)
+{
+	p_frame = (fnum+1 >= map_buffers.size())? 0 : fnum+1;
+	if(ioctl(vid_dev, VIDIOCSYNC, &fnum) == -1)
+	{
+		log_message(1, "Vidstream: syncing failed");
+		return false;
+	}
+	return true;
+}
+
+uint Vidstream::ptime(uint frames)
 {
 	if(vid_dev <= 0) return 0;
-	prepare_frame(0);
 
 	UTimer timer;
-	uint bsize = width*height*3;
-	unsigned char* buffer = new unsigned char[bsize];
+	unsigned char* buffer = new unsigned char[b_size];
 
 	timer.start();
 	for(int i=0; i<frames; i++)
-		Read(buffer, bsize);
+		Read(buffer, b_size);
 	timer.stop();
 
 	delete[] buffer;
@@ -228,9 +301,10 @@ double Vidstream::ptime(uint frames)
 
 
 //private functions
-void Vidstream::yuv422_to_yuv420p(unsigned char *dest, unsigned char *src, int w, int h) const
+void Vidstream::yuv422_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h)
 {
-	unsigned char *src1, *dest1, *src2, *dest2;
+	const unsigned char *src1, *src2;
+	unsigned char       *dest1, *dest2;
 	int i, j;
 
 	/* Create the Y plane */
@@ -265,10 +339,10 @@ void Vidstream::yuv422_to_yuv420p(unsigned char *dest, unsigned char *src, int w
 	}
 }
 
-void Vidstream::rgb24_to_yuv420p(unsigned char *dest, unsigned char *src, int w, int h) const
+void Vidstream::rgb24_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h)
 {
-	unsigned char *y, *u, *v;
-	unsigned char *r, *g, *b;
+	unsigned char       *y, *u, *v;
+	const unsigned char *r, *g, *b;
 	int i, loop;
 
 	b = src;
@@ -308,25 +382,3 @@ void Vidstream::rgb24_to_yuv420p(unsigned char *dest, unsigned char *src, int w,
 	}
 }
 
-bool Vidstream::prepare_frame(uint fnum)
-{
-	vid_mmap.frame  = fnum;
-	if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
-	{
-		log_message(1, "Vidstream: capturing failed");
-		return false;
-	}
-	p_frame = fnum;
-	return true;
-}
-
-bool Vidstream::capture_frame(uint fnum)
-{
-	vid_mmap.frame  = fnum;
-	if(ioctl(vid_dev, VIDIOCSYNC, &vid_mmap) == -1)
-	{
-		log_message(1, "Vidstream: syncing failed");
-		return false;
-	}
-	return true;
-}

@@ -36,19 +36,20 @@ Sndstream::Sndstream()
 	channels  = 0;
 	dev_mode  = 0;
 
-	amp_level  = 1;
-	sig_offset = 0;
-	threshold  = -1;
-	level_func = SND_LIN;
+	amp_level   = 1;
+	sig_offset  = 0;
+	threshold   = -1;
+	level_func  = SND_LIN;
 	noise_level = 0;
 
 	_bsize    = 0;
 	_ptime    = 0;
 }
 
-bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte)
+bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte, uint desired_frames)
 {
 	int ret  = false;
+	int dir  = 0;
 	format   = fmt;
 	rate     = rte;
 	channels = chans;
@@ -106,15 +107,36 @@ bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte)
 			return false;
 	}
 
-	/* Sen channels number */
-	snd_pcm_hw_params_set_channels(snd_dev, params, channels);
+	/* Set channels number */
+	ret = snd_pcm_hw_params_set_channels(snd_dev, params, channels);
+	if(ret < 0)
+	{
+		log_message(1, "Sndstream: unable to set channels number: %s", snd_strerror(ret));
+		exit(1);
+	}
 
 	/* Set sampling rate */
-	snd_pcm_hw_params_set_rate_near(snd_dev, params, &rate, NULL);
+	ret = snd_pcm_hw_params_set_rate_near(snd_dev, params, &rate, &dir);
+	if(ret < 0)
+	{
+		log_message(1, "Sndstream: unable to set sample rate near: %s", snd_strerror(ret));
+		exit(1);
+	}
 
 	/* Set period size to 0 for default. */
-	frames = 0;
-	snd_pcm_hw_params_set_period_size_near(snd_dev, params, &frames, NULL);
+	frames = desired_frames;
+	ret = snd_pcm_hw_params_set_period_size_near(snd_dev, params, &frames, &dir);
+	if(ret < 0)
+	{
+		log_message(1, "Sndstream: unable to set period size: %s.",	snd_strerror(ret));
+		exit(1);
+	}
+
+	/* Calculate one period buffer size and period time */
+	snd_pcm_hw_params_get_period_size(params, &frames, &dir);
+	snd_pcm_hw_params_get_period_time(params, &_ptime, &dir);
+	framesize = snd_pcm_format_size(pcm_format, channels);
+	_bsize = frames * framesize;
 
 	/* Write the parameters to the driver */
 	ret = snd_pcm_hw_params(snd_dev, params);
@@ -123,12 +145,6 @@ bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte)
 		log_message(1, "Sndstream: unable to set hw parameters: %s", snd_strerror(ret));
 		exit(1);
 	}
-
-	/* Calculate one period buffer size and period time */
-	snd_pcm_hw_params_get_period_size(params, &frames, NULL);
-	snd_pcm_hw_params_get_period_time(params, &_ptime, NULL);
-	framesize = snd_pcm_format_size(pcm_format, channels);
-	_bsize = frames * framesize;
 
 	//all is done
 	return true;
@@ -158,11 +174,12 @@ uint Sndstream::Read(void* buffer, uint size)
 
 	int ret = false;
 	ret = snd_pcm_readi(snd_dev, buffer, frames);
-	if (ret == -EPIPE)
+	if(ret == -EAGAIN) return 0;
+	else if(ret == -EPIPE)
 	{
 		/* EPIPE means overrun */
-		log_message(1, "Sndstream: overrun occurred");
-		snd_pcm_prepare(snd_dev);
+		if(snd_pcm_prepare(snd_dev) < 0)
+			log_message(1, "Sndstream: cant recover from overrun");
 		return 0;
 	}
 	else if(ret < 0)
@@ -186,12 +203,13 @@ uint Sndstream::Write(void* buffer, uint size)
 	if(!opened() || dev_mode != SND_W) return false;
 
 	int ret = snd_pcm_writei(snd_dev, buffer, size/framesize);
-	if(ret == -EPIPE)
+	if(ret == -EAGAIN) return 0;
+	else if(ret == -EPIPE)
 	{
 		/* EPIPE means underrun */
-		log_message(1, "Sndstream: underrun occurred");
-		snd_pcm_prepare(snd_dev);
-		return false;
+		if(snd_pcm_prepare(snd_dev) < 0)
+			log_message(1, "Sndstream: cant recover from underrun");
+		return 0;
 	}
 	else if(ret < 0)
 	{
@@ -207,26 +225,27 @@ void Sndstream::amplify(void* buffer, uint bsize)
 	char*  cb = NULL;
 	short* sb = NULL;
 	uint   size   = 0;
-	double max    = 0;
+	long	 max    = 0;
+	long	 cur		= 0;
 
 	switch(format)
 	{
 		case SND_8BIT:
-			cb  = (char*)buffer;
-			size = bsize/sizeof(char);
+			cb		= (char*)buffer;
+			size	= bsize/sizeof(char);
 
 			if(!sig_offset)
 			{
 				for(int i = 0; i < size; i++)
 					sig_offset += cb[i]; sig_offset /= size;
-#ifdef DEBUG_VERSION
-				log_message(0, "Sndstream: signal offset is: %d", sig_offset);
-#endif
 			}
 
 			for(int i = 0; i < size; i++)
 			{
-				cb[i]  = char((cb[i] - sig_offset) * amp_level);
+				cur		= (cb[i] - sig_offset) * amp_level;
+				if(labs(cur) > CHAR_MAX*0.9)
+					cur = (cur > 0)? CHAR_MAX*0.9 : CHAR_MAX*(-0.9);
+				cb[i]	= char(cur);
 				if(threshold >= 0) if(abs(cb[i]) > max) max = abs(cb[i]);
 			}
 			if(threshold >= 0) max = level(max, CHAR_MAX);
@@ -242,14 +261,14 @@ void Sndstream::amplify(void* buffer, uint bsize)
 			{
 				for(int i = 0; i < size; i++)
 					sig_offset += sb[i]; sig_offset /= size;
-#ifdef DEBUG_VERSION
-				log_message(0, "Sndstream: signal offset is: %d", sig_offset);
-#endif
 			}
 
 			for(int i = 0; i < size; i++)
 			{
-				sb[i]   = short((sb[i] - sig_offset) * amp_level);
+				cur		= (sb[i] - sig_offset) * amp_level;
+				if(labs(cur) > SHRT_MAX*0.9)
+					cur = (cur > 0)? SHRT_MAX*0.9 : SHRT_MAX*(-0.9);
+				sb[i]   = short(cur);
 				if(threshold >= 0) if(abs(sb[i]) > max) max = abs(sb[i]);
 			}
 			if(threshold >= 0) max = level(max, SHRT_MAX);
@@ -273,11 +292,11 @@ double Sndstream::level( double sample, double max )
 		case SND_RT8:
 			return sqrt(sqrt(sqrt(sample / max)))*1000;
 		case SND_PWR2:
-			return ldexp(sample / max, 2)*1000;
+			return pow(sample / max, 2)*1000;
 		case SND_PWR4:
-			return ldexp(sample / max, 4)*1000;
+			return pow(sample / max, 4)*1000;
 		case SND_PWR8:
-			return ldexp(sample / max, 8)*1000;
+			return pow(sample / max, 8)*1000;
 		default:
 			return sample * 1000 / max;
 	}

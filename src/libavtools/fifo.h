@@ -27,24 +27,82 @@
 #include "common.h"
 
 ///implements standart fifo operations
+template<class _type>
 class Fifo
 {
 public:
 	Fifo(uint size = 0);
-	~Fifo() { av_free(buffer); };
+	~Fifo() { free(buffer); };
 
 	uint data_size() const { return dsize; }; ///< returns size of stored data
-	bool read(uint8_t* buf, uint bsize);      ///< reads data from fifo
+	bool read(_type* buf, uint bsize);        ///< reads data from fifo
 	                                          ///  if data_size is less than bsize, return false
-	void write(uint8_t* buf, uint bsize);     ///< writes data to fifo
+	void write(_type* buf, uint bsize);       ///< writes data to fifo
 
 private:
-	uint8_t *buffer;  ///< fifo buffer
+	_type   *buffer;  ///< fifo buffer
 	uint     size;    ///< buffer size
 	uint    dsize;    ///< size of the stored data
-	uint8_t *r_point; ///< read pointer
-	uint8_t *w_point; ///< write pointer
-	uint8_t *end;     ///< end pointer
+	_type   *r_point; ///< read pointer
+	_type   *w_point; ///< write pointer
+	_type   *end;     ///< end pointer
 };
+
+
+
+template<class _type>
+Fifo<_type>::Fifo(uint size)
+		: size(size)
+{
+	buffer  = (_type*)av_malloc(size);
+	r_point = buffer;
+	w_point = buffer;
+	end     = buffer + size;
+	dsize   = 0;
+}
+
+template<class _type>
+bool Fifo<_type>::read(_type *buf, uint bsize)
+{
+	if(data_size() < bsize) return false;
+	dsize -= bsize;
+	uint len;
+	while(bsize > 0)
+	{
+		len = end - r_point;
+		if(len > bsize)
+			len = bsize;
+
+		memcpy(buf, r_point, len);
+		buf     += len;
+		r_point += len;
+
+		if(r_point >= end)
+			r_point = buffer;
+		bsize -= len;
+	}
+	return true;
+}
+
+template<class _type>
+void Fifo<_type>::write(_type *buf, uint bsize)
+{
+	dsize += bsize;
+	uint len;
+	while(bsize > 0)
+	{
+		len = end - w_point;
+		if(len > bsize)
+			len = bsize;
+
+		memcpy(w_point, buf, len);
+
+		w_point += len;
+		if(w_point >= end)
+			w_point = buffer;
+		buf   += len;
+		bsize -= len;
+	}
+}
 
 #endif

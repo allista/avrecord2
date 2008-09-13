@@ -19,6 +19,9 @@ filename   = movie-%Y-%m-%d_%H-%M.avi
 
 #######video parameters###########################################
 #
+#video device file
+video_device = /dev/video0
+
 #name of video codec
 video_codec  = msmpeg4 #see ffmpeg -formats for details
 
@@ -26,7 +29,7 @@ video_codec  = msmpeg4 #see ffmpeg -formats for details
 input_source = 1
 
 #The video norm to use (only for video capture and TV tuner cards)
-#Values: 0 (PAL), 1 (NTSC), 2 (SECAM), 3 (PAL NC no colour)
+#Values: 0 = PAL; 1 = NTSC; 2 = SECAM; 3 = PAL-Nc; 4 = PAL-M; 5 = PAL-N; 6 = NTSC-JP; 7 = PAL-60;
 input_mode   = 3
 
 #width of the image
@@ -47,7 +50,6 @@ vid_bitrate  = 700000
 var_bitrate  = 2
 
 #if true, automaticaly measure frame rate during initialization
-#this option is recomended =)
 auto_frate   = yes
 
 #Picture brightness (0-100) (leave empty to use current capture card settings)
@@ -81,6 +83,9 @@ aud_bitrate  = 96000
 
 #number of audio channel
 channels     = 1
+
+#number of desired buffer length (in frames) (0 is auto)
+audio_buffer = 0
 
 #each audio sample will be multiplied on this value
 amplification_level = 20
@@ -149,6 +154,9 @@ noise_level = 2
 #we detect a motion when number of motion pixels is grater
 #than this value
 threshold   = 25
+
+#step in pixels that is used when difference between frames is measured
+pixels_step = 1
 
 #shows, how many times we need to erode captured image to
 #remove a noise

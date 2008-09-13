@@ -1,8 +1,10 @@
-default: all
+all: 
+	@echo "This Makefile is only for the CVS repository"
+	@echo "This will be deleted before making the distribution"
+	@echo ""
+	$(MAKE) -f admin/Makefile.common cvs
 
-all:
-	aclocal
-	autoheader
-	automake
-	autoconf
+dist:
+	$(MAKE) -f admin/Makefile.common dist
 
+.SILENT:

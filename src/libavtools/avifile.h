@@ -25,6 +25,7 @@
 
 extern "C"
 {
+#  define INT64_C(c)	c ## LL
 #include <ffmpeg/avformat.h>
 #include <ffmpeg/avcodec.h>
 }
@@ -53,7 +54,7 @@ public:
 	               );
 
 	///sets parameters of the audio codec
-	bool setAParams(string codec_name, ///< name of audio codec
+	bool setAParams(string codec_name,  ///< name of audio codec
 	                uint channels,      ///< number of channels
 	                uint rate,          ///< samples per second
 	                uint bps            ///< bits per second
@@ -72,13 +73,13 @@ public:
 	double getApts() const;
 
 	///write video frame to the file
-	bool writeVFrame(unsigned char *img, ///< rgb image data
+	bool writeVFrame(unsigned char *img,  ///< yuv420p image data
 	                 uint width,          ///< width of the image
 	                 uint height          ///< height of the image
 	                );
 
 	///write audio frame to the file
-	bool writeAFrame(uint8_t *samples,   ///< audio data
+	bool writeAFrame(uint8_t *samples,    ///< audio data
 	                 uint size            ///< audio data size in bytes
 	                );
 
@@ -108,7 +109,8 @@ private:
 	AVStream        *astream; ///< output audio stream
 	AVCodecContext  *vcodec;  ///< video codec
 	AVCodecContext  *acodec;  ///< audio codec
-	Fifo             afifo;   ///< audio fifo for framesize sensitive codecs (mp2, mp3...)
+	Fifo<uint8_t>    afifo;   ///< audio fifo for writing with framesize sensitive codecs (mp2, mp3...)
+	uint             a_fsize; ///< audio codec frame size
 
 	//video Output
 	uint      v_bsize; ///< video output buffer size
@@ -126,10 +128,6 @@ private:
 
 	///gets output codec ID according to given name and type
 	CodecID get_codec_id(string name, int codec_type) const;
-
-	///returns frame size of an audio codec if
-	///one exests and 0 if it doesn't
-	uint aframe_size() const;
 };
 
 #endif

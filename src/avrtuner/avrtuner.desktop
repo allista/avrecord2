@@ -1,0 +1,17 @@
+[Desktop Entry]
+Comment=AVRecord configuration tuning tool
+Comment[en_US]=AVRecord configuration tuning tool
+Encoding=UTF-8
+Exec=avrtuner /etc/avrecord/avrecord.conf
+GenericName=AVRecord Setup
+GenericName[en_US]=AVRecord Setup
+Icon=avrtuner
+Name=AVRTuner
+Name[en_US]=AVRTuner
+StartupNotify=true
+Terminal=false
+Type=Application
+Version=0.5
+Categories=Application;Qt;KDE;System;
+X-KDE-SubstituteUID=true
+X-KDE-Username=root

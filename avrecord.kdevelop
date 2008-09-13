@@ -1,41 +1,65 @@
 <?xml version = '1.0'?>
 <kdevelop>
   <general>
-    <author>Allis</author>
+    <author>Allis Tauri</author>
     <email>allista@gmail.com</email>
-    <version>$VERSION$</version>
-    <projectmanagement>KDevAutoProject</projectmanagement>
+    <version>0.5</version>
+    <projectmanagement>KDevKDEAutoProject</projectmanagement>
     <primarylanguage>C++</primarylanguage>
+    <keywords>
+      <keyword>C++</keyword>
+      <keyword>Code</keyword>
+      <keyword>Qt</keyword>
+      <keyword>KDE</keyword>
+    </keywords>
     <ignoreparts/>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description/>
-    <versioncontrol>kdevcvsservice</versioncontrol>
+    <description></description>
+    <versioncontrol></versioncontrol>
+    <projectname>avrecord</projectname>
+    <defaultencoding></defaultencoding>
   </general>
   <kdevautoproject>
     <general>
       <activetarget>src/avrecord</activetarget>
-      <useconfiguration>debug</useconfiguration>
+      <useconfiguration>optimized</useconfiguration>
     </general>
     <run>
       <mainprogram/>
       <directoryradio>build</directoryradio>
-      <runarguments>
-        <test/>
-        <avrecord>-c avrecord.conf</avrecord>
-      </runarguments>
       <customdirectory>/</customdirectory>
       <programargs/>
       <terminal>false</terminal>
       <autocompile>true</autocompile>
-      <envvars/>
+      <envvars>
+        <envvar value="1" name="MALLOC_CHECK_" />
+      </envvars>
+      <runarguments>
+        <avrecord>-c avrecord.conf</avrecord>
+        <test/>
+        <avrtuner>avrecord.conf</avrtuner>
+      </runarguments>
+      <debugarguments>
+        <avrtuner>avrecord.conf</avrtuner>
+        <avrecord>-c avrecord.conf</avrecord>
+      </debugarguments>
+      <cwd>
+        <avrtuner>/home/allis/Workspace/Programming/avrecord</avrtuner>
+        <avrecord>/home/allis/Workspace/Programming/avrecord</avrecord>
+      </cwd>
+      <globaldebugarguments/>
+      <globalcwd/>
+      <useglobalprogram>false</useglobalprogram>
+      <autoinstall>false</autoinstall>
+      <autokdesu>false</autokdesu>
     </run>
     <configurations>
       <optimized>
         <builddir>optimized</builddir>
         <ccompiler>kdevgccoptions</ccompiler>
         <cxxcompiler>kdevgppoptions</cxxcompiler>
-        <f77compiler>kdevpgf77options</f77compiler>
+        <f77compiler>kdevg77options</f77compiler>
         <cxxflags>-O2 -pedantic -Wall -g0</cxxflags>
         <envvars/>
         <configargs/>
@@ -53,7 +77,7 @@
         <builddir>debug</builddir>
         <ccompiler>kdevgccoptions</ccompiler>
         <cxxcompiler>kdevgppoptions</cxxcompiler>
-        <f77compiler>kdevpgf77options</f77compiler>
+        <f77compiler>kdevg77options</f77compiler>
         <cxxflags>-O0 -pedantic -Wall -g3</cxxflags>
         <envvars/>
         <topsourcedir/>
@@ -65,23 +89,6 @@
         <cflags/>
         <f77flags/>
       </debug>
-      <default>
-        <envvars/>
-        <configargs/>
-        <builddir/>
-        <topsourcedir>./</topsourcedir>
-        <cppflags/>
-        <ldflags/>
-        <ccompiler>kdevgccoptions</ccompiler>
-        <cxxcompiler>kdevgppoptions</cxxcompiler>
-        <f77compiler>kdevpgf77options</f77compiler>
-        <ccompilerbinary/>
-        <cxxcompilerbinary/>
-        <f77compilerbinary/>
-        <cflags/>
-        <cxxflags>-pedantic -Wall</cxxflags>
-        <f77flags/>
-      </default>
     </configurations>
     <make>
       <envvars>
@@ -89,31 +96,34 @@
         <envvar value="1" name="WANT_AUTOMAKE_1_6" />
       </envvars>
       <abortonerror>true</abortonerror>
-      <numberofjobs>1</numberofjobs>
+      <runmultiplejobs>true</runmultiplejobs>
+      <numberofjobs>3</numberofjobs>
       <dontact>false</dontact>
       <makebin/>
       <prio>0</prio>
     </make>
-    <subclassing/>
+    <subclassing>
+      <subclass uifile="/src/tunerformbase.ui" sourcefile="/src/tunerform.cpp" />
+      <subclass uifile="/src/avrtuner/tunerformbase.ui" sourcefile="/src/avrtuner/tunerform.cpp" />
+      <subclass uifile="/src/avrtuner/tunerformbase.ui" sourcefile="/src/avrtuner/tunerform.h" />
+    </subclassing>
   </kdevautoproject>
-  <kdevdebugger>
-    <general>
-      <dbgshell>libtool</dbgshell>
-      <programargs>test.avi</programargs>
-      <gdbpath>/usr/bin/</gdbpath>
-      <configGdbScript/>
-      <runShellScript/>
-      <runGdbScript/>
-      <breakonloadinglibs>true</breakonloadinglibs>
-      <separatetty>false</separatetty>
-      <floatingtoolbar>false</floatingtoolbar>
-    </general>
-    <display>
-      <staticmembers>false</staticmembers>
-      <demanglenames>true</demanglenames>
-      <outputradix>10</outputradix>
-    </display>
-  </kdevdebugger>
+  <kdevfileview>
+    <groups>
+      <group pattern="*.cpp;*.cxx;*.h" name="Sources" />
+      <group pattern="*.ui" name="User Interface" />
+      <group pattern="*.png" name="Icons" />
+      <group pattern="*.po;*.ts" name="Translations" />
+      <group pattern="*" name="Others" />
+      <hidenonprojectfiles>false</hidenonprojectfiles>
+      <hidenonlocation>false</hidenonlocation>
+    </groups>
+    <tree>
+      <hidepatterns>*.o,*.lo,CVS</hidepatterns>
+      <hidenonprojectfiles>false</hidenonprojectfiles>
+      <showvcsfields>false</showvcsfields>
+    </tree>
+  </kdevfileview>
   <kdevdoctreeview>
     <ignoretocs>
       <toc>ada</toc>
@@ -121,6 +131,7 @@
       <toc>bash</toc>
       <toc>bash_bugs</toc>
       <toc>clanlib</toc>
+      <toc>w3c-dom-level2-html</toc>
       <toc>fortran_bugs_gcc</toc>
       <toc>gnome1</toc>
       <toc>gnustep</toc>
@@ -130,8 +141,6 @@
       <toc>haskell_bugs_ghc</toc>
       <toc>java_bugs_gcc</toc>
       <toc>java_bugs_sun</toc>
-      <toc>kde2book</toc>
-      <toc>opengl</toc>
       <toc>pascal_bugs_fp</toc>
       <toc>php</toc>
       <toc>php_bugs</toc>
@@ -139,27 +148,37 @@
       <toc>perl_bugs</toc>
       <toc>python</toc>
       <toc>python_bugs</toc>
-      <toc>qt-kdev3</toc>
       <toc>ruby</toc>
       <toc>ruby_bugs</toc>
       <toc>sdl</toc>
-      <toc>sw</toc>
-      <toc>w3c-dom-level2-html</toc>
       <toc>w3c-svg</toc>
+      <toc>sw</toc>
       <toc>w3c-uaag10</toc>
       <toc>wxwidgets_bugs</toc>
     </ignoretocs>
     <ignoreqt_xml>
-      <toc>Guide to the Qt Translation Tools</toc>
-      <toc>Qt Assistant Manual</toc>
-      <toc>Qt Designer Manual</toc>
-      <toc>Qt Reference Documentation</toc>
       <toc>qmake User Guide</toc>
     </ignoreqt_xml>
-    <ignoredoxygen>
-      <toc>KDE Libraries (Doxygen)</toc>
-    </ignoredoxygen>
   </kdevdoctreeview>
+  <kdevdebugger>
+    <general>
+      <dbgshell>libtool</dbgshell>
+      <programargs>-c ../avrecord.conf</programargs>
+      <gdbpath></gdbpath>
+      <configGdbScript></configGdbScript>
+      <runShellScript></runShellScript>
+      <runGdbScript></runGdbScript>
+      <breakonloadinglibs>true</breakonloadinglibs>
+      <separatetty>false</separatetty>
+      <floatingtoolbar>false</floatingtoolbar>
+      <raiseGDBOnStart>false</raiseGDBOnStart>
+    </general>
+    <display>
+      <staticmembers>true</staticmembers>
+      <demanglenames>true</demanglenames>
+      <outputradix>10</outputradix>
+    </display>
+  </kdevdebugger>
   <kdevfilecreate>
     <filetypes/>
     <useglobaltypes>
@@ -168,6 +187,26 @@
       <type ext="h" />
     </useglobaltypes>
   </kdevfilecreate>
+  <kdevdocumentation>
+    <projectdoc>
+      <docsystem/>
+      <docurl/>
+      <usermanualurl/>
+    </projectdoc>
+  </kdevdocumentation>
+  <substmap>
+    <APPNAME>avrecord</APPNAME>
+    <APPNAMELC>avrecord</APPNAMELC>
+    <APPNAMESC>Avrecord</APPNAMESC>
+    <APPNAMEUC>AVRECORD</APPNAMEUC>
+    <AUTHOR>Allis Tauri</AUTHOR>
+    <EMAIL>allista@gmail.com</EMAIL>
+    <LICENSE>GPL</LICENSE>
+    <LICENSEFILE>COPYING</LICENSEFILE>
+    <VERSION>0.1</VERSION>
+    <YEAR>2007</YEAR>
+    <dest>/home/simon/Workspace/Programming/tmp/avrecord</dest>
+  </substmap>
   <cppsupportpart>
     <filetemplates>
       <interfacesuffix>.h</interfacesuffix>
@@ -175,6 +214,16 @@
     </filetemplates>
   </cppsupportpart>
   <kdevcppsupport>
+    <qt>
+      <used>true</used>
+      <version>3</version>
+      <root>/usr/qt/3</root>
+      <includestyle>3</includestyle>
+      <designerintegration>EmbeddedKDevDesigner</designerintegration>
+      <qmake>/usr/qt/3/bin/qmake</qmake>
+      <designer>/usr/qt/3/bin/designer</designer>
+      <designerpluginpaths/>
+    </qt>
     <codecompletion>
       <includeGlobalFunctions>true</includeGlobalFunctions>
       <includeTypes>true</includeTypes>
@@ -184,54 +233,54 @@
       <automaticArgumentsHint>true</automaticArgumentsHint>
       <automaticHeaderCompletion>true</automaticHeaderCompletion>
       <codeCompletionDelay>800</codeCompletionDelay>
-      <argumentsHintDelay>250</argumentsHintDelay>
+      <argumentsHintDelay>400</argumentsHintDelay>
       <headerCompletionDelay>250</headerCompletionDelay>
+      <showOnlyAccessibleItems>false</showOnlyAccessibleItems>
+      <completionBoxItemOrder>0</completionBoxItemOrder>
+      <howEvaluationContextMenu>true</howEvaluationContextMenu>
+      <showCommentWithArgumentHint>true</showCommentWithArgumentHint>
+      <statusBarTypeEvaluation>false</statusBarTypeEvaluation>
+      <namespaceAliases>std=_GLIBCXX_STD;__gnu_cxx=std</namespaceAliases>
+      <processPrimaryTypes>true</processPrimaryTypes>
+      <processFunctionArguments>false</processFunctionArguments>
+      <preProcessAllHeaders>false</preProcessAllHeaders>
+      <parseMissingHeadersExperimental>false</parseMissingHeadersExperimental>
+      <resolveIncludePathsUsingMakeExperimental>false</resolveIncludePathsUsingMakeExperimental>
+      <alwaysParseInBackground>true</alwaysParseInBackground>
+      <usePermanentCaching>true</usePermanentCaching>
+      <alwaysIncludeNamespaces>false</alwaysIncludeNamespaces>
+      <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet/>
+      <prefixGet></prefixGet>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>
       <inlineGet>true</inlineGet>
       <inlineSet>true</inlineSet>
     </creategettersetter>
-    <references>
-      <pcs>glibc</pcs>
-      <pcs>gcc</pcs>
-      <pcs>alsa</pcs>
-      <pcs>sys</pcs>
-    </references>
-    <qt>
-      <used>false</used>
-      <version>3</version>
-      <root>/usr/qt/3</root>
-    </qt>
+    <references/>
     <designerintegration>
       <qtdesigner>
-        <implementation class="AVRTuner" path="src/tunerform.ui" implementationpath="src/avrtuner.h" />
+        <implementation class="CaptureThread" path="src/avrtuner/tunerformbase.ui" implementationpath="src/avrtuner/monitorthread.h" />
       </qtdesigner>
     </designerintegration>
+    <splitheadersource>
+      <enabled>false</enabled>
+      <synchronize>true</synchronize>
+      <orientation>Vertical</orientation>
+    </splitheadersource>
   </kdevcppsupport>
-  <kdevdocumentation>
-    <projectdoc>
-      <docsystem/>
-      <docurl/>
-      <usermanualurl/>
-    </projectdoc>
-  </kdevdocumentation>
-  <kdevfileview>
-    <groups>
-      <hidenonprojectfiles>false</hidenonprojectfiles>
-      <hidenonlocation>false</hidenonlocation>
-    </groups>
-    <tree>
-      <hidepatterns>*.o,*.lo,CVS</hidepatterns>
-      <hidenonprojectfiles>false</hidenonprojectfiles>
-      <showvcsfields>true</showvcsfields>
-    </tree>
-  </kdevfileview>
   <ctagspart>
     <customArguments/>
-    <customTagfilePath/>
+    <customTagfilePath>/home/allis/Workspace/Programming/avrecord/tags</customTagfilePath>
+    <activeTagsFiles/>
   </ctagspart>
+  <kdevcvsservice>
+    <recursivewhenupdate>true</recursivewhenupdate>
+    <prunedirswhenupdate>true</prunedirswhenupdate>
+    <createdirswhenupdate>true</createdirswhenupdate>
+    <recursivewhencommitremove>true</recursivewhencommitremove>
+    <revertoptions>-C</revertoptions>
+  </kdevcvsservice>
 </kdevelop>

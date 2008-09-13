@@ -1,15 +1,8 @@
-AC_INIT(configure.in)
+#MIN_CONFIG(3.2.0)
 
-AC_CANONICAL_SYSTEM
-
-AM_CONFIG_HEADER(config.h)
 AM_INIT_AUTOMAKE(avrecord, 0.1)
-
-
-AC_LANG_CPLUSPLUS
-AC_PROG_CXX
-AM_PROG_LIBTOOL
-
+AC_C_BIGENDIAN
+AC_CHECK_KDEMAXPATHLEN
 
 dnl Checks for libraries.
 AC_CHECK_LIB(asound,
@@ -30,4 +23,3 @@ AC_CHECK_LIB(avformat,
 )
 
 AC_SUBST(LIBS)
-AC_OUTPUT(Makefile src/Makefile tests/Makefile)

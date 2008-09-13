@@ -23,13 +23,15 @@
 
 extern "C"
 {
+#define __STDC_CONSTANT_MACROS
+#include <stdint.h>
 #include <ffmpeg/avformat.h>
 #include <ffmpeg/avcodec.h>
 }
 
 #include <string.h>
 #include <sys/types.h>
-typedef unsigned char uint8_t;
+//typedef unsigned char uint8_t;
 
 
 ///logs given message to our logfile

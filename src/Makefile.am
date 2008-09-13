@@ -1,15 +1,43 @@
-INCLUDES = -I$(top_srcdir)/src
+# set the include path for X, qt and KDE
+INCLUDES = -I$(top_srcdir)/src/libavtools $(all_includes)
+
+# let automoc handle all of the meta source files (moc)
 METASOURCES = AUTO
 
-noinst_HEADERS = avifile.h common.h fifo.h sndstream.h img_tools.h vidstream.h \
-	utimer.h recorder.h configfile.h
-noinst_LTLIBRARIES = libavtools.la
-libavtools_la_SOURCES = avifile.cpp fifo.cpp sndstream.cpp img_tools.cpp \
-	vidstream.cpp recorder.cpp configfile.cpp
+messages: rc.cpp
+	$(EXTRACTRC) `find . -name \*.ui -o -name \*.rc` > rc.cpp
+	$(XGETTEXT) *.cpp -o $(podir)/avrecord.pot
 
-bin_PROGRAMS = avrecord
-avrecord_SOURCES = main.cpp
-avrecord_LDADD = $(top_builddir)/src/libavtools.la
+KDE_ICON = AUTO
+
+#########################################################################
+# APPLICATION SECTION
+#########################################################################
+# this is the program that gets installed.  it's name is used for all
+# of the other Makefile.am variables
+
+# the application source, library search path, and link libraries
+
+
+# this is where the desktop file will go
+shelldesktopdir = $(kde_appsdir)/Utilities
+
+
+# this is where the shell's XML-GUI resource file goes
+shellrcdir = $(kde_datadir)/avrecord
+
 
 confdir = /etc/$(PACKAGE)
 conf_DATA = avrecord.conf.sample
+
+servicedir = /etc/init.d/
+service_SCRIPTS = avrecd
+
+
+SUBDIRS = libavtools avrtuner
+
+syssbindir       = /usr/sbin/
+syssbin_PROGRAMS = avrecord
+avrecord_SOURCES = main.cpp
+avrecord_LDFLAGS = $(all_libraries)
+avrecord_LDADD   = $(top_builddir)/src/libavtools/libavtools.la

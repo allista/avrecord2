@@ -39,8 +39,8 @@
 
 using namespace std;
 
-#include "configfile.h"
-#include "recorder.h"
+#include <configfile.h>
+#include <recorder.h>
 
 
 ///default config file
@@ -365,8 +365,8 @@ void log_message(int level, const char *fmt, ...)
 
 	//output...
 	if(nolog || !log_stream.is_open())
-		if(level)	cerr << buf; //log to stderr
-		else cout << buf; //log to stdout
+		if(level)	cerr << buf << flush; //log to stderr
+		else cout << buf << flush; //log to stdout
 	else log_stream << buf << flush;
 
 	//Clean up the argument list routine

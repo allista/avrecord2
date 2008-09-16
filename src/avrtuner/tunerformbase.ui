@@ -360,7 +360,7 @@
 <customwidgets>
     <customwidget>
         <class>KdetvView</class>
-        <header location="global">/home/allis/Workspace/Programming/avrecord/src/avrtuner/kdetvview.h</header>
+        <header location="local">kdetvview.h</header>
         <sizehint>
             <width>-1</width>
             <height>-1</height>

@@ -69,17 +69,17 @@ void BufferRing::pop()
 unsigned char * BufferRing::operator [ ](int i)
 {
 	if(abs(i) > c_size) return NULL;	unsigned int n;
-	if(i >= 0)
-		return buffers[(iw+i >= r_size)? iw+i-r_size : iw+i];
-	else
-		return buffers[(ir-i >= r_size)? ir-i-r_size : ir-i];
+	if(i >= 0) { int n = (iw-i < 0)? r_size-i : iw-i;
+		return buffers[(iw < i)? r_size-i : iw-i]; }
+	else { int n = (ir-i >= r_size)? ir-i-r_size : ir-i;
+		return buffers[(ir-i >= r_size)? ir-i-r_size : ir-i]; }
 }
 
 unsigned int BufferRing::written_size(int i)
 {
 	if(abs(i) > c_size) return 0;
 	if(i >= 0)
-		return written[(iw+i >= r_size)? iw+i-r_size : iw+i];
+		return written[(iw < i)? r_size-i : iw-i];
 	else
 		return written[(ir-i >= r_size)? ir-i-r_size : ir-i];
 }

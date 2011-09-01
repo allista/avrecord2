@@ -67,8 +67,8 @@ int main(int argc, char **argv)
         KCmdLineArgs *args = KCmdLineArgs::parsedArgs();
 
         mainWin = new TunerForm();
-				if(args->count())
-					mainWin->fileOpen(args->arg(0));
+	if(args->count())
+		mainWin->fileOpen(args->arg(0));
         app.setMainWidget( mainWin );
         mainWin->show();
 

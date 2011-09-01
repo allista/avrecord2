@@ -15,10 +15,10 @@
     <ignoreparts/>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description/>
+    <description></description>
     <versioncontrol/>
     <projectname>avrecord</projectname>
-    <defaultencoding/>
+    <defaultencoding></defaultencoding>
   </general>
   <kdevautoproject>
     <general>
@@ -26,10 +26,10 @@
       <useconfiguration>debug</useconfiguration>
     </general>
     <run>
-      <mainprogram/>
+      <mainprogram>/home/allis/Workspace/Programming/AVRecord2-trunk/optimized</mainprogram>
       <directoryradio>build</directoryradio>
       <customdirectory>/</customdirectory>
-      <programargs/>
+      <programargs></programargs>
       <terminal>false</terminal>
       <autocompile>true</autocompile>
       <envvars>
@@ -45,11 +45,11 @@
         <avrecord>-c avrecord.conf</avrecord>
       </debugarguments>
       <cwd>
-        <avrtuner>/home/allis/Workspace/Programming/AVRecord2/</avrtuner>
-        <avrecord>/home/allis/Workspace/Programming/AVRecord2/</avrecord>
+        <avrtuner>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrtuner>
+        <avrecord>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrecord>
       </cwd>
-      <globaldebugarguments/>
-      <globalcwd/>
+      <globaldebugarguments></globaldebugarguments>
+      <globalcwd>/home/allis/Workspace/Programming/AVRecord2-trunk/optimized</globalcwd>
       <useglobalprogram>false</useglobalprogram>
       <autoinstall>false</autoinstall>
       <autokdesu>false</autokdesu>
@@ -162,12 +162,12 @@
   </kdevdoctreeview>
   <kdevdebugger>
     <general>
-      <dbgshell>libtool</dbgshell>
+      <dbgshell></dbgshell>
       <programargs>-c ../avrecord.conf</programargs>
-      <gdbpath/>
-      <configGdbScript/>
-      <runShellScript/>
-      <runGdbScript/>
+      <gdbpath>/usr/bin/gdb</gdbpath>
+      <configGdbScript></configGdbScript>
+      <runShellScript></runShellScript>
+      <runGdbScript></runGdbScript>
       <breakonloadinglibs>true</breakonloadinglibs>
       <separatetty>false</separatetty>
       <floatingtoolbar>false</floatingtoolbar>
@@ -252,7 +252,7 @@
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet/>
+      <prefixGet></prefixGet>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>

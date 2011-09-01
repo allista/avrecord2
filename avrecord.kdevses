@@ -1,50 +1,84 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
 <!DOCTYPE KDevPrjSession>
 <KDevPrjSession>
- <DocsAndViews NumberOfDocuments="13" >
-  <Doc0 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/buffer-ring.h" >
-   <View0 Encoding="" Type="Source" />
+ <DocsAndViews NumberOfDocuments="16" >
+  <Doc0 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avifile.cpp" >
+   <View0 Encoding="" line="179" Type="Source" />
   </Doc0>
-  <Doc1 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/recorder.h" >
-   <View0 Encoding="" Type="Source" />
-  </Doc1>
-  <Doc2 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/avrtuner/monitorthread.cpp" >
-   <View0 Encoding="" Type="Source" />
-  </Doc2>
-  <Doc3 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/avrtuner/monitorthread.h" >
-   <View0 Encoding="" Type="Source" />
-  </Doc3>
-  <Doc4 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/buffer-ring.cpp" >
-   <View0 Encoding="" Type="Source" />
-  </Doc4>
-  <Doc5 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/common.h" >
-   <View0 Encoding="" Type="Source" />
-  </Doc5>
-  <Doc6 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/avifile.h" >
-   <View0 Encoding="" Type="Source" />
-  </Doc6>
-  <Doc7 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/avifile.cpp" >
-   <View0 Encoding="" Type="Source" />
-  </Doc7>
-  <Doc8 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/vidstream.cpp" >
-   <View0 Encoding="" line="100" Type="Source" />
-  </Doc8>
-  <Doc9 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/avrecord.conf" >
-   <View0 Encoding="" Type="Source" />
-  </Doc9>
-  <Doc10 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/avrecord.log" >
+  <Doc1 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avifile.h" >
    <View0 Encoding="" line="0" Type="Source" />
+  </Doc1>
+  <Doc2 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/vidstream.cpp" >
+   <View0 Encoding="" line="0" Type="Source" />
+  </Doc2>
+  <Doc3 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/vidstream.h" >
+   <View0 Encoding="" line="32" Type="Source" />
+  </Doc3>
+  <Doc4 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/common.h" >
+   <View0 Encoding="" line="4" Type="Source" />
+  </Doc4>
+  <Doc5 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/avrtuner_main.cpp" >
+   <View0 Encoding="" line="78" Type="Source" />
+  </Doc5>
+  <Doc6 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/tunerform.h" >
+   <View0 Encoding="" line="0" Type="Source" />
+  </Doc6>
+  <Doc7 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.h" >
+   <View0 Encoding="" line="0" Type="Source" />
+  </Doc7>
+  <Doc8 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.cpp" >
+   <View0 Encoding="" line="34" Type="Source" />
+  </Doc8>
+  <Doc9 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/tunerform.cpp" >
+   <View0 Encoding="" line="100" Type="Source" />
+  </Doc9>
+  <Doc10 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/recorder.h" >
+   <View0 Encoding="" line="440" Type="Source" />
   </Doc10>
-  <Doc11 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/libavtools/vidstream.h" >
-   <View0 Encoding="" line="43" Type="Source" />
+  <Doc11 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/configfile.cpp" >
+   <View0 Encoding="" line="78" Type="Source" />
   </Doc11>
-  <Doc12 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2/src/avrecord.conf.sample" >
-   <View0 Encoding="" line="31" Type="Source" />
+  <Doc12 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/avrecord.conf" >
+   <View0 Encoding="" line="41" Type="Source" />
   </Doc12>
+  <Doc13 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/sndstream.cpp" >
+   <View0 Encoding="" line="78" Type="Source" />
+  </Doc13>
+  <Doc14 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/configfile.h" >
+   <View0 Encoding="" line="55" Type="Source" />
+  </Doc14>
+  <Doc15 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/avrecord.log" >
+   <View0 Encoding="" line="10" Type="Source" />
+  </Doc15>
  </DocsAndViews>
  <pluginList>
   <kdevdebugger>
-   <breakpointList/>
+   <breakpointList>
+    <breakpoint0 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.cpp:66" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
+     <tracedExpressions/>
+    </breakpoint0>
+    <breakpoint1 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.cpp:32" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
+     <tracedExpressions/>
+    </breakpoint1>
+    <breakpoint2 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.cpp:91" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
+     <tracedExpressions/>
+    </breakpoint2>
+    <breakpoint3 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.cpp:99" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
+     <tracedExpressions/>
+    </breakpoint3>
+    <breakpoint4 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/tunerform.cpp:95" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
+     <tracedExpressions/>
+    </breakpoint4>
+    <breakpoint5 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/recorder.h:322" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
+     <tracedExpressions/>
+    </breakpoint5>
+    <breakpoint6 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/recorder.h:330" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
+     <tracedExpressions/>
+    </breakpoint6>
+    <breakpoint7 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/sndstream.cpp:51" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
+     <tracedExpressions/>
+    </breakpoint7>
+   </breakpointList>
    <showInternalCommands value="0" />
   </kdevdebugger>
   <kdevastyle>
@@ -52,7 +86,11 @@
    <AStyle IndentPreprocessors="0" FillCount="4" PadParenthesesOut="0" IndentNamespaces="1" IndentLabels="1" Fill="Tabs" MaxStatement="40" Brackets="Break" MinConditional="-1" IndentBrackets="0" PadParenthesesUn="1" BlockBreak="0" KeepStatements="1" KeepBlocks="1" BlockIfElse="0" IndentSwitches="1" PadOperators="1" FStyle="UserDefined" IndentCases="0" FillEmptyLines="0" BracketsCloseHeaders="0" BlockBreakAll="1" PadParenthesesIn="0" IndentClasses="1" IndentBlocks="0" FillForce="0" />
   </kdevastyle>
   <kdevbookmarks>
-   <bookmarks/>
+   <bookmarks>
+    <bookmark url="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/sndstream.cpp" >
+     <mark line="50" />
+    </bookmark>
+   </bookmarks>
   </kdevbookmarks>
   <kdevvalgrind>
    <executable path="" params="" />

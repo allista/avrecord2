@@ -26,8 +26,8 @@
 extern "C"
 {
 #  define INT64_C(c)	c ## LL
-#include <ffmpeg/avformat.h>
-#include <ffmpeg/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 }
 
 #include "common.h"

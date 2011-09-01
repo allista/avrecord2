@@ -25,8 +25,8 @@ extern "C"
 {
 #define __STDC_CONSTANT_MACROS
 #include <stdint.h>
-#include <ffmpeg/avformat.h>
-#include <ffmpeg/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 }
 
 #include <string.h>

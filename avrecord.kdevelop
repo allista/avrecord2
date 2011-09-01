@@ -15,15 +15,15 @@
     <ignoreparts/>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description></description>
+    <description/>
     <versioncontrol/>
     <projectname>avrecord</projectname>
-    <defaultencoding></defaultencoding>
+    <defaultencoding/>
   </general>
   <kdevautoproject>
     <general>
-      <activetarget>src/avrecord</activetarget>
-      <useconfiguration>optimized</useconfiguration>
+      <activetarget>src/avrtuner/avrtuner</activetarget>
+      <useconfiguration>debug</useconfiguration>
     </general>
     <run>
       <mainprogram/>
@@ -164,10 +164,10 @@
     <general>
       <dbgshell>libtool</dbgshell>
       <programargs>-c ../avrecord.conf</programargs>
-      <gdbpath></gdbpath>
-      <configGdbScript></configGdbScript>
-      <runShellScript></runShellScript>
-      <runGdbScript></runGdbScript>
+      <gdbpath/>
+      <configGdbScript/>
+      <runShellScript/>
+      <runGdbScript/>
       <breakonloadinglibs>true</breakonloadinglibs>
       <separatetty>false</separatetty>
       <floatingtoolbar>false</floatingtoolbar>
@@ -217,11 +217,11 @@
     <qt>
       <used>true</used>
       <version>3</version>
-      <root>/usr/qt/3</root>
+      <root>/usr/share/qt3</root>
       <includestyle>3</includestyle>
       <designerintegration>EmbeddedKDevDesigner</designerintegration>
-      <qmake>/usr/qt/3/bin/qmake</qmake>
-      <designer>/usr/qt/3/bin/designer</designer>
+      <qmake>/usr/bin/qmake-qt3</qmake>
+      <designer></designer>
       <designerpluginpaths/>
     </qt>
     <codecompletion>
@@ -252,7 +252,7 @@
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet></prefixGet>
+      <prefixGet/>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>
@@ -290,13 +290,13 @@
     <appname>avrecord2</appname>
     <version>1.1.1</version>
     <release>beta</release>
-    <vendor></vendor>
+    <vendor/>
     <licence>GPL</licence>
-    <summary></summary>
-    <group></group>
-    <packager></packager>
-    <description></description>
-    <changelog></changelog>
+    <summary/>
+    <group/>
+    <packager/>
+    <description/>
+    <changelog/>
     <devpackage>false</devpackage>
     <docspackage>false</docspackage>
     <appicon>false</appicon>
@@ -305,6 +305,6 @@
     <useRPM>false</useRPM>
     <ftpkde>false</ftpkde>
     <appskde>false</appskde>
-    <url></url>
+    <url/>
   </dist>
 </kdevelop>

@@ -26,20 +26,20 @@ video_device = /dev/video0
 video_codec  = msmpeg4 #see ffmpeg -formats for details
 
 #0 (TV), 1 (COMPOSITE1), 2 (COMPOSITE2), 3 (SVIDEO)
-input_source = 1
+input_source = 0
 
 #The video norm to use (only for video capture and TV tuner cards)
 #Values: 0 = PAL; 1 = NTSC; 2 = SECAM; 3 = PAL-Nc; 4 = PAL-M; 5 = PAL-N; 6 = NTSC-JP; 7 = PAL-60;
-input_mode   = 3
+input_mode   = 0
 
 #width of the image
-width        = 512
+width        = 640
 
 #haight of the image
-height       = 384
+height       = 480
 
 #frames per second
-frame_rate   = 20
+frame_rate   = 25
 
 #if true, automaticaly measure frame rate during initialization
 auto_frate   = yes

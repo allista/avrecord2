@@ -529,7 +529,7 @@ void AVIFile::cleanup()
 	if(o_file)
 	{
 		if(_opened & INIT_FOPEN)
-			url_fclose(&o_file->pb);
+			url_fclose(o_file->pb);
 		av_free(o_file);
 	}
 	o_file  = NULL;
@@ -548,12 +548,12 @@ void AVIFile::cleanup()
 
 CodecID AVIFile::get_codec_id(string name, int codec_type) const
 {
-	AVCodec *codec = first_avcodec;
-	while(codec)
+	AVCodec *codec = avcodec_find_encoder_by_name(name.c_str());//first_avcodec;
+	/*while(codec)
 	{
 		if((name == codec->name) && (codec->type == codec_type))
 			break;
 		codec = codec->next;
-	}
+	}*/
 	return (codec)? codec->id : CODEC_ID_NONE;
 }

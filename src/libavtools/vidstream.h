@@ -41,28 +41,28 @@ enum
     IN_COMPOSITE1 = 1,
     IN_COMPOSITE2 = 2,
     IN_SVIDEO     = 3,
-    IN_DEFAULT    = 1
+    IN_DEFAULT    = 0
 };
 
 ///input modes
 enum
 {
-    NORM_PAL      = 0,
-    NORM_NTSC     = 1,
-    NORM_SECAM    = 2,
-		NORM_PAL_NC   = 3,
-		NORM_PAL_M		= 4,
-		NORM_PAL_N		= 5,
-		NORM_NTSC_JP	= 6,
-		NORM_PAL_60		= 7,
+	NORM_PAL	= 0,
+	NORM_NTSC	= 1,
+	NORM_SECAM	= 2,
+	NORM_PAL_NC	= 3,
+	NORM_PAL_M	= 4,
+	NORM_PAL_N	= 5,
+	NORM_NTSC_JP	= 6,
+	NORM_PAL_60	= 7,
 
-    NORM_DEFAULT  = 0
+	NORM_DEFAULT	= 0
 };
 
 static const char *pallets[] =
 {
 	"PALLET UNDEFINED",
-	"VIDEO_PALETTE_GREY",			/* 1 Linear greyscale */
+	"VIDEO_PALETTE_GREY",		/* 1 Linear greyscale */
 	"VIDEO_PALETTE_HI240",		/* 2 High 240 cube (BT848) */
 	"VIDEO_PALETTE_RGB565",		/* 3 565 16 bit RGB */
 	"VIDEO_PALETTE_RGB24", 		/* 4 24bit RGB */
@@ -73,7 +73,7 @@ static const char *pallets[] =
 	"VIDEO_PALETTE_UYVY", 		/* 9 The great thing about standards is ... */
 	"VIDEO_PALETTE_YUV420", 	/* 10 */
 	"VIDEO_PALETTE_YUV411", 	/* 11 YUV411 capture */
-	"VIDEO_PALETTE_RAW", 			/* 12 RAW capture (BT848) */
+	"VIDEO_PALETTE_RAW", 		/* 12 RAW capture (BT848) */
 	"VIDEO_PALETTE_YUV422P",	/* 13 YUV 4:2:2 Planar */
 	"VIDEO_PALETTE_YUV411P",	/* 14 YUV 4:1:1 Planar */
 	"VIDEO_PALETTE_YUV420P",	/* 15 YUV 4:2:0 Planar */
@@ -84,21 +84,21 @@ static const uint used_pallets[] =
 {
 	0,
 	1,
-	0,
- 	0,
+	2,
+	3,
 	4,
-  0,
-	0,
+	5,
+	6,
 	7,
- 	0,
-	0,
- 	0,
-	0,
- 	0,
-	0,
- 	0,
- 	15,
- 	0
+	8,
+	9,
+	10,
+	11,
+	12,
+	13,
+	14,
+	15,
+	16
 };
 
 ///encapsulates simple grabbing work with v4l device

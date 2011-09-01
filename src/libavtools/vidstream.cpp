@@ -88,7 +88,7 @@ bool Vidstream::Open(const char * device, uint w, uint h, int source, int mode)
 	//init mmap buffer and pointers to the frames of multibuffering
 	map_buffers = vector<unsigned char*>(vid_buffer.frames);
 	map_buffers[0] = (unsigned char*) mmap(0, vid_buffer.size, PROT_READ|PROT_WRITE, MAP_SHARED, vid_dev, 0);
-	if(int(map_buffers[0]) == -1)
+	if(long(map_buffers[0]) == -1)
 	{
 		log_message(1, "Vidstream: mmap() failed");
 		Close();
@@ -101,7 +101,7 @@ bool Vidstream::Open(const char * device, uint w, uint h, int source, int mode)
 	vid_mmap.frame  = 0;
 	vid_mmap.width  = width;
 	vid_mmap.height = height;
-	int pallet			= 0;
+	int pallet	= 0;
 	if(mode == NORM_PAL_NC && used_pallets[VIDEO_PALETTE_GREY])
 	{
 		pallet = VIDEO_PALETTE_GREY;
@@ -201,7 +201,7 @@ void Vidstream::setPicParams( uint br, uint cont, uint hue, uint col, uint wit )
 
 void Vidstream::Close()
 {
-	if(int(map_buffers[0])  != -1)
+	if(long(map_buffers[0])  != -1)
 		munmap(map_buffers[0], vid_buffer.size);
 	map_buffers.clear();
 

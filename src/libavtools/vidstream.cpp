@@ -22,30 +22,179 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <getopt.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <asm/types.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <signal.h>
+#include <malloc.h>
+#include <assert.h>
 
 #include <iostream>
 using namespace std;
 
 #include "vidstream.h"
 
-Vidstream::Vidstream()
+Vidstream::Vidstream(Setting& _video_settings)
+	: video_settings(_video_settings)
 {
-	vid_dev     = -1;
+	device = -1;
+	io_method = 0;
 
 	p_frame     = 0;
-
-	width       = 0;
-	height      = 0;
 }
 
-bool Vidstream::Open(const char * device, uint w, uint h, int source, int mode)
+
+bool Vidstream::Init()
+{
+	uint io_method = 0;
+	struct stat st;
+
+	//stat and open the device
+	device = video_settings["device"];
+	if(-1 == stat(dev_name, &st))
+	{
+		log_message(1, "Cannot identify '%s': %d, %s.", dev_name, errno, strerror (errno));
+		Close();
+		return false;
+	}
+
+	if(!S_ISCHR(st.st_mode))
+	{
+		log_message(1, "%s is no device.", dev_name);
+		Close();
+		return false;
+	}
+
+	device = open(dev_name, O_RDWR | O_NONBLOCK, 0);
+	if(-1 == device)
+	{
+		log_message(1, "Cannot open '%s': %d, %s.", dev_name, errno, strerror (errno));
+		Close();
+		return false;
+	}
+
+	//query device capabilities and check the necessary ones
+	if(-1 == xioctl(VIDIOC_QUERYCAP, &cap))
+	{
+		if(EINVAL == errno)
+		{
+			log_message(1, "%s is no V4L2 device.", dev_name);
+			Close();
+			return false;
+		}
+		else
+		{
+			log_errno("Could not get device capabilities (VIDIOC_QUERYCAP): ");
+			Close();
+			return false;
+		}
+	}
+
+	if(!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE))
+	{
+		log_message(1, "%s is no video capture device.", dev_name);
+		Close();
+		return false;
+	}
+
+	//set desired video source
+	input.index = (int)video_settings["input"];
+	if(-1 == xioctl(VIDIOC_S_INPUT, &input))
+	{
+		log_errno("Unable to set video input (VIDIOC_S_INPUT): ");
+		Close();
+		return false;
+	}
+
+	//set desired video standard
+	standard = (long long)video_settings["standard"];
+	if(-1 == xioctl(VIDIOC_S_STD, &standard))
+	{
+		log_errno("Unable to set video standard (VIDIOC_G_STD): ");
+		Close();
+		return false;
+	}
+
+	//resetting crop and setting video format
+	v4l2_cropcap cropcap;
+	CLEAR(cropcap);
+	cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	if(0 == xioctl(VIDIOC_CROPCAP, &cropcap))
+	{
+		crop.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		crop.c = cropcap.defrect; /* reset to default */
+		if(-1 == xioctl(VIDIOC_S_CROP, &crop))
+		{
+			switch (errno)
+			{
+				case EINVAL:
+					log_errno("Cropping not supported (VIDIOC_G_CROP): ");
+					break;
+				default:
+					log_errno("Unable to set cropping (VIDIOC_G_CROP): ");
+					break;
+			}
+		}
+	}
+	else
+	{
+		log_errno("Unable query cropping capabilities (VIDIOC_CROPCAP): ");
+		Close();
+		return false;
+	}
+
+	CLEAR(format);
+	format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+	format.fmt.pix.width       = video_settings["width"];
+	format.fmt.pix.height      = video_settings["height"];
+	format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+	format.fmt.pix.field       = V4L2_FIELD_INTERLACED;
+	if(-1 == xioctl(VIDIOC_S_FMT, &format))
+	{
+		log_errno("Unable set format (VIDIOC_S_FMT): ");
+		Close();
+		return false;
+	}
+
+	//setup input/output mechanism
+	if(cap.capabilities & V4L2_CAP_STREAMING)
+	{
+	}
+	else if(cap.capabilities & V4L2_CAP_READWRITE)
+	{
+	}
+
+	//set values for all the controls defined in configuration
+	Setting& controls = video_settings["controls"]
+	v4l2_control control;
+	int control_idx = 0;
+	while(true)
+	{
+		try
+		{
+			Setting& control_s = controls[control_idx];
+			CLEAR(control);
+			control.id = (int)control_s["id"];
+			control.value = (int)control_s["value"];
+			if(-1 == xioctl(fd, VIDIOC_S_CTRL, &control) && errno != ERANGE && errno != EINVAL)
+			{
+				log_errno("Unable to set control value (VIDIOC_S_CTRL): ");
+				Close();
+				return false;
+			}
+			control_idx++;
+		}
+		catch(...) { break; }
+	}
+
+	return true;
+}
+
+bool Vidstream::Open(const char * device, uint w, uint h, intput_source source, intput_mode mode)
 {
 	width  = w;
 	height = h;
@@ -69,7 +218,7 @@ bool Vidstream::Open(const char * device, uint w, uint h, int source, int mode)
 	//setup grab source and mode
 	vid_channel.channel = source;
 	vid_channel.norm    = mode;
-	vid_channel.type		= VIDEO_TYPE_CAMERA;
+	vid_channel.type    = VIDEO_TYPE_CAMERA;
 	if(ioctl(vid_dev, VIDIOCSCHAN, &vid_channel) == -1)
 	{
 		log_message(1, "ioctl: setting video channel failed");
@@ -259,6 +408,16 @@ bool Vidstream::Read(unsigned char * buffer, uint bsize)
 	return true;
 }
 
+/////////////////////////////////private functions////////////////////////////////
+
+int Vidstream::xioctl(int request, void * arg)
+{
+	int r;
+	do r = ioctl(device, request, arg);
+	while(-1 == r && EINTR == errno);
+	return r;
+}
+
 bool Vidstream::prepare_frame(int fnum)
 {
 	if(--fnum < 0) fnum = map_buffers.size()-1;
@@ -381,4 +540,5 @@ void Vidstream::rgb24_to_yuv420p(unsigned char *dest, const unsigned char *src, 
 		}
 	}
 }
+
 

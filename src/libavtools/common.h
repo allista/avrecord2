@@ -29,12 +29,17 @@ extern "C"
 #include <libavcodec/avcodec.h>
 }
 
+#include <errno.h>
 #include <string.h>
 #include <sys/types.h>
 //typedef unsigned char uint8_t;
 
+#define CLEAR(x) memset (&(x), 0, sizeof (x))
 
 ///logs given message to our logfile
 void log_message(int level, const char *fmt, ...);
+
+void log_errno(const char *message = NULL)
+{ log_message(1, "%s errno: %d, %s.", message, errno, strerror(errno)); }
 
 #endif

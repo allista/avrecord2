@@ -1,0 +1,5 @@
+Switch to V4L2
+Switch to libconfig for settings
+=> request the device for controls, formats, etc. and udpate the INI file
+Switch to gtk2 in avrtuner
+Fix video stuttering

@@ -25,39 +25,30 @@
 
 typedef unsigned long long __u64;
 typedef long long __s64;
+
 #include <sys/mman.h>
-#include <linux/videodev.h>
+#include <linux/videodev2.h>
 
 #include <vector>
 using namespace std;
 
+#include <libconfig.h++>
+using namespace libconfig;
+
 #include "common.h"
 #include "utimer.h"
 
-///input sources
-enum
-{
-    IN_TV         = 0,
-    IN_COMPOSITE1 = 1,
-    IN_COMPOSITE2 = 2,
-    IN_SVIDEO     = 3,
-    IN_DEFAULT    = 0
-};
+///tool functions
+#define CLEAR(x) memset (&(x), 0, sizeof (x))
+static int xioctl(int fd, int request, void *arg);
 
-///input modes
-enum
+///io method
+typedef enum
 {
-	NORM_PAL	= 0,
-	NORM_NTSC	= 1,
-	NORM_SECAM	= 2,
-	NORM_PAL_NC	= 3,
-	NORM_PAL_M	= 4,
-	NORM_PAL_N	= 5,
-	NORM_NTSC_JP	= 6,
-	NORM_PAL_60	= 7,
-
-	NORM_DEFAULT	= 0
-};
+	IO_METHOD_READ,
+	IO_METHOD_MMAP,
+	IO_METHOD_USERPTR,
+} io_method;
 
 static const char *pallets[] =
 {
@@ -105,24 +96,11 @@ static const uint used_pallets[] =
 class Vidstream
 {
 public:
-	Vidstream();
+	Vidstream(Setting& _video_settings);
 	~Vidstream() { Close(); };
 
-	///opens a video device
-	bool Open(const char *device,       ///< name of the video device to open
-						uint w = 640,             ///< width of captured images
-						uint h = 480,             ///< height of captured images
-						int source = IN_DEFAULT,  ///< grab source
-						int mode   = NORM_DEFAULT ///< grab mode
-					 );
-
-	///sets picture parameters (color, hue, brightness, contrast...)
-	void setPicParams(uint br,       ///< Picture brightness
-										uint cont,     ///< Picture contrast
-										uint hue = -1, ///< Picture hue (colour only)
-										uint col = -1, ///< Picture colour (colour only)
-										uint wit = -1  ///< Picture whiteness (greyscale only)
-									 );
+	///open and init video device
+	bool Init();
 
 	///closes video device
 	void Close();
@@ -137,21 +115,31 @@ public:
 	uint bsize() const { return b_size; };
 
 private:
-	int  vid_dev;  ///< pointer to opened video device
+	Setting& video_settings; ///<reference to the video settings object (libconfig++)
+
+	int device;  ///< pointer to opened video device
+
+	v4l2_capability cap;   ///< video capabilities
+	v4l2_input input;      ///< grab source
+	v4l2_std_id standard;  ///< video standard
+	v4l2_format format;    ///< video format
+
+	video_mbuf       mbuf;  ///< device video buffer
+	video_mmap       mmap;    ///< video mmap
+
+	v4l2_buffer buffer;
 
 	vector<unsigned char*> map_buffers; ///< mmap buffers
 	int                    p_frame;     ///< last prepaired frame
-
-	video_capability vid_cap;     ///< video capabilities
-	video_channel    vid_channel; ///< grab source and mode
-	video_mbuf       vid_buffer;  ///< device video buffer
-	video_mmap       vid_mmap;    ///< video mmap
 
 	uint width;    ///< width of a grabbing image
 	uint height;   ///< height of a grabbing image
 	uint b_size;   ///< pallet speciffic size of video buffer
 
 	//functions
+	///make an ioctl call to device safe from signal interuption
+	int xioctl(int request, void *arg);
+
 	///prepairs to capture a frame 'n'
 	bool prepare_frame(int fnum);
 

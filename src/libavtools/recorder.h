@@ -410,7 +410,7 @@ bool BaseRecorder<_mutex>::Init(const ConfigFile &config)
 	min_gap               = config.getOptionI("min_gap")            * 1000000;
 	min_record_time       = config.getOptionI("min_record_time")    * 1000000 * 60;
 	post_motion_offset    = config.getOptionI("post_motion_offset") * 1000000;
-	latency								= config.getOptionI("latency");
+	latency	              = config.getOptionI("latency");
 
 	noise_level           = config.getOptionI("noise_level");
 	threshold             = config.getOptionI("threshold");

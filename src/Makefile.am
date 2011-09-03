@@ -28,7 +28,7 @@ shellrcdir = $(kde_datadir)/avrecord
 
 
 confdir = /etc/$(PACKAGE)
-conf_DATA = avrecord.conf.sample
+conf_DATA = avrecord.conf.sample avrecord.sample.cfg
 
 servicedir = /etc/init.d/
 service_SCRIPTS = avrecd

@@ -15,10 +15,10 @@
     <ignoreparts/>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description></description>
+    <description/>
     <versioncontrol/>
     <projectname>avrecord</projectname>
-    <defaultencoding></defaultencoding>
+    <defaultencoding/>
   </general>
   <kdevautoproject>
     <general>
@@ -29,7 +29,7 @@
       <mainprogram>/home/allis/Workspace/Programming/AVRecord2-trunk/optimized</mainprogram>
       <directoryradio>build</directoryradio>
       <customdirectory>/</customdirectory>
-      <programargs></programargs>
+      <programargs/>
       <terminal>false</terminal>
       <autocompile>true</autocompile>
       <envvars>
@@ -39,16 +39,21 @@
         <avrecord>-c avrecord.conf</avrecord>
         <test/>
         <avrtuner>avrecord.conf</avrtuner>
+        <v4l2-teset/>
       </runarguments>
       <debugarguments>
         <avrtuner>avrecord.conf</avrtuner>
         <avrecord>-c avrecord.conf</avrecord>
+        <v4l2-teset/>
+        <test/>
       </debugarguments>
       <cwd>
         <avrtuner>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrtuner>
         <avrecord>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrecord>
+        <v4l2-teset>/home/allis/Workspace/Programming/AVRecord2-trunk/debug/./src/tests</v4l2-teset>
+        <test>/home/allis/Workspace/Programming/AVRecord2-trunk/debug/./src/tests</test>
       </cwd>
-      <globaldebugarguments></globaldebugarguments>
+      <globaldebugarguments/>
       <globalcwd>/home/allis/Workspace/Programming/AVRecord2-trunk/optimized</globalcwd>
       <useglobalprogram>false</useglobalprogram>
       <autoinstall>false</autoinstall>
@@ -162,12 +167,12 @@
   </kdevdoctreeview>
   <kdevdebugger>
     <general>
-      <dbgshell></dbgshell>
+      <dbgshell/>
       <programargs>-c ../avrecord.conf</programargs>
       <gdbpath>/usr/bin/gdb</gdbpath>
-      <configGdbScript></configGdbScript>
-      <runShellScript></runShellScript>
-      <runGdbScript></runGdbScript>
+      <configGdbScript/>
+      <runShellScript/>
+      <runGdbScript/>
       <breakonloadinglibs>true</breakonloadinglibs>
       <separatetty>false</separatetty>
       <floatingtoolbar>false</floatingtoolbar>
@@ -252,7 +257,7 @@
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet></prefixGet>
+      <prefixGet/>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>

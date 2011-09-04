@@ -64,7 +64,7 @@ public:
 	bool Open(string filename);
 
 	///true if the file is opened
-  bool opened() const { return _opened & INIT_FULL; };
+	bool opened() const { return _opened & INIT_FULL; };
 
 	///returns pts value (in seconds) of the video stream
 	double getVpts() const;

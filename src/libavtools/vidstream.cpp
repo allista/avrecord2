@@ -54,7 +54,13 @@ bool Vidstream::Init()
 	struct stat st;
 
 	//stat and open the device
-	device = video_settings["device"];
+	const char* dev_name = NULL;
+	try{ dev_name = video_settings["device"]; }
+	catch(SettingNotFoundException)
+	{
+		log_message(1, "No <device> setting was found. Using default /dev/video0");
+		dev_name = "/dev/video0";
+	}
 	if(-1 == stat(dev_name, &st))
 	{
 		log_message(1, "Cannot identify '%s': %d, %s.", dev_name, errno, strerror (errno));
@@ -102,22 +108,33 @@ bool Vidstream::Init()
 	}
 
 	//set desired video source
-	input.index = (int)video_settings["input"];
-	if(-1 == xioctl(VIDIOC_S_INPUT, &input))
+	try
 	{
-		log_errno("Unable to set video input (VIDIOC_S_INPUT): ");
-		Close();
-		return false;
+		input.index = (int)video_settings["input"];
+		if(-1 == xioctl(VIDIOC_S_INPUT, &input))
+		{
+			log_errno("Unable to set video input (VIDIOC_S_INPUT): ");
+			Close();
+			return false;
+		}
 	}
+	catch(SettingNotFoundException)
+	{ log_message(0, "No <input> setting was found. Using current device configuration."); }
 
 	//set desired video standard
-	standard = (long long)video_settings["standard"];
-	if(-1 == xioctl(VIDIOC_S_STD, &standard))
+	try
 	{
-		log_errno("Unable to set video standard (VIDIOC_G_STD): ");
-		Close();
-		return false;
+		standard = (long long)video_settings["standard"];
+		if(-1 == xioctl(VIDIOC_S_STD, &standard))
+		{
+			log_errno("Unable to set video standard (VIDIOC_G_STD): ");
+			Close();
+			return false;
+		}
 	}
+	catch(SettingNotFoundException)
+	{ log_message(0, "No <standard> setting was found. Using current device configuration."); }
+
 
 	//resetting crop and setting video format
 	v4l2_cropcap cropcap;
@@ -148,11 +165,20 @@ bool Vidstream::Init()
 	}
 
 	CLEAR(format);
+	try
+	{
+		format.fmt.pix.width   = video_settings["width"];
+		format.fmt.pix.height  = video_settings["height"];
+	}
+	catch(SettingNotFoundException)
+	{
+		log_message(1, "No <width> or <height> setting was found.");
+		Close();
+		return false;
+	}
 	format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	format.fmt.pix.width       = video_settings["width"];
-	format.fmt.pix.height      = video_settings["height"];
-	format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 	format.fmt.pix.field       = V4L2_FIELD_INTERLACED;
+	format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
 	if(-1 == xioctl(VIDIOC_S_FMT, &format))
 	{
 		log_errno("Unable set format (VIDIOC_S_FMT): ");
@@ -169,27 +195,32 @@ bool Vidstream::Init()
 	}
 
 	//set values for all the controls defined in configuration
-	Setting& controls = video_settings["controls"]
-	v4l2_control control;
-	int control_idx = 0;
-	while(true)
+	try
 	{
-		try
+		Setting& controls = video_settings["controls"]
+		v4l2_control control;
+		int control_idx = 0;
+		while(true)
 		{
-			Setting& control_s = controls[control_idx];
-			CLEAR(control);
-			control.id = (int)control_s["id"];
-			control.value = (int)control_s["value"];
-			if(-1 == xioctl(fd, VIDIOC_S_CTRL, &control) && errno != ERANGE && errno != EINVAL)
+			try
 			{
-				log_errno("Unable to set control value (VIDIOC_S_CTRL): ");
-				Close();
-				return false;
+				Setting& control_s = controls[control_idx];
+				CLEAR(control);
+				control.id = (int)control_s["id"];
+				control.value = (int)control_s["value"];
+				if(-1 == xioctl(fd, VIDIOC_S_CTRL, &control) && errno != ERANGE && errno != EINVAL)
+				{
+					log_errno("Unable to set control value (VIDIOC_S_CTRL): ");
+					Close();
+					return false;
+				}
+				control_idx++;
 			}
-			control_idx++;
+			catch(...) { break; }
 		}
-		catch(...) { break; }
 	}
+	catch(SettingNotFoundException)
+	{ log_message(0, "No <controls> setting group was found."); }
 
 	return true;
 }
@@ -246,33 +277,6 @@ bool Vidstream::Open(const char * device, uint w, uint h, intput_source source, 
 	for(int i=1; i<map_buffers.size(); i++)
 		map_buffers[i] = (unsigned char*) map_buffers[0] + vid_buffer.offsets[i];
 
-	//setup pallet
-	vid_mmap.frame  = 0;
-	vid_mmap.width  = width;
-	vid_mmap.height = height;
-	int pallet	= 0;
-	if(mode == NORM_PAL_NC && used_pallets[VIDEO_PALETTE_GREY])
-	{
-		pallet = VIDEO_PALETTE_GREY;
-		vid_mmap.format = used_pallets[VIDEO_PALETTE_GREY];
-		if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
-		{
-			log_message(1, "Vidstream: Faild setting %s palette...", pallets[vid_mmap.format]);
-			pallet = 0;
-		}
-	}
-	if(!pallet) for(pallet = 16; pallet > 0; pallet--)
-	{
-		vid_mmap.format = used_pallets[pallet];
-		if(!vid_mmap.format) continue;
-		if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
-		{
-			log_message(1, "Vidstream: Faild setting %s palette...", pallets[vid_mmap.format]);
-			continue;
-		}
-		else break;
-	}
-	if(!pallet) { Close(); return false; }
 
 	switch (vid_mmap.format)
 	{
@@ -320,43 +324,14 @@ bool Vidstream::Open(const char * device, uint w, uint h, intput_source source, 
 	return true;
 }
 
-void Vidstream::setPicParams( uint br, uint cont, uint hue, uint col, uint wit )
-{
-	if(vid_dev <= 0) return;
-
-	video_picture pic;
-
-	//get current params
-	if(ioctl(vid_dev, VIDIOCGPICT, &pic) == -1)
-	{
-		log_message(1, "Vidstream: setPicParams: Faild to get current picture params");
-		return;
-	}
-
-	//change params
-	pic.brightness = br;   //Picture brightness
-	pic.hue        = hue;  //Picture hue (colour only)
-	pic.colour     = col;  //Picture colour (colour only)
-	pic.contrast   = cont; //Picture contrast
-	pic.whiteness  = wit;  //Picture whiteness (greyscale only)
-
-	//set current params
-	if(ioctl(vid_dev, VIDIOCSPICT, &pic) == -1)
-	{
-		log_message(1, "Vidstream: setPicParams: Faild to set new picture params");
-		return;
-	}
-}
-
 void Vidstream::Close()
 {
 	if(long(map_buffers[0])  != -1)
 		munmap(map_buffers[0], vid_buffer.size);
 	map_buffers.clear();
 
-	if(vid_dev > 0)
-		close(vid_dev);
-	vid_dev    = -1;
+	if(device > 0) close(device);
+	device = -1;
 }
 
 bool Vidstream::Read(unsigned char * buffer, uint bsize)

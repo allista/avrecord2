@@ -22,7 +22,7 @@
   </general>
   <kdevautoproject>
     <general>
-      <activetarget>src/avrtuner/avrtuner</activetarget>
+      <activetarget>tests/v4l2-teset</activetarget>
       <useconfiguration>debug</useconfiguration>
     </general>
     <run>
@@ -39,18 +39,18 @@
         <avrecord>-c avrecord.conf</avrecord>
         <test/>
         <avrtuner>avrecord.conf</avrtuner>
-        <v4l2-teset/>
+        <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
       </runarguments>
       <debugarguments>
         <avrtuner>avrecord.conf</avrtuner>
         <avrecord>-c avrecord.conf</avrecord>
-        <v4l2-teset/>
+        <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
         <test/>
       </debugarguments>
       <cwd>
         <avrtuner>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrtuner>
         <avrecord>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrecord>
-        <v4l2-teset>/home/allis/Workspace/Programming/AVRecord2-trunk/debug/./src/tests</v4l2-teset>
+        <v4l2-teset>/home/allis/Workspace/Programming/AVRecord2-trunk/</v4l2-teset>
         <test>/home/allis/Workspace/Programming/AVRecord2-trunk/debug/./src/tests</test>
       </cwd>
       <globaldebugarguments/>

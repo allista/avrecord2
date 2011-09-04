@@ -41,8 +41,10 @@ using namespace std;
 Vidstream::Vidstream(Setting& _video_settings)
 	: video_settings(_video_settings)
 {
-	device = -1;
-	io_method = 0;
+	device    = -1;
+	io_method = IO_METHOD_USERPTR;
+	pix_fmt   = 0
+	buffers.resize(NUM_BUFFERS);
 
 	p_frame     = 0;
 }
@@ -50,10 +52,8 @@ Vidstream::Vidstream(Setting& _video_settings)
 
 bool Vidstream::Init()
 {
-	uint io_method = 0;
-	struct stat st;
-
 	//stat and open the device
+	stat st;
 	const char* dev_name = NULL;
 	try{ dev_name = video_settings["device"]; }
 	catch(SettingNotFoundException)
@@ -136,7 +136,7 @@ bool Vidstream::Init()
 	{ log_message(0, "No <standard> setting was found. Using current device configuration."); }
 
 
-	//resetting crop and setting video format
+	//resetting crop boundaries and setting video format
 	v4l2_cropcap cropcap;
 	CLEAR(cropcap);
 	cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
@@ -164,11 +164,11 @@ bool Vidstream::Init()
 		return false;
 	}
 
-	CLEAR(format);
+
 	try
 	{
-		format.fmt.pix.width   = video_settings["width"];
-		format.fmt.pix.height  = video_settings["height"];
+		 width  = video_settings["width"];
+		 height = video_settings["height"];
 	}
 	catch(SettingNotFoundException)
 	{
@@ -176,22 +176,149 @@ bool Vidstream::Init()
 		Close();
 		return false;
 	}
-	format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-	format.fmt.pix.field       = V4L2_FIELD_INTERLACED;
-	format.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
-	if(-1 == xioctl(VIDIOC_S_FMT, &format))
+	CLEAR(format);
+	for(pix_fmt = 0; pix_fmt < sizeof(pixel_formats)/sizeof(pixel_formats[0]); pix_fmt++)
 	{
-		log_errno("Unable set format (VIDIOC_S_FMT): ");
+		format.pix.height      = width;
+		format.pix.width       = height;
+		format.type            = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		format.pix.field       = V4L2_FIELD_INTERLACED;
+		format.pix.pixelformat = pixel_formats[pix_fmt];
+		if(-1 == xioctl(VIDIOC_S_FMT, &format))
+		{
+			log_message(0, "Unable set format $s. Errno: %d %s.", pixel_format_names[fmt], errno, strerror(errno));
+			CLEAR(format);
+		}
+		else break;
+	}
+	if(format.pix.height == 0)
+	{
+		log_message(1, "Unable to set any of the supported pixel formats.");
 		Close();
 		return false;
+	}
+	else ///<driver may change image dimensions
+	{
+		width  = format.pix.height;
+		height = format.pix.width;
 	}
 
 	//setup input/output mechanism
 	if(cap.capabilities & V4L2_CAP_STREAMING)
 	{
+		v4l2_requestbuffers req;
+
+		///trying memory mapping first
+		CLEAR (req);
+		req.count               = NUM_BUFFERS;
+		req.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		req.memory              = V4L2_MEMORY_MMAP;
+		if(0 == xioctl(VIDIOC_REQBUFS, &req))
+		{
+			if(req.count < 2)
+			{
+				log_message(1, "Insufficient buffer memory on %s.", dev_name);
+				Close();
+				return false;
+			}
+
+			for (int b = 0; b < NUM_BUFFERS; b++)
+			{
+				v4l2_buffer buf;
+				CLEAR(buf);
+
+				buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+				buf.memory      = V4L2_MEMORY_MMAP;
+				buf.index       = NUM_BUFFERS;
+				if(-1 == xioctl(VIDIOC_QUERYBUF, &buf))
+				{
+					log_errno("Failed to query mmap buffers (VIDIOC_QUERYBUF): ");
+					Close();
+					return false;
+				}
+
+				buffers[b].length = buf.length;
+				buffers[b].start  = mmap(NULL /* start anywhere */, buf.length, PROT_READ | PROT_WRITE /* required */, MAP_SHARED /* recommended */, device, buf.m.offset);
+
+				if(MAP_FAILED == buffers[b].start)
+				{
+					log_errno("mmap failed: ");
+					Close();
+					return false;
+				}
+			}
+
+			io_method = IO_METHOD_MMAP;
+		}
+		else
+		{
+			if(EINVAL != errno)
+			{
+				log_errno("VIDIOC_REQBUFS");
+				Close();
+				return false;
+			}
+			else
+			{
+				log_message(0, "Device %s does not support memory mapping.", dev_name);
+
+				///now trying user pointers
+				CLEAR (req);
+				req.count               = NUM_BUFFERS;
+				req.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+				req.memory              = V4L2_MEMORY_USERPTR;
+				if(0 == xioctl(VIDIOC_REQBUFS, &req))
+				{
+					uint page_size = getpagesize();
+					uint buffer_size = (format.fmt.pix.sizeimage + page_size - 1) & ~(page_size - 1);
+
+					for (int b = 0; b < NUM_BUFFERS; b++)
+					{
+						buffers[b].length = buffer_size;
+						buffers[b].start  = memalign(/* boundary */ page_size, buffer_size);
+
+						if(!buffers[b].start)
+						{
+							log_message(1, "Out of memory trying to allocate image buffers (USERPTR METHOD).");
+							Close();
+							return false;
+						}
+					}
+
+					io_method = IO_METHOD_USERPTR;
+				}
+				else
+				{
+					if(EINVAL == errno)
+						log_message(1, "Device %s does not support user pointers.", dev_name);
+					else
+						log_errno("VIDIOC_REQBUFS");
+					Close();
+					return false;
+				}
+			}
+		}
 	}
 	else if(cap.capabilities & V4L2_CAP_READWRITE)
 	{
+		buffers.resize(1);
+		buffers[0].length = format.fmt.pix.imagesize;
+		buffers[0].start  = malloc(format.fmt.pix.imagesize);
+
+		if(!buffers[0].start)
+		{
+			log_message(1, "Out of memory trying to allocate image buffer (READ METHOD).");
+			Close();
+			return false;
+		}
+
+		io_method = IO_METHOD_READ;
+	}
+	else
+	{
+		log_message(1, "Device has no I/O capability.");
+		Close();
+		return false;
 	}
 
 	//set values for all the controls defined in configuration
@@ -225,118 +352,129 @@ bool Vidstream::Init()
 	return true;
 }
 
-bool Vidstream::Open(const char * device, uint w, uint h, intput_source source, intput_mode mode)
-{
-	width  = w;
-	height = h;
-
-	//open the video4linux device
-	vid_dev = open(device, O_RDWR);
-	if(vid_dev == -1)
-	{
-		log_message(1, "Vidstream: Can't open device: %s", device);
-		return false;
-	}
-
-	//get the capabilities
-	if(ioctl(vid_dev, VIDIOCGCAP, &vid_cap) == -1)
-	{
-		log_message(1, "ioctl: getting capability failed");
-		Close();
-		return false;
-	}
-
-	//setup grab source and mode
-	vid_channel.channel = source;
-	vid_channel.norm    = mode;
-	vid_channel.type    = VIDEO_TYPE_CAMERA;
-	if(ioctl(vid_dev, VIDIOCSCHAN, &vid_channel) == -1)
-	{
-		log_message(1, "ioctl: setting video channel failed");
-		Close();
-		return false;
-	}
-
-	//set device video buffer using normal 'read'
-	if(ioctl(vid_dev, VIDIOCGMBUF, &vid_buffer) == -1)
-	{
-		log_message(1, "Vidstream: unable to set device video buffer");
-		Close();
-		return false;
-	}
-
-	//init mmap buffer and pointers to the frames of multibuffering
-	map_buffers = vector<unsigned char*>(vid_buffer.frames);
-	map_buffers[0] = (unsigned char*) mmap(0, vid_buffer.size, PROT_READ|PROT_WRITE, MAP_SHARED, vid_dev, 0);
-	if(long(map_buffers[0]) == -1)
-	{
-		log_message(1, "Vidstream: mmap() failed");
-		Close();
-		return false;
-	}
-	for(int i=1; i<map_buffers.size(); i++)
-		map_buffers[i] = (unsigned char*) map_buffers[0] + vid_buffer.offsets[i];
-
-
-	switch (vid_mmap.format)
-	{
-		case VIDEO_PALETTE_YUV420P:
-			b_size = (width*height*3)/2;
-			break;
-		case VIDEO_PALETTE_YUV422:
-			b_size = (width*height*2);
-			break;
-		case VIDEO_PALETTE_RGB24:
-			b_size = (width*height*3);
-			break;
-		case VIDEO_PALETTE_RGB32:
-			b_size = (width*height*4);
-			break;
-
-		case VIDEO_PALETTE_HI240:
-		case VIDEO_PALETTE_RGB565:
-		case VIDEO_PALETTE_RGB555:
-		case VIDEO_PALETTE_YUYV:
-		case VIDEO_PALETTE_UYVY:
-		case VIDEO_PALETTE_YUV420:
-		case VIDEO_PALETTE_YUV411:
-		case VIDEO_PALETTE_RAW:
-		case VIDEO_PALETTE_YUV422P:
-		case VIDEO_PALETTE_YUV411P:
-		case VIDEO_PALETTE_YUV410P:
-			b_size = (width*height*3);
-			break;
-
-		case VIDEO_PALETTE_GREY:
-			b_size = width*height;
-			break;
-
-		default: b_size = (width*height*3);
-	}
-
-	//wait for completion of all operations with video device
-	usleep(500000);
-
-	//make test capture in order to "heat up" capturing interface =)
-	ptime(map_buffers.size());
-
-	//all is done
-	return true;
-}
-
 void Vidstream::Close()
 {
-	if(long(map_buffers[0])  != -1)
-		munmap(map_buffers[0], vid_buffer.size);
-	map_buffers.clear();
+	StopCapture();
+	switch(io_method)
+	{
+		case IO_METHOD_READ:
+			free(buffers[0].start);
+			break;
+
+		case IO_METHOD_MMAP:
+			for(uint i = 0; i < NUM_BUFFERS; i++)
+				if(-1 == munmap(buffers[i].start, buffers[i].length))
+				{
+					log_errno("munmap failed: ");
+					Close();
+					return false;
+				}
+			break;
+
+		case IO_METHOD_USERPTR:
+			for(uint i = 0; i < NUM_BUFFERS; i++)
+				free(buffers[i].start);
+			break;
+	}
+	buffers.clear();
 
 	if(device > 0) close(device);
 	device = -1;
 }
 
-bool Vidstream::Read(unsigned char * buffer, uint bsize)
+
+bool Vidstream::StartCapture()
 {
-	if(vid_dev <= 0) return false;
+	v4l2_buf_type type;
+	switch (io_method)
+	{
+		case IO_METHOD_READ:
+			/* Nothing to do. */
+			break;
+
+		case IO_METHOD_MMAP:
+			for(uint i = 0; i < NUM_BUFFERS; i++)
+			{
+				v4l2_buffer buf;
+				CLEAR (buf);
+
+				buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+				buf.memory      = V4L2_MEMORY_MMAP;
+				buf.index       = i;
+				if(-1 == xioctl(VIDIOC_QBUF, &buf))
+				{
+					log_errno("VIDIOC_QBUF failed: ");
+					Close();
+					return false;
+				}
+			}
+
+			type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+			if (-1 == xioctl(VIDIOC_STREAMON, &type))
+			{
+				log_errno("VIDIOC_STREAMON failed: ");
+				Close();
+				return false;
+			}
+			break;
+
+		case IO_METHOD_USERPTR:
+			for(uint i = 0; i < NUM_BUFFERS; i++)
+			{
+				v4l2_buffer buf;
+				CLEAR (buf);
+
+				buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+				buf.memory      = V4L2_MEMORY_USERPTR;
+				buf.index       = i;
+				buf.m.userptr   = (unsigned long)buffers[i].start;
+				buf.length      = buffers[i].length;
+				if(-1 == xioctl(VIDIOC_QBUF, &buf))
+				{
+					log_errno("VIDIOC_QBUF failed: ");
+					Close();
+					return false;
+				}
+			}
+
+			type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+			if (-1 == xioctl(VIDIOC_STREAMON, &type))
+			{
+				log_errno("VIDIOC_STREAMON failed: ");
+				Close();
+				return false;
+			}
+			break;
+	}
+}
+
+
+bool Vidstream::StopCapture()
+{
+	v4l2_buf_type type;
+	switch(io_method)
+	{
+		case IO_METHOD_READ:
+			/* Nothing to do. */
+			break;
+
+		case IO_METHOD_MMAP:
+		case IO_METHOD_USERPTR:
+			type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+			if(-1 == xioctl(VIDIOC_STREAMOFF, &type))
+			{
+				log_errno("VIDIOC_STREAMOFF failed: ");
+				Close();
+				return false;
+			}
+			break;
+	}
+}
+
+
+int Vidstream::Read(image_buffer& buffer)
+{
+	if(device <= 0) return false;
 
 	/* Block signals during IOCTL */
 	sigset_t  set, old;
@@ -348,39 +486,131 @@ bool Vidstream::Read(unsigned char * buffer, uint bsize)
 	sigaddset (&set, SIGHUP);
 	pthread_sigmask (SIG_BLOCK, &set, &old);
 
-	//prepare the next one
-	if(!prepare_frame(p_frame))
+	v4l2_buffer buf;
+	switch(io_method)
 	{
-		pthread_sigmask (SIG_UNBLOCK, &old, NULL);
-		return false;
-	}
+		case IO_METHOD_READ:
+			if(-1 == read(device, buffers[0].start, buffers[0].length))
+			{
+				switch (errno)
+				{
+					case EAGAIN:
+						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+						return 0;
+					default:
+						log_errno("Read error while trying to grab image with READ method: ");
+						Close();
+						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+						return -1;
+				}
+			}
 
-	//capture prepared frame
-	uint c_frame = p_frame;
-	if(!capture_frame(c_frame))
-	{
-		pthread_sigmask (SIG_UNBLOCK, &old, NULL);
-		return false;
+			//copy captured frame
+			timeval t;
+			CLEAR(t);
+			if(!fill_buffer(buffer, buffers[0].start, buffers[0].length, t))
+			{
+				Close();
+				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+				return -1;
+			}
+			break;
+
+		case IO_METHOD_MMAP:
+			CLEAR(buf);
+			buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+			buf.memory = V4L2_MEMORY_MMAP;
+			if(-1 == xioctl(VIDIOC_DQBUF, &buf))
+			{
+				switch (errno) {
+					case EAGAIN:
+						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+						return 0;
+					default:
+						log_errno("(mmap method) VIDIOC_DQBUF failed: ");
+						Close();
+						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+						return -1;
+				}
+			}
+			if(!buf.index < NUM_BUFFERS)
+			{
+				log_message(1, "mmap buffer index is out of range");
+				Close();
+				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+				return -1;
+			}
+
+			//copy captured frame
+			if(!fill_buffer(buffer, buffers[buf.index].start, buffers[buf.index].length, buf.timestamp))
+			{
+				Close();
+				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+				return -1;
+			}
+
+			if(-1 == xioctl(VIDIOC_QBUF, &buf))
+			{
+				log_errno("VIDIOC_QBUF failed: ");
+				Close();
+				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+				return -1;
+			}
+			break;
+
+		case IO_METHOD_USERPTR:
+			CLEAR(buf);
+			buf.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+			buf.memory = V4L2_MEMORY_USERPTR;
+			if(-1 == xioctl(VIDIOC_DQBUF, &buf))
+			{
+				switch (errno) {
+					case EAGAIN:
+						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+						return 0;
+					default:
+						log_errno("(user pointer method) VIDIOC_DQBUF failed: ");
+						Close();
+						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+						return -1;
+				}
+			}
+
+			//find current buffer index
+			for(uint buf_idx = 0; i < NUM_BUFFERS; buf_idx++)
+				if(buf.m.userptr == (unsigned long)buffers[buf_idx].start
+					&& buf.length == buffers[buf_idx].length)
+					break;
+
+			if(!buf_idx < NUM_BUFFERS)
+			{
+				log_message(1, "user pointer buffer index is out of range");
+				Close();
+				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+				return -1;
+			}
+
+			//copy captured frame
+			if(!fill_buffer(buffer, (void*)buf.m.userptr, buf.length, buf.timestamp))
+			{
+				Close();
+				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+				return -1;
+			}
+
+			if(-1 == xioctl(VIDIOC_QBUF, &buf))
+			{
+				log_errno("VIDIOC_QBUF failed: ");
+				Close();
+				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+				return -1;
+			}
+			break;
 	}
 
 	/*undo the signal blocking*/
-	pthread_sigmask (SIG_UNBLOCK, &old, NULL);
-
-	//copy captured frame and convert it if needed
-	unsigned char* map_buffer = map_buffers[c_frame];
-	switch(vid_mmap.format)
-	{
-		case VIDEO_PALETTE_RGB24:
-			rgb24_to_yuv420p(buffer, map_buffer, width, height);
-			break;
-		case VIDEO_PALETTE_YUV422:
-			yuv422_to_yuv420p(buffer, map_buffer, width, height);
-			break;
-		default:
-			memcpy(buffer, map_buffer, bsize);
-			break;
-	}
-	return true;
+	pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+	return 1;
 }
 
 /////////////////////////////////private functions////////////////////////////////
@@ -393,127 +623,119 @@ int Vidstream::xioctl(int request, void * arg)
 	return r;
 }
 
-bool Vidstream::prepare_frame(int fnum)
+bool Vidstream::fill_buffer(image_buffer & buffer, void * start, uint length, timeval timestamp)
 {
-	if(--fnum < 0) fnum = map_buffers.size()-1;
-	vid_mmap.frame = fnum;
-	if(ioctl(vid_dev, VIDIOCMCAPTURE, &vid_mmap) == -1)
+	if(buffer.start) free(buffer.start);
+	buffer.start = malloc(length);
+	if(!buffer.start)
 	{
-		log_message(1, "Vidstream: capturing failed");
+		log_message(1, "Out of memory trying to allocate image buffer (fill_buffer).");
 		return false;
 	}
+	memcpy(buffer, start, length);
+	buffer.timestamp.tv_sec = timestamp.tv_sec;
+	buffer.timestamp.tv_usec = timestamp.tv_usec;
 	return true;
 }
 
-bool Vidstream::capture_frame(int fnum)
-{
-	p_frame = (fnum+1 >= map_buffers.size())? 0 : fnum+1;
-	if(ioctl(vid_dev, VIDIOCSYNC, &fnum) == -1)
-	{
-		log_message(1, "Vidstream: syncing failed");
-		return false;
-	}
-	return true;
-}
-
-uint Vidstream::ptime(uint frames)
-{
-	if(vid_dev <= 0) return 0;
-
-	UTimer timer;
-	unsigned char* buffer = new unsigned char[b_size];
-
-	timer.start();
-	for(int i=0; i<frames; i++)
-		Read(buffer, b_size);
-	timer.stop();
-
-	delete[] buffer;
-
-	return timer.elapsed()/frames;
-}
-
-
-//private functions
-void Vidstream::yuv422_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h)
-{
-	const unsigned char *src1, *src2;
-	unsigned char       *dest1, *dest2;
-	int i, j;
-
-	/* Create the Y plane */
-	src1  = src;
-	dest1 = dest;
-	for(i = w*h; i; i--)
-	{
-		*dest++ = *src;
-		src += 2;
-	}
-
-	/* Create U and V planes */
-	src1  = src + 1;
-	src2  = src + w*2 + 1;
-	dest  = dest + w*h;
-	dest2 = dest1 + (w*h)/4;
-	for(i = h/2; i; i--)
-	{
-		for(j = w/2; j; j--)
-		{
-			*dest1 = ((int)*src1+(int)*src2)/2;
-			src1  += 2;
-			src2  += 2;
-			dest1++;
-			*dest2 = ((int)*src1+(int)*src2)/2;
-			src1  += 2;
-			src2  += 2;
-			dest2++;
-		}
-		src1 += w*2;
-		src2 += w*2;
-	}
-}
-
-void Vidstream::rgb24_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h)
-{
-	unsigned char       *y, *u, *v;
-	const unsigned char *r, *g, *b;
-	int i, loop;
-
-	b = src;
-	g = b+1;
-	r = g+1;
-	y = dest;
-	u = y + w*h;
-	v = u+(w*h)/4;
-	memset(u, 0, w*h/4);
-	memset(v, 0, w*h/4);
-
-	for(loop=0; loop<h; loop++)
-	{
-		for(i=0; i<w; i+=2)
-		{
-			*y++ = (9796**r+19235**g+3736**b)>>15;
-			*u  += ((-4784**r-9437**g+14221**b)>>17)+32;
-			*v  += ((20218**r-16941**g-3277**b)>>17)+32;
-			r  += 3;
-			g  += 3;
-			b  += 3;
-			*y++ = (9796**r+19235**g+3736**b)>>15;
-			*u  += ((-4784**r-9437**g+14221**b)>>17)+32;
-			*v  += ((20218**r-16941**g-3277**b)>>17)+32;
-			r  += 3;
-			g  += 3;
-			b  += 3;
-			u++;
-			v++;
-		}
-
-		if((loop & 1) == 0)
-		{
-			u -= w/2;
-			v -= w/2;
-		}
-	}
-}
+// uint Vidstream::ptime(uint frames)
+// {
+// 	if(device <= 0) return 0;
+//
+// 	UTimer timer;
+// 	unsigned char* buffer = new unsigned char[b_size];
+//
+// 	timer.start();
+// 	for(int i=0; i<frames; i++)
+// 		Read(buffer, b_size);
+// 	timer.stop();
+//
+// 	delete[] buffer;
+//
+// 	return timer.elapsed()/frames;
+// }
+//
+//
+// //private functions
+// void Vidstream::yuv422_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h)
+// {
+// 	const unsigned char *src1, *src2;
+// 	unsigned char       *dest1, *dest2;
+// 	int i, j;
+//
+// 	/* Create the Y plane */
+// 	src1  = src;
+// 	dest1 = dest;
+// 	for(i = w*h; i; i--)
+// 	{
+// 		*dest++ = *src;
+// 		src += 2;
+// 	}
+//
+// 	/* Create U and V planes */
+// 	src1  = src + 1;
+// 	src2  = src + w*2 + 1;
+// 	dest  = dest + w*h;
+// 	dest2 = dest1 + (w*h)/4;
+// 	for(i = h/2; i; i--)
+// 	{
+// 		for(j = w/2; j; j--)
+// 		{
+// 			*dest1 = ((int)*src1+(int)*src2)/2;
+// 			src1  += 2;
+// 			src2  += 2;
+// 			dest1++;
+// 			*dest2 = ((int)*src1+(int)*src2)/2;
+// 			src1  += 2;
+// 			src2  += 2;
+// 			dest2++;
+// 		}
+// 		src1 += w*2;
+// 		src2 += w*2;
+// 	}
+// }
+//
+// void Vidstream::rgb24_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h)
+// {
+// 	unsigned char       *y, *u, *v;
+// 	const unsigned char *r, *g, *b;
+// 	int i, loop;
+//
+// 	b = src;
+// 	g = b+1;
+// 	r = g+1;
+// 	y = dest;
+// 	u = y + w*h;
+// 	v = u+(w*h)/4;
+// 	memset(u, 0, w*h/4);
+// 	memset(v, 0, w*h/4);
+//
+// 	for(loop=0; loop<h; loop++)
+// 	{
+// 		for(i=0; i<w; i+=2)
+// 		{
+// 			*y++ = (9796**r+19235**g+3736**b)>>15;
+// 			*u  += ((-4784**r-9437**g+14221**b)>>17)+32;
+// 			*v  += ((20218**r-16941**g-3277**b)>>17)+32;
+// 			r  += 3;
+// 			g  += 3;
+// 			b  += 3;
+// 			*y++ = (9796**r+19235**g+3736**b)>>15;
+// 			*u  += ((-4784**r-9437**g+14221**b)>>17)+32;
+// 			*v  += ((20218**r-16941**g-3277**b)>>17)+32;
+// 			r  += 3;
+// 			g  += 3;
+// 			b  += 3;
+// 			u++;
+// 			v++;
+// 		}
+//
+// 		if((loop & 1) == 0)
+// 		{
+// 			u -= w/2;
+// 			v -= w/2;
+// 		}
+// 	}
+// }
 
 

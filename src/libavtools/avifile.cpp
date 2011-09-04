@@ -353,7 +353,7 @@ bool AVIFile::writeVFrame(unsigned char * img, uint width, uint height )
 	AVFrame *picture = avcodec_alloc_frame();
 	if(!picture)
 	{
-		log_message(1, "AVIFile: avcodec_alloc_frame - could not alloc frame");
+		log_message(1, "AVIFile: avcodec_alloc_frame - could not allocate frame");
 		return false;
 	}
 
@@ -387,10 +387,10 @@ bool AVIFile::writeVFrame(unsigned char * img, uint width, uint height )
 		/* encode the image */
 		out_size = avcodec_encode_video(vcodec, vbuffer, v_bsize, picture);
 
-		/* if zero size, it means the image was buffered */
+		/* zero size means the image was buffered */
 		if(out_size != 0)
 		{
-			/* write the compressed frame in the media file */
+			/* write the compressed frame to the media file */
 			/* XXX: in case of B frames, the pts is not yet valid */
 			if(vcodec->coded_frame)
 				pkt.pts = vcodec->coded_frame->pts;

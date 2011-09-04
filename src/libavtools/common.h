@@ -39,6 +39,7 @@ extern "C"
 ///logs given message to our logfile
 void log_message(int level, const char *fmt, ...);
 
+///logs given message as error to our logfile, appendig errno and it's description
 void log_errno(const char *message = NULL)
 { log_message(1, "%s errno: %d, %s.", message, errno, strerror(errno)); }
 

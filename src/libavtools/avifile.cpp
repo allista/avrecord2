@@ -24,7 +24,8 @@ using namespace std;
 
 #include "avifile.h"
 
-AVIFile::AVIFile()
+ AVIFile::AVIFile(Setting& _video_settings, Setting& _audio_settings)
+	: video_settings(_video_settings), audio_settings(_audio_settings)
 {
 	_opened = INIT_NONE;
 
@@ -47,7 +48,7 @@ AVIFile::AVIFile()
 }
 
 
-bool AVIFile::Init( )
+bool AVIFile::Init()
 {
 	/* allocation the output media context */
 	o_file = (AVFormatContext*)av_mallocz(sizeof(AVFormatContext));
@@ -61,24 +62,31 @@ bool AVIFile::Init( )
 	//guess the avi output format
 	o_file->oformat = guess_format("avi", NULL, NULL);
 	if(!o_file->oformat)
-	{ cleanup(); return false; }
+	{
+		cleanup();
+		return false;
+	}
 
 	return true;
 }
 
 
-bool AVIFile::setVParams(string codec_name,
-                         uint  width,
-                         uint  height,
-                         uint  rate,
-                         uint  bps,
-                         uint  _vbr)
+bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 {
 	if(opened() || !o_file) return false;
-	vbr     = _vbr;
 
 	/* Setup video codec id */
-	o_file->oformat->video_codec = get_codec_id(codec_name, CODEC_TYPE_VIDEO);
+	try
+	{
+		o_file->oformat->video_codec = get_codec_id(
+				(const char*)video_settings["codec"],
+				CODEC_TYPE_VIDEO);
+	}
+	catch(SettingNotFoundException)
+	{
+		log_message(1, "No video <codec> setting was found. Using default msmpeg4");
+		o_file->oformat->video_codec = get_codec_id("msmpeg4", CODEC_TYPE_VIDEO);
+	}
 
 	/* Create a new video stream and initialize the codecs */
 	if(o_file->oformat->video_codec != CODEC_ID_NONE)
@@ -104,37 +112,44 @@ bool AVIFile::setVParams(string codec_name,
 	vcodec->codec_id   = o_file->oformat->video_codec;
 	vcodec->codec_type = CODEC_TYPE_VIDEO;
 
-	/* Uncomment to allow non-standard framerates. */
-	//vcodec->strict_std_compliance = -1;
-
 	/* Set default parameters */
-	vcodec->bit_rate       = bps;
-	vcodec->width          = width;
-	vcodec->height         = height;
-	/* frame rate = 1/time_base, so we set 1/rate, not rate/1 */
-	vcodec->time_base.num  = 1;
-	vcodec->time_base.den  = rate;
+	try
+	{
+		vcodec->bit_rate       = video_settings["bitrate"];
+		vcodec->width          = video_settings["width"];
+		vcodec->height         = video_settings["height"];
+
+		if(video_settings.exists("var_bitrate"))
+		{
+			vbr = video_settings["var_bitrate"];
+			vcodec->flags |= CODEC_FLAG_QSCALE;
+			vcodec->bit_rate_tolerance = vcodec->bit_rate/20;
+			vcodec->qmin = (vbr-2 < 2)? 2 : vbr-2;
+			vcodec->qmax = (vbr+2 > 31)? 31 : vbr+2;
+		}
+	}
+	catch(SettingNotFoundException)
+	{
+		log_message(1, "Video <bitrate>, <width> or <height> settings not found");
+		cleanup();
+		return false;
+	}
+	vcodec->time_base.num  = numerator;
+	vcodec->time_base.den  = denomenator;
 	/* set intra frame distance in frames depending on codec */
 	vcodec->gop_size       = 12;
-	/* Set the picture format - need in ffmpeg starting round April-May 2005 */
-	vcodec->pix_fmt = PIX_FMT_YUV420P;
-	if(vbr)
-	{
-		vcodec->flags |= CODEC_FLAG_QSCALE;
-		vcodec->bit_rate_tolerance = bps/20;
-		vcodec->qmin = (vbr-2 < 2)? 2 : vbr-2;
-		vcodec->qmax = (vbr+2 > 31)? 31 : vbr+2;
-	}
+	/* Set the picture format */
+	vcodec->pix_fmt = av_pixel_formats[pix_fmt];
 
 	/* Set codec specific parameters. */
 	/* some formats want stream headers to be separate */
 	if(!strcmp(o_file->oformat->name, "mp4") ||
-	        !strcmp(o_file->oformat->name, "mov") ||
-	        !strcmp(o_file->oformat->name, "3gp"))
+		!strcmp(o_file->oformat->name, "mov") ||
+		!strcmp(o_file->oformat->name, "3gp"))
 		vcodec->flags |= CODEC_FLAG_GLOBAL_HEADER;
 
 	/* Now that all the parameters are set, we can open the video
-		 codec and allocate the necessary encode buffers */
+	codec and allocate the necessary encode buffers */
 	AVCodec *codec = avcodec_find_encoder(vcodec->codec_id);
 	if(!codec)
 	{
@@ -152,6 +167,7 @@ bool AVIFile::setVParams(string codec_name,
 	}
 	else _opened |= INIT_VCODEC;
 
+	/// O_o ???
 	if(!(o_file->oformat->flags & AVFMT_RAWPICTURE))
 	{
 		/* allocate output buffer */
@@ -170,15 +186,23 @@ bool AVIFile::setVParams(string codec_name,
 }
 
 
-bool AVIFile::setAParams(string codec_name,
-                         uint channels,
-                         uint rate,
-                         uint bps)
+bool AVIFile::setAParams()
 {
 	if(opened() || !o_file) return false;
 
 	/* Setup audio codec id */
 	o_file->oformat->audio_codec = get_codec_id(codec_name, CODEC_TYPE_AUDIO);
+	try
+	{
+		o_file->oformat->audio_codec = get_codec_id(
+				(const char*)audio_settings["codec"],
+				 CODEC_TYPE_AUDIO);
+	}
+	catch(SettingNotFoundException)
+	{
+		log_message(1, "No audio <codec> setting was found. Using default mp2");
+		o_file->oformat->audio_codec = get_codec_id("mp2", CODEC_TYPE_AUDIO);
+	}
 
 	/* Create a new audio stream and initialize the codecs */
 	if(o_file->oformat->audio_codec != CODEC_ID_NONE)
@@ -205,11 +229,18 @@ bool AVIFile::setAParams(string codec_name,
 	acodec->codec_type = CODEC_TYPE_AUDIO;
 
 	/* Set default parameters */
-	acodec->bit_rate      				= bps;
-	//smaple rate of audio stream
-	acodec->sample_rate   = rate;
-	//channels of audio stream
-	acodec->channels      = channels;
+	try
+	{
+		acodec->bit_rate    = audio_settings["bitrate"];
+		acodec->sample_rate = audio_settings["sample_rate"];
+		acodec->channels    = audio_settings["channels"];
+	}
+	catch(SettingNotFoundException)
+	{
+		log_message(1, "Audio <bitrate>, <sample_rate> or <channels> setting(s) not found");
+		cleanup();
+		return false;
+	}
 	acodec->frame_size    = 1; //it's initial value. it will be changed during codec initialization
 	acodec->strict_std_compliance = 0;
 
@@ -340,14 +371,9 @@ double AVIFile::getApts( ) const
 	return (double)astream->pts.val * astream->time_base.num / astream->time_base.den;
 }
 
-bool AVIFile::writeVFrame(unsigned char * img, uint width, uint height )
+bool AVIFile::writeVFrame(image_buffer& buffer)
 {
 	if(!opened()) return false;
-
-	//make yuv from rgb
-	unsigned char *y = img;
-	unsigned char *u = y + (width * height);
-	unsigned char *v = u + (width * height) / 4;
 
 	/* allocate the encoded raw picture */
 	AVFrame *picture = avcodec_alloc_frame();
@@ -357,29 +383,23 @@ bool AVIFile::writeVFrame(unsigned char * img, uint width, uint height )
 		return false;
 	}
 
+	//fill in the picture
+	avpicture_fill((AVPicture *)picture, buffer.start, vcodec->pix_fmt, vcodec->width, vcodec->height);
+
 	/* set variable bitrate if requested */
 	if(vbr) picture->quality = vbr;
-
-	/* set the frame data */
-	picture->data[0] = y;
-	picture->data[1] = u;
-	picture->data[2] = v;
-	picture->linesize[0] = vcodec->width;
-	picture->linesize[1] = vcodec->width / 2;
-	picture->linesize[2] = vcodec->width / 2;
 
 	//encode and write a video frame using the av_write_frame API.
 	int out_size, ret;
 	AVPacket pkt;
 	av_init_packet(&pkt); /* init static structure */
-
 	pkt.stream_index = vstream->index;
-	if (o_file->oformat->flags & AVFMT_RAWPICTURE)
+	if(o_file->oformat->flags & AVFMT_RAWPICTURE)
 	{
 		/* raw video case. The API will change slightly in the near future for that */
 		pkt.flags |= PKT_FLAG_KEY;
-		pkt.data = (uint8_t *)picture;
-		pkt.size = sizeof(AVPicture);
+		pkt.data   = (uint8_t *)picture;
+		pkt.size   = sizeof(AVPicture);
 		ret = av_interleaved_write_frame(o_file, &pkt);
 	}
 	else

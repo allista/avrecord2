@@ -246,6 +246,7 @@ int main(int argc, char *argv[])
 		{
 			standard_list.push_back(standard);
 			log_message(0, "Standard %s is supported by current input.", standard.name);
+			log_message(0, "The framerate defined by this standard is: %d", standard.frameperiod.denominator/standard.frameperiod.numerator);
 			if(standard.id & current_standard)
 				log_message(0, "Standard %s is currently selected on input.", standard.name);
 		}
@@ -332,7 +333,7 @@ int main(int argc, char *argv[])
 		fmt.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		fmt.fmt.pix.width       = cropcap.defrect.width;
 		fmt.fmt.pix.height      = cropcap.defrect.height;
-		fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUYV;
+		fmt.fmt.pix.pixelformat = V4L2_PIX_FMT_YUV422P;
 		fmt.fmt.pix.field       = V4L2_FIELD_INTERLACED;
 		if(-1 == xioctl(fd, VIDIOC_S_FMT, &fmt))
 			log_errno("VIDIOC_TRY_FMT");

@@ -29,6 +29,7 @@ extern "C"
 #include <libavcodec/avcodec.h>
 }
 
+#include <time.h>
 #include <errno.h>
 #include <string.h>
 #include <sys/types.h>
@@ -42,5 +43,12 @@ void log_message(int level, const char *fmt, ...);
 ///logs given message as error to our logfile, appendig errno and it's description
 void log_errno(const char *message = NULL)
 { log_message(1, "%s errno: %d, %s.", message, errno, strerror(errno)); }
+
+struct image_buffer    ///< image buffer structure
+{
+	void* start;       ///< the beginning of a buffer
+	size_t length;     ///< buffer length
+	timeval timestamp; ///< image timestamp as returnd by VIDIOC_DQBUF in v4l2_buffer structure
+};
 
 #endif

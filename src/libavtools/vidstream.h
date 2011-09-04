@@ -44,12 +44,8 @@ using namespace libconfig;
 static const uint *pixel_formats[] =
 {
 	V4L2_PIX_FMT_YUV422P,
-	V4L2_PIX_FMT_YVU420,
 	V4L2_PIX_FMT_YUV420,
-	V4L2_PIX_FMT_NV12,
-	V4L2_PIX_FMT_NV21,
 	V4L2_PIX_FMT_YUV411P
-	V4L2_PIX_FMT_YVU410,
 	V4L2_PIX_FMT_YUV410,
 	V4L2_PIX_FMT_GREY
 };
@@ -58,12 +54,8 @@ static const uint *pixel_formats[] =
 static const char *pixel_format_names[] =
 {
 	"V4L2_PIX_FMT_YUV422P",
-	"V4L2_PIX_FMT_YVU420",
 	"V4L2_PIX_FMT_YUV420",
-	"V4L2_PIX_FMT_NV12",
-	"V4L2_PIX_FMT_NV21",
 	"V4L2_PIX_FMT_YUV411P"
-	"V4L2_PIX_FMT_YVU410",
 	"V4L2_PIX_FMT_YUV410",
 	"V4L2_PIX_FMT_GREY"
 };
@@ -72,13 +64,6 @@ typedef enum io {
 	IO_METHOD_READ,
 	IO_METHOD_MMAP,
 	IO_METHOD_USERPTR,
-};
-
-struct image_buffer    ///< image buffer structure
-{
-	void* start;       ///< the beginning of a buffer
-	size_t length;     ///< buffer length
-	timeval timestamp; ///< image timestamp as returnd by VIDIOC_DQBUF in v4l2_buffer structure
 };
 
 ///encapsulates simple grabbing work with v4l device
@@ -103,6 +88,23 @@ public:
 	///grabs an image from the device and stores it in the 'buffer'
 	int  Read(image_buffer& buffer);
 
+	///pixel format currently in use
+	uint pixel_format() const { return pix_fmt; }
+
+	///used for frame rate/interval calculations
+	uint frameperiod_numerator() const { return standard.frameperiod.numerator; }
+
+	///used for frame rate/interval calculations
+	uint frameperiod_demoninator() const { return standard.frameperiod.denominator; }
+
+	///is it needed at all?
+	uint frame_rate() const
+	{ return standard.frameperiod.denominator/standard.frameperiod.numerator ;}
+
+	///timespan between frames (sec)
+	double frame_interval() const
+	{ return (double)standard.frameperiod.numerator/standard.frameperiod.denominator; }
+
 private:
 	Setting& video_settings; ///<reference to the video settings object (libconfig++)
 
@@ -112,10 +114,10 @@ private:
 	uint width;     ///< width of an image
 	uint height;    ///< height of an image
 
-	v4l2_capability cap;   ///< video capabilities
-	v4l2_input input;      ///< grab source
-	v4l2_std_id standard;  ///< video standard
-	v4l2_format format;    ///< video format
+	v4l2_capability cap;     ///< video capabilities
+	v4l2_input input;        ///< grab source
+	v4l2_standard standard; ///< video standard
+	v4l2_format format;      ///< video format
 
 	static const uint NUM_BUFFERS = 4; ///<number of image buffers to request from driver. Hardcoded for now.
 	vector<image_buffer> buffers;      ///< image buffers

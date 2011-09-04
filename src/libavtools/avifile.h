@@ -30,37 +30,40 @@ extern "C"
 #include <libavcodec/avcodec.h>
 }
 
+#include<libconfig++.h>
+
 #include "common.h"
 #include "fifo.h"
+
+static const uint *av_pixel_formats[] =
+{
+	PIX_FMT_YUV422P,
+	PIX_FMT_YUV420P,
+	PIX_FMT_YUV411P
+	PIX_FMT_YUV410P,
+	PIX_FMT_GREY8
+};
 
 ///encapsulates simple ffmpeg work with avi file
 class AVIFile
 {
 public:
-	AVIFile();
+	AVIFile(Setting& _video_settings, Setting& _audio_settings);
 	~AVIFile() { if(opened()) Close(); else cleanup(); };
 
-	///allocates output context
+	///allocate output context, set audio and video parameters
 	bool Init();
 
 	///sets parameters of the video codec
-	bool setVParams(string codec_name,  ///< name of video codec
-	                uint  width,
-	                uint  height,
-	                uint  rate,         ///< frames per second
-	                uint  bps,          ///< bits per second
-	                uint  _vbr          ///< variable bitrate
-	                                    ///< (0 for constant, or 2-31 for variable quality (2 is the best))
-	               );
+	bool setVParams(uint numerator,   ///<frame interval numerator (determined by video standard)
+					uint denomenator, ///<frame interval denomenator (determined by video standard)
+	 				uint pix_fmt      ///<pixel format used in video capture
+				   );
 
 	///sets parameters of the audio codec
-	bool setAParams(string codec_name,  ///< name of audio codec
-	                uint channels,      ///< number of channels
-	                uint rate,          ///< samples per second
-	                uint bps            ///< bits per second
-	               );
+	bool setAParams();
 
-	///opens avi file and writeout the header
+	///open avi file and write out the header
 	bool Open(string filename);
 
 	///true if the file is opened
@@ -73,19 +76,15 @@ public:
 	double getApts() const;
 
 	///write video frame to the file
-	bool writeVFrame(unsigned char *img,  ///< yuv420p image data
-	                 uint width,          ///< width of the image
-	                 uint height          ///< height of the image
-	                );
+	bool writeVFrame(image_buffer& buffer);
 
 	///write audio frame to the file
 	bool writeAFrame(uint8_t *samples,    ///< audio data
 	                 uint size            ///< audio data size in bytes
 	                );
 
-	///writes avi trailer and closes the file
+	///write avi trailer and close the file
 	void Close();
-
 
 private:
 	//predefinitions
@@ -102,6 +101,9 @@ private:
 	    INIT_FULL   = 0x008
 	};
 	uint _opened; ///< bitflag that shows what was inited already
+
+	Setting& video_settings; ///<reference to the video settings object (libconfig++)
+	Setting& audio_settings; ///<reference to the audio settings object (libconfig++)
 
 	//file streams and codecs
 	AVFormatContext *o_file;  ///< output file context

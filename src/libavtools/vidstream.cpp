@@ -124,10 +124,17 @@ bool Vidstream::Init()
 	//set desired video standard
 	try
 	{
-		standard = (long long)video_settings["standard"];
-		if(-1 == xioctl(VIDIOC_S_STD, &standard))
+		CLEAR(standard);
+		standard.index = (long long)video_settings["standard"];
+		if(-1 == xioctl(VIDIOC_S_STD, &standard.index))
 		{
 			log_errno("Unable to set video standard (VIDIOC_G_STD): ");
+			Close();
+			return false;
+		}
+		else if(-1 == xioctl(VIDIOC_ENUMSTD, &standard))
+		{
+			log_errno("Unable to get video standard info (VIDIOC_ENUMSTD): ");
 			Close();
 			return false;
 		}
@@ -199,8 +206,8 @@ bool Vidstream::Init()
 	}
 	else ///<driver may change image dimensions
 	{
-		width  = format.pix.height;
-		height = format.pix.width;
+		video_settings["width"]  = width  = format.pix.height;
+		video_settings["height"] = height = format.pix.width;
 	}
 
 	//setup input/output mechanism

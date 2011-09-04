@@ -19,15 +19,15 @@ avrecord:
 		//video device file
 		device = "/dev/video0";
 
-		//device outputs (set on initialization)
-		outputs = [];
-		//choosen output
-		output = "";
+		//device inputs (set on initialization)
+		inputs = [];
+		//choosen input
+		input = 1;
 
-		//formats supported by device (set on initialization)
-		formats = [];
-		//choosen format
-		format = "";
+		//standarts supported by device (set on initialization)
+		standards = [];
+		//choosen standart
+		standard = "";
 
 		//device controls (set on initialization)
 		controls:

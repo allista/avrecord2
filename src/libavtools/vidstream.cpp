@@ -26,6 +26,7 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 #include <asm/types.h>
 #include <fcntl.h>
 #include <unistd.h>
@@ -42,10 +43,8 @@ Vidstream::Vidstream()
 {
 	device    = -1;
 	io_method = IO_METHOD_USERPTR;
-	pix_fmt   = 0
+	pix_fmt   = 0;
 	buffers.resize(NUM_BUFFERS);
-
-	p_frame     = 0;
 }
 
 
@@ -55,13 +54,14 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	Setting &video_settings = *video_settings_ptr;
 
 	//stat and open the device
-	stat st;
+	struct stat st;
 	const char *dev_name = NULL;
 	try{ dev_name = video_settings["device"]; }
 	catch(SettingNotFoundException)
 	{
 		log_message(1, "No <device> setting was found. Using default /dev/video0");
-		dev_name = "/dev/video0";
+		Close();
+		return false;
 	}
 	if(-1 == stat(dev_name, &st))
 	{
@@ -134,19 +134,21 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 			Close();
 			return false;
 		}
-		else if(-1 == xioctl(VIDIOC_ENUMSTD, &standard))
-		{
-			log_errno("Unable to get video standard info (VIDIOC_ENUMSTD): ");
-			Close();
-			return false;
-		}
 	}
 	catch(SettingNotFoundException)
 	{ log_message(0, "No <standard> setting was found. Using current device configuration."); }
 
+	if(-1 == xioctl(VIDIOC_ENUMSTD, &standard))
+	{
+		log_errno("Unable to get video standard info (VIDIOC_ENUMSTD): ");
+		Close();
+		return false;
+	}
+
 
 	//resetting crop boundaries and setting video format
 	v4l2_cropcap cropcap;
+	v4l2_crop crop;
 	CLEAR(cropcap);
 	cropcap.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	if(0 == xioctl(VIDIOC_CROPCAP, &cropcap))
@@ -188,19 +190,19 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	CLEAR(format);
 	for(pix_fmt = 0; pix_fmt < sizeof(pixel_formats)/sizeof(pixel_formats[0]); pix_fmt++)
 	{
-		format.pix.height      = width;
-		format.pix.width       = height;
-		format.type            = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		format.pix.field       = V4L2_FIELD_INTERLACED;
-		format.pix.pixelformat = pixel_formats[pix_fmt];
+		format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
+		format.fmt.pix.height      = width;
+		format.fmt.pix.width       = height;
+		format.fmt.pix.field       = V4L2_FIELD_INTERLACED;
+		format.fmt.pix.pixelformat = pixel_formats[pix_fmt];
 		if(-1 == xioctl(VIDIOC_S_FMT, &format))
 		{
-			log_message(0, "Unable set format $s. Errno: %d %s.", pixel_format_names[fmt], errno, strerror(errno));
+			log_message(0, "Unable set format $s. Errno: %d %s.", pixel_format_names[pix_fmt], errno, strerror(errno));
 			CLEAR(format);
 		}
 		else break;
 	}
-	if(format.pix.height == 0)
+	if(format.fmt.pix.height == 0)
 	{
 		log_message(1, "Unable to set any of the supported pixel formats.");
 		Close();
@@ -208,8 +210,10 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	}
 	else ///<driver may change image dimensions
 	{
-		video_settings["width"]  = width  = format.pix.height;
-		video_settings["height"] = height = format.pix.width;
+		width  = format.fmt.pix.height;
+		height = format.fmt.pix.width;
+		video_settings["width"]  = (int)width;
+		video_settings["height"] = (int)height;
 	}
 
 	//setup input/output mechanism
@@ -311,8 +315,8 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	else if(cap.capabilities & V4L2_CAP_READWRITE)
 	{
 		buffers.resize(1);
-		buffers[0].length = format.fmt.pix.imagesize;
-		buffers[0].start  = malloc(format.fmt.pix.imagesize);
+		buffers[0].length = format.fmt.pix.sizeimage;
+		buffers[0].start  = malloc(format.fmt.pix.sizeimage);
 
 		if(!buffers[0].start)
 		{
@@ -333,7 +337,7 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	//set values for all the controls defined in configuration
 	try
 	{
-		Setting &controls = video_settings["controls"]
+		Setting &controls = video_settings["controls"];
 		v4l2_control control;
 		int control_idx = 0;
 		for(control_idx = 0; control_idx < controls.getLength(); control_idx++)
@@ -344,7 +348,7 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 				CLEAR(control);
 				control.id = (int)control_s["id"];
 				control.value = (int)control_s["value"];
-				if(-1 == xioctl(fd, VIDIOC_S_CTRL, &control) && errno != ERANGE && errno != EINVAL)
+				if(-1 == xioctl(VIDIOC_S_CTRL, &control) && errno != ERANGE && errno != EINVAL)
 				{
 					log_errno("Unable to set control value (VIDIOC_S_CTRL): ");
 					Close();
@@ -374,11 +378,7 @@ void Vidstream::Close()
 		case IO_METHOD_MMAP:
 			for(uint i = 0; i < NUM_BUFFERS; i++)
 				if(-1 == munmap(buffers[i].start, buffers[i].length))
-				{
 					log_errno("munmap failed: ");
-					Close();
-					return false;
-				}
 			break;
 
 		case IO_METHOD_USERPTR:
@@ -587,7 +587,8 @@ int Vidstream::Read(image_buffer& buffer)
 			}
 
 			//find current buffer index
-			for(uint buf_idx = 0; i < NUM_BUFFERS; buf_idx++)
+			uint buf_idx;
+			for(buf_idx = 0; buf_idx < NUM_BUFFERS; buf_idx++)
 				if(buf.m.userptr == (unsigned long)buffers[buf_idx].start
 					&& buf.length == buffers[buf_idx].length)
 					break;
@@ -642,7 +643,7 @@ bool Vidstream::fill_buffer(image_buffer &buffer, void *start, uint length, time
 		log_message(1, "Out of memory trying to allocate image buffer (fill_buffer).");
 		return false;
 	}
-	memcpy(buffer, start, length);
+	memcpy(buffer.start, start, length);
 	buffer.timestamp.tv_sec = timestamp.tv_sec;
 	buffer.timestamp.tv_usec = timestamp.tv_usec;
 	return true;

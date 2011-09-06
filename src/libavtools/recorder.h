@@ -75,7 +75,7 @@ public:
 	~BaseRecorder() { Close(); };
 
 	///initializes the recorder
-	bool Init(Setting *_avrecord_setting_ptr);
+	bool Init(Config *_avrecord_config_ptr);
 
 	///cleans all up
 	void Close();
@@ -140,7 +140,7 @@ private:
 
 	//configuration//
 	///pointer to the root Setting object (libconfig)
-	Setting *avrecord_settings_ptr;
+	Config  *avrecord_config;
 	///pointer to the audio Setting object (libconfig)
 	Setting *audio_settings_ptr;
 	///pointer to the video Setting object (libconfig)
@@ -290,8 +290,7 @@ static bool operator<=(const tm &x, const tm &y)
 
 
 template<class _mutex>
-BaseRecorder<_mutex>::BaseRecorder(Setting &_avrecord_settings)
-	: config(_config)
+BaseRecorder<_mutex>::BaseRecorder()
 {
 	inited           = false;
 	a_buffer         = NULL;
@@ -317,46 +316,45 @@ BaseRecorder<_mutex>::BaseRecorder(Setting &_avrecord_settings)
 
 
 template<class _mutex>
-bool BaseRecorder<_mutex>::Init(Setting *_avrecord_setting_ptr)
+bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 {
 	//configuration//
-	if(!_avrecord_setting) return false;
-	avrecord_settings_ptr = _avrecord_setting_ptr;
+	if(!_avrecord_config_ptr) return false;
+	avrecord_config = _avrecord_config_ptr;
 	try
 	{
-		audio_settings_ptr = &(*avrecord_settings_ptr)["audio"];
-		video_settings_ptr = &(*avrecord_settings_ptr)["video"];
+		audio_settings_ptr = avrecord_config->lookup("audio");
+		video_settings_ptr = avrecord_config->lookup("video");
 	}
 	catch(SettingNotFoundException)
 	{
 		log_message(1, "No <audio> or <video> setting group was found.");
 		return false;
 	}
-	Setting &avrecord_settings = *avrecord_settings_ptr;
 
 	//paths
-	try	{ fname_format = avrecord_settings["paths.filename"]; }
+	try	{ fname_format = avrecord_config->lookup("paths.filename"); }
 	catch(SettingNotFoundException) { fname_format = "%Y-%m-%d_%H-%M.avi"; }
-	try	{ output_dir   = avrecord_settings["paths.output_dir"]; }
+	try	{ output_dir   = avrecord_config->lookup("paths.output_dir"); }
 	catch(SettingNotFoundException) { output_dir   = "./"; }
 
 	if(output_dir[output_dir.size()-1] != '/')
 		output_dir += '/';
 
 	//flags
-	try	{ detect_motion    = avrecord_settings["detection.detect_motion"]; }
+	try	{ detect_motion    = avrecord_config->lookup("detection.detect_motion"); }
 	catch(SettingNotFoundException) { detect_motion    = true; }
-	try	{ detect_noise     = avrecord_settings["detection.detect_noise"]; }
+	try	{ detect_noise     = avrecord_config->lookup("detection.detect_noise"); }
 	catch(SettingNotFoundException) { detect_noise     = false; }
-	try	{ record_on_motion = avrecord_settings["detection.record_on_motion"]; }
+	try	{ record_on_motion = avrecord_config->lookup("detection.record_on_motion"); }
 	catch(SettingNotFoundException) { record_on_motion = true; }
-	try	{ record_on_noise  = avrecord_settings["detection.record_on_noise"]; }
+	try	{ record_on_noise  = avrecord_config->lookup("detection.record_on_noise"); }
 	catch(SettingNotFoundException) { record_on_noise  = false; }
-	try	{ print_diffs      = avrecord_settings["detection.print_diffs"]; }
+	try	{ print_diffs      = avrecord_config->lookup("detection.print_diffs"); }
 	catch(SettingNotFoundException) { print_diffs      = true; }
-	try	{ print_level      = avrecord_settings["detection.print_level"]; }
+	try	{ print_level      = avrecord_config->lookup("detection.print_level"); }
 	catch(SettingNotFoundException) { print_level      = false; }
-	try	{ print_date       = avrecord_settings["detection.print_date"]; }
+	try	{ print_date       = avrecord_config->lookup("detection.print_date"); }
 	catch(SettingNotFoundException) { print_date       = true; }
 
 	if(record_on_motion)
@@ -370,11 +368,11 @@ bool BaseRecorder<_mutex>::Init(Setting *_avrecord_setting_ptr)
 
 	//schedule parameters
 	string start_date, end_date, win_list;
-	try	{ start_date = avrecord_settings["schedule.start_time"]; }
+	try	{ start_date = avrecord_config->lookup("schedule.start_time"); }
 	catch(SettingNotFoundException) { start_time = 0; }
-	try	{ end_date   = avrecord_settings["schedule.end_time"]; }
+	try	{ end_date   = avrecord_config->lookup("schedule.end_time"); }
 	catch(SettingNotFoundException) { end_time   = 0; }
-	try	{ win_list   = avrecord_settings["schedule.schedule"]; }
+	try	{ win_list   = avrecord_config->lookup("schedule.schedule"); }
 	catch(SettingNotFoundException) { ; }
 
 	time_t now = time(0);
@@ -419,57 +417,57 @@ bool BaseRecorder<_mutex>::Init(Setting *_avrecord_setting_ptr)
 
 	//motion detection parameters
 	try	{ min_gap
-		= avrecord_settings["detection.min_gap"] * 1000000; }
+		= (int)avrecord_config->lookup("detection.min_gap") * 1000000; }
 	catch(SettingNotFoundException)
 	{ min_gap               = 300*1000000; } //300 sec
 
 	try	{ min_record_time
-		= avrecord_settings["detection.min_record_time"] * 1000000 * 60; }
+		= (int)avrecord_config->lookup("detection.min_record_time") * 1000000 * 60; }
 	catch(SettingNotFoundException)
 	{ min_record_time       = 30 * 1000000 * 60; } //30 min
 
 	try	{ post_motion_offset
-		= avrecord_settings["detection.post_motion_offset"] * 1000000; }
+		= (int)avrecord_config->lookup("detection.post_motion_offset") * 1000000; }
 	catch(SettingNotFoundException)
 	{ post_motion_offset    = 30 * 1000000; } //30 sec
 
 	try	{ latency
-		= avrecord_settings["detection.latency"]; }
+		= (int)avrecord_config->lookup("detection.latency"); }
 	catch(SettingNotFoundException)
 	{ latency               = 2; }
 
 	try	{ noise_level
-		= avrecord_settings["detection.noise_level"]; }
+		= (int)avrecord_config->lookup("detection.noise_level"); }
 	catch(SettingNotFoundException)
 	{ noise_level           = 2; }
 
 	try	{ threshold
-		= avrecord_settings["detection.threshold"]; }
+		= (int)avrecord_config->lookup("detection.threshold"); }
 	catch(SettingNotFoundException)
 	{ threshold             = 25; }
 
 	try	{ diff_step
-		= avrecord_settings["detection.pixels_step"]; }
+		= (int)avrecord_config->lookup("detection.pixels_step"); }
 	catch(SettingNotFoundException)
 	{ diff_step             = 1; }
 
 	try	{ frames_step
-		= avrecord_settings["detection.frames_step"]; }
+		= (int)avrecord_config->lookup("detection.frames_step"); }
 	catch(SettingNotFoundException)
 	{ frames_step           = 5; }
 
 	try	{ noise_reduction_level
-		= avrecord_settings["detection.noise_reduction_level"]; }
+		= (int)avrecord_config->lookup("detection.noise_reduction_level"); }
 	catch(SettingNotFoundException)
 	{ noise_reduction_level = 1; }
 
 	try	{ snd_noise_level_func
-		= avrecord_settings["detection.snd_noise_level_func"]; }
+		= (int)avrecord_config->lookup("detection.snd_noise_level_func"); }
 	catch(SettingNotFoundException)
 	{ snd_noise_level_func  = SND_LIN; }
 
 	try	{ snd_noise_threshold
-		= avrecord_settings["detection.snd_noise_threshold"]; }
+		= (int)avrecord_config->lookup("detection.snd_noise_threshold"); }
 	catch(SettingNotFoundException)
 	{ snd_noise_threshold   = 250; }
 	/////////////////
@@ -499,7 +497,7 @@ bool BaseRecorder<_mutex>::Init(Setting *_avrecord_setting_ptr)
 	a_buffer  		= new BufferRing(a_bsize, audio_latency);
 
 	v_bsize   		= v_source.bsize();
-	v_buffer			= new BufferRing(v_bsize, latency);
+	v_buffer		= new BufferRing(v_bsize, latency);
 
 	if(frames_step < 1) frames_step = 1;
 	if(detect_motion)

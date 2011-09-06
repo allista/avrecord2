@@ -34,21 +34,21 @@ using namespace libconfig;
 #include "common.h"
 
 ///soundstream i/o modes
-typedef enum snd_io_mode
+enum snd_io_mode
 {
 	SND_R,
 	SND_W
 };
 
 ///soundstream pcm formats
-typedef enum pcm_fmt
+enum pcm_fmt
 {
 	SND_8BIT,
 	SND_16BIT
 };
 
 ///functions for weighting peak values
-typedef enum weight_func
+enum weight_func
 {
 	 SND_LIN,
 	 SND_RT2,
@@ -70,7 +70,7 @@ public:
 	bool Open(Setting *audio_settings_ptr,       ///< pointer to the audio Setting object (libconfig++)
 			  snd_io_mode  mode     = SND_R,     ///< i/o mode
 	          pcm_fmt      fmt      = SND_16BIT, ///< pcm format
-	          weight_func  weight_f = SND_LIN   ///< weighting function
+	          weight_func  weight_f = SND_LIN    ///< weighting function
 			 );
 
 	void Close(); ///< close soundstream
@@ -84,7 +84,7 @@ public:
 	uint Write(void *buffer, uint size);
 
 	/// it's a peak value after amplification and weighting by the weight function updated on every Read
-	uint Peak() const { return peak_level; };
+	uint Peak() const { return peak_value; };
 
 	/// true if i/o operations is allowed
 	bool opened() const { return snd_dev != NULL; };
@@ -109,7 +109,7 @@ private:
 	uint   channels;             ///< number of channels
 	double amp_level;            ///< ampliffication level
 	double sig_offset;           ///< vertical signal offset
-	uint   wieght_func;          ///< math function for weight calculations
+	uint   weight_function;      ///< math function for weight calculations
 	uint   peak_value;           ///< current peak value
 
 	snd_pcm_uframes_t frames;    ///< number of frames in a single read period

@@ -93,8 +93,9 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 	}
 	catch(SettingNotFoundException)
 	{
-		log_message(1, "No video <codec> setting was found. Using default msmpeg4");
-		o_file->oformat->video_codec = get_codec_id("msmpeg4", CODEC_TYPE_VIDEO);
+		log_message(1, "No video <codec> setting was found.");
+		cleanup();
+		return false;
 	}
 
 	/* Create a new video stream and initialize the codecs */
@@ -127,28 +128,27 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 		vcodec->bit_rate       = video_settings["bitrate"];
 		vcodec->width          = video_settings["width"];
 		vcodec->height         = video_settings["height"];
-
-		if(video_settings.exists("var_bitrate"))
-		{
-			vbr = video_settings["var_bitrate"];
-			vcodec->flags |= CODEC_FLAG_QSCALE;
-			vcodec->bit_rate_tolerance = vcodec->bit_rate/20;
-			vcodec->qmin = (vbr-2 < 2)? 2 : vbr-2;
-			vcodec->qmax = (vbr+2 > 31)? 31 : vbr+2;
-		}
 	}
 	catch(SettingNotFoundException)
 	{
-		log_message(1, "Video <bitrate>, <width> or <height> settings not found");
+		log_message(1, "Video <bitrate>, <width> or <height> settings not found.");
 		cleanup();
 		return false;
+	}
+	if(video_settings.exists("var_bitrate"))
+	{
+		vbr = video_settings["var_bitrate"];
+		vcodec->flags |= CODEC_FLAG_QSCALE;
+		vcodec->bit_rate_tolerance = vcodec->bit_rate/20;
+		vcodec->qmin = (vbr-2 < 2)? 2 : vbr-2;
+		vcodec->qmax = (vbr+2 > 31)? 31 : vbr+2;
 	}
 	vcodec->time_base.num  = numerator;
 	vcodec->time_base.den  = denomenator;
 	/* set intra frame distance in frames depending on codec */
 	vcodec->gop_size       = 12;
 	/* Set the picture format */
-	vcodec->pix_fmt = av_pixel_formats[pix_fmt];
+	vcodec->pix_fmt        = av_pixel_formats[pix_fmt];
 
 	/* Set codec specific parameters. */
 	/* some formats want stream headers to be separate */
@@ -201,7 +201,6 @@ bool AVIFile::setAParams()
 	Setting &audio_settings = *audio_settings_ptr;
 
 	/* Setup audio codec id */
-	o_file->oformat->audio_codec = get_codec_id(codec_name, CODEC_TYPE_AUDIO);
 	try
 	{
 		o_file->oformat->audio_codec = get_codec_id(
@@ -210,8 +209,9 @@ bool AVIFile::setAParams()
 	}
 	catch(SettingNotFoundException)
 	{
-		log_message(1, "No audio <codec> setting was found. Using default mp2");
-		o_file->oformat->audio_codec = get_codec_id("mp2", CODEC_TYPE_AUDIO);
+		log_message(1, "No audio <codec> setting was found.");
+		cleanup();
+		return false;
 	}
 
 	/* Create a new audio stream and initialize the codecs */
@@ -394,7 +394,7 @@ bool AVIFile::writeVFrame(image_buffer &buffer)
 	}
 
 	//fill in the picture
-	avpicture_fill((AVPicture *)picture, buffer.start, vcodec->pix_fmt, vcodec->width, vcodec->height);
+	avpicture_fill((AVPicture *)picture, (uint8_t*)buffer.start, vcodec->pix_fmt, vcodec->width, vcodec->height);
 
 	/* set variable bitrate if requested */
 	if(vbr) picture->quality = vbr;

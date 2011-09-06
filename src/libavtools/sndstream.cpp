@@ -36,10 +36,10 @@ Sndstream::Sndstream()
 	channels  = 0;
 	dev_mode  = 0;
 
+	weight_function = SND_LIN;
 	amp_level   = 1;
 	sig_offset  = 0;
-	weight_func = SND_LIN;
-	peak_level  = 0;
+	peak_value  = 0;
 
 	_bsize    = 0;
 	_ptime    = 0;
@@ -48,7 +48,7 @@ Sndstream::Sndstream()
 bool Sndstream::Open(Setting *audio_settings_ptr,
 					 snd_io_mode  mode, pcm_fmt fmt, weight_func weight_f)
 {
-	if(!_audio_settings_ptr) return false;
+	if(!audio_settings_ptr) return false;
 	Setting &audio_settings = *audio_settings_ptr;
 
 	int ret     = false;
@@ -56,21 +56,26 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 	sig_offset  = 0;
 	dev_mode    = mode;
 	format      = fmt;
-	wieght_func = weight_f;
+	weight_function = weight_f;
 
 	try
 	{
 		rate       = audio_settings["sample_rate"];
 		channels   = audio_settings["channels"];
-		amp_level  = audio_settings["amplification_level"];
-		amp_level = (amp_level <= 0)? 1 : amp_level;
 	}
 	catch(SettingNotFoundException)
 	{
-		log_message(0, "No <sample_rate>, <channels> or <amplification_level> setting was found. Using 44100Hz, 2 channels and 1 respectively.");
-		rate = 44100;
-		channels = 2;
+		log_message(0, "Sndstream: no <sample_rate>, <channels> or setting was found.");
+		return false;
 	}
+
+	try { amp_level  = audio_settings["amplification_level"]; }
+	catch(SettingNotFoundException)
+	{
+		log_message(0, "Sndstream: no <amplification_level> setting was found. Using default: 1.");
+		amp_level = 1;
+	}
+	amp_level = (amp_level <= 0)? 1 : amp_level;
 
 	/* Open PCM device. */
 	switch(dev_mode)
@@ -128,7 +133,7 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 	if(ret < 0)
 	{
 		log_message(1, "Sndstream: unable to set channels number: %s", snd_strerror(ret));
-		exit(1);
+		return false;
 	}
 
 	/* Set sampling rate */
@@ -136,16 +141,21 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 	if(ret < 0)
 	{
 		log_message(1, "Sndstream: unable to set sample rate near: %s", snd_strerror(ret));
-		exit(1);
+		return false;
 	}
 
 	/* Set period size to 0 for default. */
-	frames = desired_frames;
+	try { frames = audio_settings["buffer_lenght"]; }
+	catch(...)
+	{
+		log_message(1, "Sndstream: no buffer_longht setting. Setting to auto.");
+		frames = 0;
+	}
 	ret = snd_pcm_hw_params_set_period_size_near(snd_dev, params, &frames, &dir);
 	if(ret < 0)
 	{
 		log_message(1, "Sndstream: unable to set period size: %s.",	snd_strerror(ret));
-		exit(1);
+		return false;
 	}
 
 	/* Calculate one period buffer size and period time */
@@ -159,7 +169,7 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 	if(ret < 0)
 	{
 		log_message(1, "Sndstream: unable to set hw parameters: %s", snd_strerror(ret));
-		exit(1);
+		return false;
 	}
 
 	//all is done
@@ -292,12 +302,12 @@ void Sndstream::amplify(void *buffer, uint bsize)
 			break;
 	}
 
-	peak_level = uint(max);
+	peak_value = uint(max);
 }
 
 double Sndstream::weight( double sample, double max )
 {
-	switch(weight_func)
+	switch(weight_function)
 	{
 		case SND_LIN:
 			return sample * 1000 / max;

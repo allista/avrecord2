@@ -39,12 +39,13 @@
 
 using namespace std;
 
-#include <configfile.h>
+#include <avconfig.h>
 #include <recorder.h>
 
 
 ///default config file
-char *CONFIG_FILE   = "avrecord.conf";
+char *CONFIG_FILE   = "avrecord.cfg";
+bool  initialize    = false;
 
 ///default log file
 char *LOG_FILE      = "avrecord.log";
@@ -84,10 +85,12 @@ int main(int argc, char *argv[])
 	//parse commandline args
 	string log_fname;
 	string conf_fname;
+	string template_fname;
+	string output_fname;
 	if(argc > 1)
 	{
 		int c;
-		while((c = getopt(argc, argv, "c:l:dnh?"))!=EOF)
+		while((c = getopt(argc, argv, "c:l:t:o:idnh?"))!=EOF)
 			switch(c)
 			{
 				case 'c':
@@ -95,6 +98,15 @@ int main(int argc, char *argv[])
 					break;
 				case 'l':
 					log_fname  = string(optarg);
+					break;
+				case 't':
+					template_fname = string(optarg);
+					break;
+				case 'o':
+					output_fname = string(optarg);
+					break;
+				case 'i':
+					initialize = true;
 					break;
 				case 'd':
 					daemonize  = true;
@@ -110,10 +122,32 @@ int main(int argc, char *argv[])
 			}
 	}
 
+	//if we've been asked to, initialize configuration and die
+	if(initialize)
+	{
+		if(template_fname.empty())
+		{
+			log_message(1, "No template file was given. Use -t option.");
+			exit(1);
+		}
+		if(output_fname.empty())
+		{
+			log_message(1, "No output file was given. Use -o option.");
+			exit(1);
+		}
+
+		AVConfig new_config;
+		new_config.Load(template_fname, true) || exit(1);
+		new_config.Init()                     || exit(1);
+		new_config.SaveAs(output_fname)       || exit(1);
+
+		exit(0);
+	}
+
 	//if -d option is passed, fork the process
 	if(daemonize && fork())
 	{
-		log_message(0, "AVRecord going to daemon mode");
+		log_message(0, "AVRecord is going to daemon mode.");
 		exit(0);
 	}
 
@@ -163,54 +197,44 @@ int main(int argc, char *argv[])
 		break;
 	}
 
+	//if there's still no config, die
+	if(conf_fname.empty())
+	{
+		log_message(1, "No configuration file was found in default locations nor was it's location provided using -c option.")
+		exit(1);
+	}
+
 	//make sure, that we work with absolute path only
 	//this will be needed in daemon mode
-	if(conf_fname.size() && conf_fname[0] != '/')
+	if(conf_fname[0] != '/')
 		conf_fname = workdir + conf_fname;
 
-	//load config file
-	ConfigFile config;
-	if(conf_fname.size())
-		config = ConfigFile(conf_fname);
-	else log_message(0, "No config file was found. Using default settings.");
+	//load config file or die
+	AVConfig config;
+	config.Load(conf_fname) || exit(1);
 
 	//setup output directory
-	string output_dir = config.getOptionS("output_dir");
+	string output_dir;
+	try	{ output_dir = config.lookup("paths.output_dir"); }
+	catch(...) { output_dir = "./"; }
 	if(output_dir.size() && output_dir[0] != '/')
-		output_dir = workdir + output_dir;
-	config.setOption("output_dir", output_dir);
-
-	//log file
-	while(!nolog && log_fname.empty())
 	{
-		//no config file? using current dir for log file
-		if(conf_fname.empty())
-		{
-			log_fname = string(LOG_FILE);
-			break;
-		}
-
-		//loading from config file
-		log_fname = config.getOptionS("log_file");
-
-		//no log_file option in config file? using wordir for log file
-		if(log_fname.empty())
-		{
-			log_fname = string(LOG_FILE);
-			break;
-		}
-
-		//have logfile =)
-		break;
+		output_dir = workdir + output_dir;
+		*config.getSetting("paths.output_dir") = output_dir.c_str();
 	}
+
 
 	//open logfile
 	if(!nolog)
 	{
-		//make sure, that we work with absolute paths only
+		//loading from config file
+		try { log_fname = config.lookup("paths.log_file"); }
+		catch(...) { ; };
+		if(log_fname.empty())   log_fname = string(LOG_FILE);
+
+		//make sure that we work with absolute paths only
 		//this will be needed in daemon mode
-		if(log_fname.size() && log_fname[0] != '/')
-			log_fname = workdir + log_fname;
+		if(log_fname[0] != '/') log_fname = workdir + log_fname;
 
 		log_stream.open(log_fname.c_str(), ios::out|ios::app);
 		if(!log_stream.is_open())
@@ -235,7 +259,7 @@ int main(int argc, char *argv[])
 		}
 		else log_message(0, "Starting...");
 
-		rec.Init(config);
+		rec.Init(config.getConfig());
 		rec.RecordLoop(&avsignal);
 		rec.Close();
 

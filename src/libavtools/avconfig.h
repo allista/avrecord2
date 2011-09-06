@@ -49,30 +49,48 @@ using namespace std;
 class AVConfig
 {
 public:
-	AVConfig() { avconfig = NULL; };
-	~AVConfig() { delete avconfig; };
+	///conversion to the reference to the Config object
+	operator Config & () { return avconfig; }
+	///forwardig of the original lookup function. May throw exeptions!
+	Setting &lookup(const char* path) { return avconfig.lookup(path); }
+	///forwardig of the original lookup function. May throw exeptions!
+	Setting &lookup(string path)      { return avconfig.lookup(path); }
 
-	bool Load(string fname); ///< load configuration from a file
+	//constructors and destructor
+	AVConfig() {}
+	AVConfig(string fname) { Load(fname); }
+	~AVConfig() {}
 
-	bool Init(); ///< initialize configuration by quering devices using loaded configuration file
+	void Clear(); ///< remove all settings
+
+	void New(); ///< make new configuration
+
+	bool Load(string fname, bool readonly = false); ///< load configuration from a file
+
+	///initialize configuration by quering devices using loaded configuration file
+	bool Init();
 
 	bool Save(); ///< save configuration into the file "filename"
 
 	bool SaveAs(string fname); ///< save configuration into another file
 
-	Setting *getRoot(); ///< pointer to the root setting group or NULL if not loaded yet
+	///pointer to the Config object
+	Config  *getConfig() { return &avconfig; }
+
+	///pointer to the root setting group
+	Setting *getRoot() { return &avconfig.getRoot(); }
 
 	///pointer to the setting under the root by path or NULL if not found
 	Setting *getSetting(const char *path);
 
 	Setting *getAudioSettings() ///< pointer to the audio section of a configuration
-	{ return getSetting("audio"); };
+	{ return getSetting("audio"); }
 
 	Setting *getVideoSettings() ///< pointer to the video section of a configuration
-	{ return getSetting("video"); };
+	{ return getSetting("video"); }
 
 private:
-	Config *avconfig; ///< pointer to the Config object
+	Config avconfig;  ///< Config object
 	string filename;  ///< name of the configuration file loaded
 
 	int  xioctl(int fd, int request, void *arg);

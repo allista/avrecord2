@@ -36,13 +36,13 @@ using namespace libconfig;
 #include "common.h"
 #include "fifo.h"
 
-static const uint *av_pixel_formats[] =
+static const PixelFormat av_pixel_formats[] =
 {
 	PIX_FMT_YUV422P,
 	PIX_FMT_YUV420P,
-	PIX_FMT_YUV411P
+	PIX_FMT_YUV411P,
 	PIX_FMT_YUV410P,
-	PIX_FMT_GREY8
+	PIX_FMT_GRAY8
 };
 
 ///encapsulates simple ffmpeg work with avi file

@@ -56,6 +56,8 @@ video:
 
 audio:
 {
+	//video codecs (see ffmpeg -formats for details)
+	codecs = [];
 	//codec name (see ffmpeg -formats for details)
 	codec  = "mp2";
 

@@ -37,7 +37,21 @@
 #include "avconfig.h"
 
 
-bool AVConfig::Load(string fname)
+void AVConfig::Clear()
+{
+	Setting &root = avconfig.getRoot();
+	for(int i = 0; i < root.getLength(); i++)
+		root.remove(i);
+}
+
+void AVConfig::New()
+{
+	Clear();
+	getRoot()->add("video", Setting::TypeGroup);
+	getRoot()->add("audio", Setting::TypeGroup);
+}
+
+bool AVConfig::Load(string fname, bool readonly)
 {
 	if(fname.empty())
 	{
@@ -45,39 +59,32 @@ bool AVConfig::Load(string fname)
 		return false;
 	}
 
-	avconfig = new Config();
-
-	try { avconfig->readFile(fname.c_str()); }
+	try { avconfig.readFile(fname.c_str()); }
 	catch(FileIOException)
 	{
 		log_message(1, "Configuration file \"%s\" cannot be read.", fname.c_str());
-		delete avconfig;
-		avconfig = NULL;
 		return false;
 	}
 	catch(ParseException e)
 	{
 		log_message(1, "Parsing of \"%s\" failed on line %d.", fname.c_str(), e.getLine());
 		log_message(0, "%s", e.getError());
-		delete avconfig;
-		avconfig = NULL;
 		return false;
 	}
 
-	filename = fname;
+	if(!readonly)
+		filename = fname;
 	return true;
 }
 
 bool AVConfig::Init()
 {
-	if(!avconfig) return false;
-
 	int video_device = NULL;
 	const char *device_name;
 	struct stat st;
 
 
-	//check if there're essential setting groups
+	//check if there're essential settings
 	if(!getRoot()->exists("audio"))
 		getRoot()->add("audio", Setting::TypeGroup);
 	if(!getRoot()->exists("video"))
@@ -274,7 +281,7 @@ bool AVConfig::Init()
 	for(int i = 0; i < queryctrl_list.size(); i++)
 	{
 		string control_name = (const char*)queryctrl_list[i].name;
-		replace(control_name.begin(), control_name.end(), " "[0], "_"[0]);
+		replace(control_name.begin(), control_name.end(), ' ', '_');
 		Setting &control = controls.add(control_name.c_str(), Setting::TypeGroup);
 		control.add("id", Setting::TypeInt) = (int)queryctrl_list[i].id;
 		control.add("value", Setting::TypeInt) = (int)control_list[i].value;
@@ -298,9 +305,9 @@ bool AVConfig::Init()
 
 bool AVConfig::Save()
 {
-	if(!avconfig) return false;
+	if(filename.empty()) return false;
 
-	try { avconfig->writeFile(filename.c_str()); }
+	try { avconfig.writeFile(filename.c_str()); }
 	catch(FileIOException)
 	{
 		log_message(1, "Cannot write to \"%s\".", filename.c_str());
@@ -312,15 +319,13 @@ bool AVConfig::Save()
 
 bool AVConfig::SaveAs(string fname)
 {
-	if(!avconfig) return false;
-
 	if(fname.empty())
 	{
 		log_message(1, "No configuration filename was given.");
 		return false;
 	}
 
-	try { avconfig->writeFile(fname.c_str()); }
+	try { avconfig.writeFile(fname.c_str()); }
 	catch(FileIOException)
 	{
 		log_message(1, "Cannot write to \"%s\".", fname.c_str());
@@ -331,19 +336,10 @@ bool AVConfig::SaveAs(string fname)
 	return true;
 }
 
-
-Setting * AVConfig::getRoot()
-{
-	if(!avconfig) return NULL;
-	return &avconfig->getRoot();
-}
-
 Setting * AVConfig::getSetting(const char * path)
 {
-	if(!avconfig) return NULL;
-
 	Setting *setting = NULL;
-	try { setting = &avconfig->lookup(path); }
+	try { setting = &avconfig.lookup(path); }
 	catch(SettingNotFoundException)
 	{ log_message(1, "Setting \"%s\" not found.", path); }
 	return setting;
@@ -385,5 +381,3 @@ bool AVConfig::enumerate_v4l2_menu(int fd, v4l2_queryctrl queryctrl, map< unsign
 
 	return true;
 }
-
-

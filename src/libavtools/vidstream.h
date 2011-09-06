@@ -26,7 +26,7 @@
 typedef unsigned long long __u64;
 typedef long long __s64;
 
-#inlcude <time.h>
+#include <time.h>
 #include <linux/videodev2.h>
 
 #include <vector>
@@ -40,11 +40,11 @@ using namespace libconfig;
 
 ///supported pixel formats
 ///note, that all these formats are planar, I don't use packed ones because of the text rendering function: for all the planar formats one single function is enough, while each packed format requires it's own function.
-static const uint *pixel_formats[] =
+static const uint pixel_formats[] =
 {
 	V4L2_PIX_FMT_YUV422P,
 	V4L2_PIX_FMT_YUV420,
-	V4L2_PIX_FMT_YUV411P
+	V4L2_PIX_FMT_YUV411P,
 	V4L2_PIX_FMT_YUV410,
 	V4L2_PIX_FMT_GREY
 };
@@ -59,10 +59,11 @@ static const char *pixel_format_names[] =
 	"V4L2_PIX_FMT_GREY"
 };
 
-typedef enum io {
+enum io
+{
 	IO_METHOD_READ,
 	IO_METHOD_MMAP,
-	IO_METHOD_USERPTR,
+	IO_METHOD_USERPTR
 };
 
 ///encapsulates simple grabbing work with v4l device

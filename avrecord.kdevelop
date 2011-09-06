@@ -22,7 +22,7 @@
   </general>
   <kdevautoproject>
     <general>
-      <activetarget>tests/v4l2-teset</activetarget>
+      <activetarget>src/avrecord</activetarget>
       <useconfiguration>debug</useconfiguration>
     </general>
     <run>

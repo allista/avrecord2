@@ -92,11 +92,14 @@ int main(int argc, char *argv[])
 	if(init) new_cfg += cfg_file;
 
 	AVConfig cfg;
-	cfg.Load(cfg_file);
+	//cfg.Load(cfg_file);
+	cfg.New();
 
 	if(init)
 	{
 		cfg.Init();
+		Config &cfg_obj = cfg;
+		cfg_obj.lookup("video.device");
 		cfg.SaveAs(new_cfg);
 	}
 

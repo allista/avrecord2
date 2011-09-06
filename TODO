@@ -1,5 +1,6 @@
 Switch to V4L2
 Switch to libconfig for settings
 => request the device for controls, formats, etc. and udpate the INI file
-Switch to gtk2 in avrtuner
+=> request ffmpeg for supported video and audio codecs
+Switch to gtk2(3?) in avrtuner
 Fix video stuttering

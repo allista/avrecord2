@@ -24,10 +24,14 @@ using namespace std;
 
 #include "avifile.h"
 
- AVIFile::AVIFile(Setting& _video_settings, Setting& _audio_settings)
-	: video_settings(_video_settings), audio_settings(_audio_settings)
+AVIFile::AVIFile()
 {
 	_opened = INIT_NONE;
+
+    ///pointer to the video Settings object (libconfig++)
+	video_settings_ptr = NULL;
+	///pointer to the audio Settings object (libconfig++)
+	audio_settings_ptr = NULL;
 
 	//file streams and codecs
 	o_file  = NULL;
@@ -48,8 +52,12 @@ using namespace std;
 }
 
 
-bool AVIFile::Init()
+bool AVIFile::Init(Setting *_audio_settings_ptr, Setting *_video_settings_ptr_ptr)
 {
+	if(!_audio_settings_ptr || !_video_settings_ptr_ptr) return false;
+	audio_settings_ptr = _audio_settings_ptr;
+	video_settings_ptr = _video_settings_ptr_ptr;
+
 	/* allocation the output media context */
 	o_file = (AVFormatContext*)av_mallocz(sizeof(AVFormatContext));
 	if(!o_file)
@@ -74,6 +82,7 @@ bool AVIFile::Init()
 bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 {
 	if(opened() || !o_file) return false;
+	Setting &video_settings = *video_settings_ptr;
 
 	/* Setup video codec id */
 	try
@@ -189,6 +198,7 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 bool AVIFile::setAParams()
 {
 	if(opened() || !o_file) return false;
+	Setting &audio_settings = *audio_settings_ptr;
 
 	/* Setup audio codec id */
 	o_file->oformat->audio_codec = get_codec_id(codec_name, CODEC_TYPE_AUDIO);
@@ -371,7 +381,7 @@ double AVIFile::getApts( ) const
 	return (double)astream->pts.val * astream->time_base.num / astream->time_base.den;
 }
 
-bool AVIFile::writeVFrame(image_buffer& buffer)
+bool AVIFile::writeVFrame(image_buffer &buffer)
 {
 	if(!opened()) return false;
 
@@ -442,7 +452,7 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 
 	if(acodec->frame_size > 1)
 	{
-		uint8_t* tmp = new uint8_t[a_fsize];
+		uint8_t *tmp = new uint8_t[a_fsize];
 		afifo.write(samples, size);
 		while(afifo.read(tmp, a_fsize))
 		{
@@ -529,6 +539,11 @@ void AVIFile::Close()
 //private functions
 void AVIFile::cleanup()
 {
+	///pointer to the video Settings object (libconfig++)
+	video_settings_ptr = NULL;
+	///pointer to the audio Settings object (libconfig++)
+	audio_settings_ptr = NULL;
+
 	//encoders//
 	if(_opened & INIT_VCODEC)
 		avcodec_close(vcodec);

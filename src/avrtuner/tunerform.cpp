@@ -228,7 +228,7 @@ void TunerForm::fileReload()
 	cfg.close();
 }
 
-void TunerForm::restore(int& state)
+void TunerForm::restore(int &state)
 {
 	setWindowState(windowState() & ~WindowMinimized | WindowActive);
 }

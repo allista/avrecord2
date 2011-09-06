@@ -38,23 +38,39 @@ Sndstream::Sndstream()
 
 	amp_level   = 1;
 	sig_offset  = 0;
-	threshold   = -1;
-	level_func  = SND_LIN;
-	noise_level = 0;
+	weight_func = SND_LIN;
+	peak_level  = 0;
 
 	_bsize    = 0;
 	_ptime    = 0;
 }
 
-bool Sndstream::Open(int mode, uint fmt, uint chans, uint rte, uint desired_frames)
+bool Sndstream::Open(Setting *audio_settings_ptr,
+					 snd_io_mode  mode, pcm_fmt fmt, weight_func weight_f)
 {
-	int ret  = false;
-	int dir  = 0;
-	format   = fmt;
-	rate     = rte;
-	channels = chans;
-	dev_mode = mode;
-	sig_offset = 0;
+	if(!_audio_settings_ptr) return false;
+	Setting &audio_settings = *audio_settings_ptr;
+
+	int ret     = false;
+	int dir     = 0;
+	sig_offset  = 0;
+	dev_mode    = mode;
+	format      = fmt;
+	wieght_func = weight_f;
+
+	try
+	{
+		rate       = audio_settings["sample_rate"];
+		channels   = audio_settings["channels"];
+		amp_level  = audio_settings["amplification_level"];
+		amp_level = (amp_level <= 0)? 1 : amp_level;
+	}
+	catch(SettingNotFoundException)
+	{
+		log_message(0, "No <sample_rate>, <channels> or <amplification_level> setting was found. Using 44100Hz, 2 channels and 1 respectively.");
+		rate = 44100;
+		channels = 2;
+	}
 
 	/* Open PCM device. */
 	switch(dev_mode)
@@ -220,13 +236,13 @@ uint Sndstream::Write(void* buffer, uint size)
 	return ret*framesize;
 }
 
-void Sndstream::amplify(void* buffer, uint bsize)
+void Sndstream::amplify(void *buffer, uint bsize)
 {
-	char*  cb = NULL;
-	short* sb = NULL;
-	uint   size   = 0;
-	long	 max    = 0;
-	long	 cur		= 0;
+	char  *cb = NULL;
+	short *sb = NULL;
+	uint   size = 0;
+	long   max  = 0;
+	long   cur  = 0;
 
 	switch(format)
 	{
@@ -246,9 +262,9 @@ void Sndstream::amplify(void* buffer, uint bsize)
 				if(labs(cur) > CHAR_MAX*0.9)
 					cur = (cur > 0)? CHAR_MAX*0.9 : CHAR_MAX*(-0.9);
 				cb[i]	= char(cur);
-				if(threshold >= 0) if(abs(cb[i]) > max) max = abs(cb[i]);
+				if(abs(cb[i]) > max) max = abs(cb[i]);
 			}
-			if(threshold >= 0) max = level(max, CHAR_MAX);
+			max = weight(max, CHAR_MAX);
 
 			break;
 
@@ -269,19 +285,19 @@ void Sndstream::amplify(void* buffer, uint bsize)
 				if(labs(cur) > SHRT_MAX*0.9)
 					cur = (cur > 0)? SHRT_MAX*0.9 : SHRT_MAX*(-0.9);
 				sb[i]   = short(cur);
-				if(threshold >= 0) if(abs(sb[i]) > max) max = abs(sb[i]);
+				if(abs(sb[i]) > max) max = abs(sb[i]);
 			}
-			if(threshold >= 0) max = level(max, SHRT_MAX);
+			max = weight(max, SHRT_MAX);
 
 			break;
 	}
 
-	noise_level = (max > threshold)? uint(max) : 0;
+	peak_level = uint(max);
 }
 
-double Sndstream::level( double sample, double max )
+double Sndstream::weight( double sample, double max )
 {
-	switch(level_func)
+	switch(weight_func)
 	{
 		case SND_LIN:
 			return sample * 1000 / max;

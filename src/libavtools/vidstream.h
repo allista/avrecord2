@@ -27,7 +27,6 @@ typedef unsigned long long __u64;
 typedef long long __s64;
 
 #inlcude <time.h>
-#include <sys/mman.h>
 #include <linux/videodev2.h>
 
 #include <vector>
@@ -70,11 +69,12 @@ typedef enum io {
 class Vidstream
 {
 public:
-	Vidstream(Setting& _video_settings);
+	Vidstream();
 	~Vidstream() { Close(); };
 
 	///open and init video device
-	bool Init();
+	bool Open(Setting *video_settings_ptr ///<pointer to the video settings object (libconfig++)
+			 );
 
 	///closes video device
 	void Close();
@@ -86,7 +86,7 @@ public:
 	bool StopCapture();
 
 	///grabs an image from the device and stores it in the 'buffer'
-	int  Read(image_buffer& buffer);
+	int  Read(image_buffer &buffer);
 
 	///pixel format currently in use
 	uint pixel_format() const { return pix_fmt; }
@@ -106,8 +106,6 @@ public:
 	{ return (double)standard.frameperiod.numerator/standard.frameperiod.denominator; }
 
 private:
-	Setting& video_settings; ///<reference to the video settings object (libconfig++)
-
 	int  device;    ///< pointer to opened video device
 	io   io_method; ///<input/output method used
 	uint pix_fmt;   ///<chosen pixel format
@@ -127,7 +125,7 @@ private:
 	int xioctl(int request, void *arg);
 
 	///prepairs to capture a frame 'n'
-	bool fill_buffer(image_buffer& buffer, void* start, uint length, timeval timestamp);
+	bool fill_buffer(image_buffer &buffer, void *start, uint length, timeval timestamp);
 
 	///converts yuv422 image to yuv420p
 	//static void yuv422_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h);

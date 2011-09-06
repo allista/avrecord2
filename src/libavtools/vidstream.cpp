@@ -38,8 +38,7 @@ using namespace std;
 
 #include "vidstream.h"
 
-Vidstream::Vidstream(Setting& _video_settings)
-	: video_settings(_video_settings)
+Vidstream::Vidstream()
 {
 	device    = -1;
 	io_method = IO_METHOD_USERPTR;
@@ -50,11 +49,14 @@ Vidstream::Vidstream(Setting& _video_settings)
 }
 
 
-bool Vidstream::Init()
+bool Vidstream::Open(Setting *video_settings_ptr)
 {
+	if(!video_settings_ptr) return false;
+	Setting &video_settings = *video_settings_ptr;
+
 	//stat and open the device
 	stat st;
-	const char* dev_name = NULL;
+	const char *dev_name = NULL;
 	try{ dev_name = video_settings["device"]; }
 	catch(SettingNotFoundException)
 	{
@@ -331,14 +333,14 @@ bool Vidstream::Init()
 	//set values for all the controls defined in configuration
 	try
 	{
-		Setting& controls = video_settings["controls"]
+		Setting &controls = video_settings["controls"]
 		v4l2_control control;
 		int control_idx = 0;
-		while(true)
+		for(control_idx = 0; control_idx < controls.getLength(); control_idx++)
 		{
 			try
 			{
-				Setting& control_s = controls[control_idx];
+				Setting &control_s = controls[control_idx];
 				CLEAR(control);
 				control.id = (int)control_s["id"];
 				control.value = (int)control_s["value"];
@@ -350,7 +352,8 @@ bool Vidstream::Init()
 				}
 				control_idx++;
 			}
-			catch(...) { break; }
+			catch(...)
+			{ log_message(1, "Video control %d has no <id> or <value> setting.", control_idx); }
 		}
 	}
 	catch(SettingNotFoundException)
@@ -622,7 +625,7 @@ int Vidstream::Read(image_buffer& buffer)
 
 /////////////////////////////////private functions////////////////////////////////
 
-int Vidstream::xioctl(int request, void * arg)
+int Vidstream::xioctl(int request, void *arg)
 {
 	int r;
 	do r = ioctl(device, request, arg);
@@ -630,7 +633,7 @@ int Vidstream::xioctl(int request, void * arg)
 	return r;
 }
 
-bool Vidstream::fill_buffer(image_buffer & buffer, void * start, uint length, timeval timestamp)
+bool Vidstream::fill_buffer(image_buffer &buffer, void *start, uint length, timeval timestamp)
 {
 	if(buffer.start) free(buffer.start);
 	buffer.start = malloc(length);
@@ -650,7 +653,7 @@ bool Vidstream::fill_buffer(image_buffer & buffer, void * start, uint length, ti
 // 	if(device <= 0) return 0;
 //
 // 	UTimer timer;
-// 	unsigned char* buffer = new unsigned char[b_size];
+// 	unsigned char *buffer = new unsigned char[b_size];
 //
 // 	timer.start();
 // 	for(int i=0; i<frames; i++)

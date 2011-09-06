@@ -7,4 +7,4 @@ test_SOURCES = test.cpp
 test_LDADD = $(top_builddir)/src/libavtools/libavtools.la $(LIB_KDEUI)
 
 v4l2_teset_LDFLAGS = $(all_libraries)
-v4l2_teset_SOURCES = v4l2-test.cpp
+v4l2_teset_SOURCES = avconfig.cpp v4l2-test.cpp

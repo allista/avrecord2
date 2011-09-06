@@ -30,7 +30,8 @@ extern "C"
 #include <libavcodec/avcodec.h>
 }
 
-#include<libconfig++.h>
+#include <libconfig.h++>
+using namespace libconfig;
 
 #include "common.h"
 #include "fifo.h"
@@ -48,11 +49,11 @@ static const uint *av_pixel_formats[] =
 class AVIFile
 {
 public:
-	AVIFile(Setting& _video_settings, Setting& _audio_settings);
+	AVIFile();
 	~AVIFile() { if(opened()) Close(); else cleanup(); };
 
 	///allocate output context, set audio and video parameters
-	bool Init();
+	bool Init(Setting *_audio_settings_ptr, Setting *_video_settings_ptr);
 
 	///sets parameters of the video codec
 	bool setVParams(uint numerator,   ///<frame interval numerator (determined by video standard)
@@ -76,7 +77,7 @@ public:
 	double getApts() const;
 
 	///write video frame to the file
-	bool writeVFrame(image_buffer& buffer);
+	bool writeVFrame(image_buffer &buffer);
 
 	///write audio frame to the file
 	bool writeAFrame(uint8_t *samples,    ///< audio data
@@ -102,8 +103,10 @@ private:
 	};
 	uint _opened; ///< bitflag that shows what was inited already
 
-	Setting& video_settings; ///<reference to the video settings object (libconfig++)
-	Setting& audio_settings; ///<reference to the audio settings object (libconfig++)
+	///pointer to the video Setting object (libconfig++)
+	Setting *video_settings_ptr;
+	///pointer to the audio Setting object (libconfig++)
+	Setting *audio_settings_ptr;
 
 	//file streams and codecs
 	AVFormatContext *o_file;  ///< output file context

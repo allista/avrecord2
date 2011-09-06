@@ -41,7 +41,7 @@ void CaptureThread::Init( QString cfg )
 }
 
 
-void CaptureThread::initImageBuffer( unsigned char *& buffer, uint & size, uint &w, uint &h ) const
+void CaptureThread::initImageBuffer( unsigned char *&buffer, uint &size, uint &w, uint &h ) const
 {
 	if(!recorder)	return;
 	size   = recorder->getVBSize();
@@ -50,7 +50,7 @@ void CaptureThread::initImageBuffer( unsigned char *& buffer, uint & size, uint 
 	buffer = new unsigned char[size];
 }
 
-void CaptureThread::getImage( unsigned char * buffer, bool with_motion ) const
+void CaptureThread::getImage( unsigned char *buffer, bool with_motion ) const
 {
 	if(!recorder || !buffer) return;
 	const unsigned char *tmp;

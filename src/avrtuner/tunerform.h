@@ -36,24 +36,24 @@ class TunerForm : public TunerFormBase
 {
 	Q_OBJECT
 public:
-	TunerForm(QWidget* parent = 0, const char* name = 0, WFlags fl = 0 );
+	TunerForm(QWidget *parent = 0, const char *name = 0, WFlags fl = 0 );
 	~TunerForm();
 
 public slots:
-	virtual void restore(int& state);           ///< restores wiget window, if it is minimized
+	virtual void restore(int &state);           ///< restores wiget window, if it is minimized
 	virtual void configChanged();               ///< highlights filename line
 	virtual void startStopCapturing(int state); ///< on start makes visible screen and errorlog wigets
 	                                            ///< on stop makes visible config editor
 	virtual void showLog(int state);            ///< shows and hides error log wiget
-  virtual void clearLog();                    ///< clears content of error log wiget
+	virtual void clearLog();                    ///< clears content of error log wiget
 	virtual void fileReload();                  ///< reloads current config file
 	virtual void helpAbout();                   ///< shows about info
 	virtual void editFind();                    ///< hmm... does nothig for now =)
 	virtual void fileSaveAs();                  ///< saves config as different file
 	virtual void fileSave();                    ///< saves config
 	virtual void fileOpen() { fileOpen(NULL); };///< opens config
-	virtual void fileOpen(const char* fname);   ///< opens config
-  virtual void log_message(QString &str);     ///< appends string to errorlog line
+	virtual void fileOpen(const char *fname);   ///< opens config
+	virtual void log_message(QString &str);     ///< appends string to errorlog line
 	virtual void updateMeters(uint diffs, uint noise); ///< updates metters values
 	virtual void updateImage(QImage *img);      ///< updates image
 
@@ -67,8 +67,8 @@ protected:
 	void config_changed(bool modified); ///< updates filename line
 	void xperror(const char *msg);      ///< displays error dialog
 
-	virtual void closeEvent(QCloseEvent * e);   ///< promts on unsaved config and closes main window
-	virtual void customEvent(QCustomEvent * e); ///< meters values and image are updated through event queue
+	virtual void closeEvent(QCloseEvent *e);   ///< promts on unsaved config and closes main window
+	virtual void customEvent(QCustomEvent *e); ///< meters values and image are updated through event queue
 };
 
 #endif

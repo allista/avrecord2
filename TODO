@@ -1,7 +1,8 @@
+Request ffmpeg for supported video and audio codecs
+Switch to gtk2(3?) in avrtuner
+Fix video stuttering (if it is still there)
+
 Switch to V4L2... DONE
 Switch to libconfig for settings... DONE
-=> request the device for... DONE
-=> request ffmpeg for supported video and audio codecs
-Switch to gtk2(3?) in avrtuner
-Switch to SDL in avrtuner for video output (and stop inventing bicycles!)
-Fix video stuttering (if it is still there)
+Request the device for... DONE
+Switch to SDL in avrtuner for video output (and stop inventing bicycles!)... DONE

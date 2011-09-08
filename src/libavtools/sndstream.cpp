@@ -17,7 +17,7 @@
 *   Free Software Foundation, Inc.,                                       *
 *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
 ***************************************************************************/
-#include <limits.h>
+
 #include <math.h>
 #include <iostream>
 using namespace std;
@@ -274,12 +274,12 @@ void Sndstream::amplify(void *buffer, uint bsize)
 			for(int i = 0; i < size; i++)
 			{
 				cur		= (cb[i] - sig_offset) * amp_level;
-				if(labs(cur) > CHAR_MAX*0.9)
-					cur = (cur > 0)? CHAR_MAX*0.9 : CHAR_MAX*(-0.9);
+				if(labs(cur) > SND_8BIT_MAX)
+					cur = (cur > 0)? SND_8BIT_MAX : -1*SND_8BIT_MAX;
 				cb[i]	= char(cur);
 				if(abs(cb[i]) > max) max = abs(cb[i]);
 			}
-			max = weight(max, CHAR_MAX);
+			max = weight(max, SND_8BIT_MAX);
 
 			break;
 
@@ -297,12 +297,12 @@ void Sndstream::amplify(void *buffer, uint bsize)
 			for(int i = 0; i < size; i++)
 			{
 				cur		= (sb[i] - sig_offset) * amp_level;
-				if(labs(cur) > SHRT_MAX*0.9)
-					cur = (cur > 0)? SHRT_MAX*0.9 : SHRT_MAX*(-0.9);
+				if(labs(cur) > SND_16BIT_MAX)
+					cur = (cur > 0)? SND_16BIT_MAX : -1*SND_16BIT_MAX;
 				sb[i]   = short(cur);
 				if(abs(sb[i]) > max) max = abs(sb[i]);
 			}
-			max = weight(max, SHRT_MAX);
+			max = weight(max, SND_16BIT_MAX);
 
 			break;
 	}

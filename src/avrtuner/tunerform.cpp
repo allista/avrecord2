@@ -36,8 +36,6 @@ extern QApplication* qApp;
 using namespace std;
 
 #include "tunerform.h"
-#include "kdetvview.h"
-
 #include <common.h>
 
 
@@ -59,10 +57,7 @@ TunerForm::TunerForm(QWidget* parent, const char* name, WFlags fl)
 		: TunerFormBase(parent,name,fl)
 {
 	config_modified = false;
-	fdialog = new QFileDialog(NULL,"*.conf",NULL,"fdialog",TRUE);
-	this->VideoScreen->setPaletteBackgroundColor( QColor( 0, 0, 0 ) );
-	this->VideoScreen->setFixedAspectRatio( ASPECT_RATIO_NORMAL );
-	this->VideoScreen->hide();
+	fdialog = new QFileDialog(NULL,"*.cfg",NULL,"fdialog",TRUE);
 	this->ClearLogBtn->hide();
 }
 
@@ -105,7 +100,6 @@ void TunerForm::startStopCapturing(int state)
 			this->MainStack->raiseWidget(1);
 			this->ClearLogBtn->show();
 		}
-		this->VideoScreen->show();
 	}
 	else
 	{
@@ -117,7 +111,6 @@ void TunerForm::startStopCapturing(int state)
 		}
 		updateMeters(0, 0);
 		ErrorLog->append("\n");
-		this->VideoScreen->hide();
 	}
 }
 
@@ -156,7 +149,7 @@ void TunerForm::closeEvent(QCloseEvent *e)
 
 void TunerForm::fileSaveAs()
 {
-	if(!(config_file = fdialog->getSaveFileName(NULL,"*.conf",NULL,"fdialog")))
+	if(!(config_file = fdialog->getSaveFileName(NULL,"*.cfg",NULL,"fdialog")))
 		return;
 
 	config_modified = true;
@@ -190,7 +183,7 @@ void TunerForm::fileOpen(const char* fname)
 	else
 	{
 		QString old_config = config_file;
-		if(!(config_file = fdialog->getOpenFileName(NULL,"*.conf",NULL,"fdialog")))
+		if(!(config_file = fdialog->getOpenFileName(NULL,"*.cfg",NULL,"fdialog")))
 		{
 			config_file = old_config;
 			return;
@@ -250,28 +243,15 @@ void TunerForm::config_changed(bool modified)
   this->FileNameLine->setFont(fnt);
 }
 
-void TunerForm::updateMeters(uint diffs, uint noise)
+void TunerForm::updateMeters(uint motion, uint peak)
 {
-	this->Diffs->display(int(diffs));
-	this->Noise->display(int(noise));
+	this->Diffs->display(int(motion));
+	this->Noise->display(int(peak));
 
-	diffs = (diffs > DiffsPrg->totalSteps())? DiffsPrg->totalSteps() : diffs;
-	noise = (noise > NoisePrg->totalSteps())? NoisePrg->totalSteps() : noise;
-	this->DiffsPrg->setProgress(diffs);
-	this->NoisePrg->setProgress(noise);
-}
-
-void TunerForm::updateImage(QImage *img)
-{
-	if(!img) return;
-	if(VideoScreen->width() != img->width())
-	 {
-		 this->VideoScreen->setMinimumSize(img->size());
-		 this->VideoScreen->setMaximumHeight(img->height());
-		 this->MainStack->update();
-	 }
-
-	bitBlt(this->VideoScreen, 0, 0, img, 0, Qt::CopyROP);
+	motion = (motion > DiffsPrg->totalSteps())? DiffsPrg->totalSteps() : motion;
+	peak = (peak > NoisePrg->totalSteps())? NoisePrg->totalSteps() : peak;
+	this->DiffsPrg->setProgress(motion);
+	this->NoisePrg->setProgress(peak);
 }
 
 void TunerForm::customEvent( QCustomEvent * e )
@@ -282,8 +262,7 @@ void TunerForm::customEvent( QCustomEvent * e )
 		case MonitorThread::DATA_EVENT_TYPE:
 			data = (MonitorThread::TunerData*)e->data();
 			qApp->processEvents(200);
-			updateMeters(data->diffs, data->noise);
-			updateImage(data->image);
+			updateMeters(data->motion, data->peak);
 			delete data;
 			break;
 

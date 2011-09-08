@@ -49,12 +49,13 @@ void CaptureThread::Init( QString cfg )
 }
 
 
-void CaptureThread::initImageBuffer( unsigned char *&buffer, uint &size, uint &w, uint &h ) const
+void CaptureThread::initImageBuffer( unsigned char *&buffer, uint &size, uint &w, uint &h, PixelFormat &in_fmt) const
 {
 	if(!recorder)	return;
 	size   = recorder->getVBSize();
 	w      = recorder->getWidth();
 	h      = recorder->getHeight();
+	in_fmt = av_pixel_formats[recorder->getPixelFormat()];
 	buffer = new unsigned char[size];
 }
 
@@ -94,12 +95,56 @@ void CaptureThread::stop( )
 
 
 
+
+MonitorThread::MonitorThread()
+{
+	basket  = NULL;
+	buffer  = NULL;
+	screen  = NULL;
+	overlay = NULL;
+}
+
+MonitorThread::~ MonitorThread()
+{
+	catcher.stop();
+	if(buffer) delete[] buffer;
+	SDL_Quit();
+}
+
 void MonitorThread::Init( QObject * bask, QString cfg, bool with_motion )
 {
 	basket = bask;
 	catcher.Init(cfg);
-	catcher.initImageBuffer(buffer, v_bsize, width, height);
+	catcher.initImageBuffer(buffer, v_bsize, width, height, in_fmt);
 	highlight_motion = with_motion;
+
+	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER))
+		log_message(1, "MonitorThread: Could not initialize SDL - %s", SDL_GetError());
+	else if(!(screen = SDL_SetVideoMode(width, height, 0, 0)))
+		log_message(1, "MonitorThread: SDL: could not set video mode");
+	else
+	{
+		screen_rect.x = 0;
+		screen_rect.y = 0;
+		screen_rect.w = width;
+		screen_rect.h = height;
+
+		overlay = SDL_CreateYUVOverlay(width, height, SDL_YV12_OVERLAY, screen);
+
+		overlay_frame.data[0] = overlay->pixels[0];
+		overlay_frame.data[1] = overlay->pixels[2]; //note switch between Y and U planes
+		overlay_frame.data[2] = overlay->pixels[1];
+
+		overlay_frame.linesize[0] = overlay->pitches[0];
+		overlay_frame.linesize[1] = overlay->pitches[2]; //note switch between Y and U planes
+		overlay_frame.linesize[2] = overlay->pitches[1];
+
+		sws = sws_getContext(width, height, in_fmt,
+						 width, height, PIX_FMT_YUV420P,
+						 SWS_POINT, NULL, NULL, NULL);
+		if(!sws)
+			log_message(1, "MonitorThread: couldn't get SwsContext for pixel format conversion");
+	}
 }
 
 void MonitorThread::run( )
@@ -110,10 +155,39 @@ void MonitorThread::run( )
 	while(basket)
 	{
 		catcher.lock();
-		diffs = catcher.getDiffs();
-		noise = catcher.getNoise();
+		motion = catcher.getMotion();
+		peak   = catcher.getPeak();
 		catcher.getImage(buffer, highlight_motion);
 		catcher.unlock();
+
+		if(screen && overlay && sws)
+		{
+			SDL_LockYUVOverlay(overlay);
+
+			// allocate input frame
+			AVFrame *in_picture = avcodec_alloc_frame();
+			if(!in_picture)
+			{
+				log_message(1, "MonitorThread: avcodec_alloc_frame - could not allocate frame for in_picture");
+				continue;
+			}
+
+			//fill in the picture
+			avpicture_fill((AVPicture*)in_picture, buffer, in_fmt,
+							width, height);
+
+			//Convert the image into YUV format that SDL uses
+			sws_scale(sws, in_picture->data, in_picture->linesize, 0,
+					  height, overlay_frame.data, overlay_frame.linesize);
+
+			SDL_UnlockYUVOverlay(overlay);
+
+			//display the overlay
+			SDL_DisplayYUVOverlay(overlay, &screen_rect);
+
+			//pool events (or they'll pile up and freez the app O_O)
+			while(SDL_PollEvent(&event));
+		}
 
 		updateTuner();
 		msleep(50);
@@ -130,55 +204,19 @@ void MonitorThread::stop( )
 		delete[] buffer;
 	buffer  = NULL;
 	v_bsize = 0;
+
+	SDL_Quit();
 }
 
 void MonitorThread::updateTuner()
 {
 	if(!basket || !buffer) return;
 
-	image.create(width, height, 32, QImage::IgnoreEndian);
-	unsigned char *y, *u, *v;
-	int c,d,e;
-	QRgb *p;
-
-	y = buffer;
-	u = y + width*height;
-	v = u + width*height/4;
-
-	for(int yi=0; yi<height; yi++)
-	{
-		for(int x=0; x<width; x++)
-		{
-			c = (y[x])-16;
-			d = (u[x>>1])-128;
-			e = (v[x>>1])-128;
-
-			int r = (298 * c           + 409 * e + 128)>>8;
-			int g = (298 * c - 100 * d - 208 * e + 128)>>8;
-			int b = (298 * c + 516 * d           + 128)>>8;
-
-			if (r<0) r=0;   if (r>255) r=255;
-			if (g<0) g=0;   if (g>255) g=255;
-			if (b<0) b=0;   if (b>255) b=255;
-
-			p  = (QRgb*)image.scanLine(yi)+x;
-			*p = qRgba(r,g,b,255);
-		}
-
-		y += width;
-		if(yi & 1)
-		{
-			u += width/2;
-			v += width/2;
-		}
-	}
-
 	QCustomEvent *event = new QCustomEvent(DATA_EVENT_TYPE);
 	TunerData    *data  = new TunerData;
 
-	data->diffs = diffs;
-	data->noise = noise;
-	data->image = &image;
+	data->motion = motion;
+	data->peak   = peak;
 
 	event->setData((void*)data);
 	qApp->postEvent(basket, event);

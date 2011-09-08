@@ -5,8 +5,8 @@ bin_PROGRAMS = avrtuner
 avrtuner_LDADD = $(top_builddir)/src/libavtools/libavtools.la $(LIB_KDEUI)
 avrtuner_LDFLAGS = $(KDE_RPATH) $(all_libraries)
 avrtuner_SOURCES = avrtuner_main.cpp tunerformbase.ui tunerform.cpp \
-	monitorthread.cpp kdetvview.cpp
-noinst_HEADERS = tunerform.h kdetvview.h monitorthread.h
+	monitorthread.cpp
+noinst_HEADERS = tunerform.h monitorthread.h
 
 KDE_ICON = AUTO
 

@@ -38,27 +38,6 @@ using namespace libconfig;
 #include "common.h"
 #include "utimer.h"
 
-///supported pixel formats
-///note, that all these formats are planar, I don't use packed ones because of the text rendering function: for all the planar formats one single function is enough, while each packed format requires it's own function.
-static const uint pixel_formats[] =
-{
-	V4L2_PIX_FMT_YUV422P,
-	V4L2_PIX_FMT_YUV420,
-	V4L2_PIX_FMT_YUV411P,
-	V4L2_PIX_FMT_YUV410,
-	V4L2_PIX_FMT_GREY
-};
-
-///names of the supported formats
-static const char *pixel_format_names[] =
-{
-	"V4L2_PIX_FMT_YUV422P",
-	"V4L2_PIX_FMT_YUV420",
-	"V4L2_PIX_FMT_YUV411P"
-	"V4L2_PIX_FMT_YUV410",
-	"V4L2_PIX_FMT_GREY"
-};
-
 enum io
 {
 	IO_METHOD_READ,

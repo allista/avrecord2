@@ -26,6 +26,13 @@
 #include <config.h>
 #endif
 
+extern "C"
+{
+#define __STDC_CONSTANT_MACROS
+#include <libswscale/swscale.h>
+}
+#include <SDL/SDL.h>
+
 #include <qobject.h>
 #include <qthread.h>
 #include <qmutex.h>
@@ -38,8 +45,8 @@
 class CaptureThread : public QThread
 {
 public:
-	CaptureThread()	{	recorder = NULL;};
-	~CaptureThread() {	if(recorder) delete recorder;	};
+	CaptureThread()  { recorder = NULL; };
+	~CaptureThread() { if(recorder) delete recorder; };
 
 	///initializes recorder from "cfg" config file
 	void Init(QString cfg);
@@ -58,7 +65,7 @@ public:
 
 	///return last measured diff-pixels of the recorder (NOTE: you must enclose call
 	///of this function with lock()-unlock() pair)
-	uint getDiffs() const
+	uint getMotion() const
 	{
 		if(recorder)
 			return recorder->getMotion();
@@ -67,7 +74,7 @@ public:
 
 	///return last measured noise level of the recorder (NOTE: you must enclose call
 	///of this function with lock()-unlock() pair)
-	uint getNoise() const
+	uint getPeak() const
 	{
 		if(recorder)
 			return recorder->getPeak();
@@ -76,7 +83,7 @@ public:
 
 	///initializes given pointer (it's better for it to be a NULL pointer)
 	///according to the size of recorder's video buffer.
-	void initImageBuffer(unsigned char *&buffer, uint &size, uint &w, uint &h) const;
+	void initImageBuffer(unsigned char *&buffer, uint &size, uint &w, uint &h, PixelFormat &in_fmt) const;
 
 	///copies recorder's video buffer to the given pointer (wich must be
 	///initialized with initImageBuffer). (NOTE: you must enclose call
@@ -102,12 +109,8 @@ private:
 class MonitorThread : public QThread
 {
 public:
-	MonitorThread() : buffer(NULL) {};
-	virtual ~MonitorThread()
-	{
-		catcher.stop();
-		if(buffer) delete[] buffer;
-	};
+	MonitorThread();
+	virtual ~MonitorThread();
 
 	///initializes slave CaptureThread by "cfg" config file
 	void Init(QObject* bask, QString cfg, bool with_motion);
@@ -118,9 +121,8 @@ public:
 	///using this structure both diffs and noise values are sent in a single event
 	struct TunerData
 	{
-		uint diffs;
-		uint noise;
-		QImage *image;
+		uint motion;
+		uint peak;
 	};
 
 	///event types that is used for data transmition
@@ -134,10 +136,17 @@ protected:
 private:
 	CaptureThread  catcher; ///< slave CaptureThread
 	QObject       *basket;  ///< basket for event sending
+	SDL_Event      event;   ///< SDL event
 
-	uint           diffs;   ///< number of diff-pixels
-	uint           noise;   ///< sound noise level
-	QImage         image;   ///< QImage structure that holds the captuerd one
+	SDL_Rect       screen_rect; ///< screen dimentions
+	SDL_Surface   *screen;  ///< output screen
+	SDL_Overlay   *overlay; ///< YUV overlay
+	AVPicture      overlay_frame; ///< ffmpeg structure representing overlay. Used for pixel format conversions
+	SwsContext    *sws;     ///< scaling and converting context
+	PixelFormat    in_fmt;  ///< ffmpeg PixelFormat of the input picture
+
+	uint           motion;  ///< number of diff-pixels
+	uint           peak;    ///< sound noise level
 	unsigned char *buffer;  ///< buffer for captured image
 	uint           v_bsize; ///< size of image buffer
 	uint           width;   ///< widht of the image

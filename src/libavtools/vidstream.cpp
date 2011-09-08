@@ -205,16 +205,16 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 		return false;
 	}
 	CLEAR(format);
-	for(pix_fmt = 1; pix_fmt < sizeof(pixel_formats)/sizeof(pixel_formats[0]); pix_fmt++)
+	for(pix_fmt = 0; pix_fmt < sizeof(v4l2_pixel_formats)/sizeof(v4l2_pixel_formats[0]); pix_fmt++)
 	{
 		format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
-		format.fmt.pix.height      = width;
-		format.fmt.pix.width       = height;
+		format.fmt.pix.width       = width;
+		format.fmt.pix.height      = height;
 		format.fmt.pix.field       = V4L2_FIELD_INTERLACED;
-		format.fmt.pix.pixelformat = pixel_formats[pix_fmt];
+		format.fmt.pix.pixelformat = v4l2_pixel_formats[pix_fmt];
 		if(-1 == xioctl(VIDIOC_S_FMT, &format))
 		{
-			log_message(0, "Vidstream: unable set format $s. Errno: %d %s.", pixel_format_names[pix_fmt], errno, strerror(errno));
+			log_message(0, "Vidstream: unable set format $s. Errno: %d %s.", v4l2_pixel_format_names[pix_fmt], errno, strerror(errno));
 			CLEAR(format);
 		}
 		else break;
@@ -227,8 +227,8 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	}
 	else ///<driver may change image dimensions
 	{
-		width  = format.fmt.pix.height;
-		height = format.fmt.pix.width;
+		width  = format.fmt.pix.width;
+		height = format.fmt.pix.height;
 		video_settings["width"]  = (int)width;
 		video_settings["height"] = (int)height;
 	}
@@ -534,6 +534,28 @@ int Vidstream::Read(void* buffer, uint length)
 	sigaddset (&set, SIGHUP);
 	pthread_sigmask (SIG_BLOCK, &set, &old);
 
+	//wait for the device
+	fd_set fd_set;
+	timeval timeout;
+	FD_ZERO(&fd_set);
+	FD_SET(device, &fd_set);
+
+	timeout.tv_sec = 2;
+	timeout.tv_usec = 0;
+
+	int ret = select(FD_SETSIZE, &fd_set, NULL, NULL, &timeout);
+	if(-1 == ret && EINTR != errno)
+	{
+		log_errno("Vidstream: error on select");
+		return -1;
+	}
+	else if(0 == ret)
+	{
+		log_errno("Vidstream: select timeout");
+		return 0;
+	}
+
+	//capture
 	v4l2_buffer buf;
 	switch(io_method)
 	{
@@ -546,7 +568,7 @@ int Vidstream::Read(void* buffer, uint length)
 						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 						return 0;
 					default:
-						log_errno("Read error while trying to grab image with READ method: ");
+						log_errno("Vidstream: Read error while trying to grab image with READ method: ");
 						Close();
 						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 						return -1;
@@ -577,7 +599,7 @@ int Vidstream::Read(void* buffer, uint length)
 						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 						return 0;
 					default:
-						log_errno("(mmap method) VIDIOC_DQBUF failed: ");
+						log_errno("Vidstream: (mmap method) VIDIOC_DQBUF failed: ");
 						Close();
 						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 						return -1;
@@ -585,7 +607,7 @@ int Vidstream::Read(void* buffer, uint length)
 			}
 			if(!(buf.index < NUM_BUFFERS))
 			{
-				log_message(1, "mmap buffer index is out of range");
+				log_message(1, "Vidstream: mmap buffer index is out of range");
 				Close();
 				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 				return -1;
@@ -603,7 +625,7 @@ int Vidstream::Read(void* buffer, uint length)
 
 			if(-1 == xioctl(VIDIOC_QBUF, &buf))
 			{
-				log_errno("VIDIOC_QBUF failed: ");
+				log_errno("Vidstream: VIDIOC_QBUF failed: ");
 				Close();
 				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 				return -1;
@@ -621,7 +643,7 @@ int Vidstream::Read(void* buffer, uint length)
 						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 						return 0;
 					default:
-						log_errno("(user pointer method) VIDIOC_DQBUF failed: ");
+						log_errno("Vidstream: (user pointer method) VIDIOC_DQBUF failed: ");
 						Close();
 						pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 						return -1;
@@ -637,7 +659,7 @@ int Vidstream::Read(void* buffer, uint length)
 
 			if(!buf_idx < NUM_BUFFERS)
 			{
-				log_message(1, "user pointer buffer index is out of range");
+				log_message(1, "Vidstream: user pointer buffer index is out of range");
 				Close();
 				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 				return -1;
@@ -655,7 +677,7 @@ int Vidstream::Read(void* buffer, uint length)
 
 			if(-1 == xioctl(VIDIOC_QBUF, &buf))
 			{
-				log_errno("VIDIOC_QBUF failed: ");
+				log_errno("Vidstream: VIDIOC_QBUF failed: ");
 				Close();
 				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
 				return -1;

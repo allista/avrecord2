@@ -35,6 +35,8 @@ extern "C"
 #include <sys/types.h>
 //typedef unsigned char uint8_t;
 
+#include <linux/videodev2.h>
+
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
 
 ///logs given message to our logfile
@@ -49,6 +51,33 @@ struct image_buffer    ///< image buffer structure
 	void* start;       ///< the beginning of a buffer
 	size_t length;     ///< buffer length
 	timeval timestamp; ///< image timestamp as returnd by VIDIOC_DQBUF in v4l2_buffer structure
+};
+
+///supported pixel formats
+///note, that all these formats are planar, I don't use packed ones because of the text rendering function: for all the planar formats one single function is enough, while each packed format requires it's own function.
+static const uint v4l2_pixel_formats[] =
+{
+	V4L2_PIX_FMT_YUV420,
+	V4L2_PIX_FMT_YUV411P,
+	V4L2_PIX_FMT_YUV410,
+	V4L2_PIX_FMT_GREY
+};
+
+///names of the supported formats
+static const char *v4l2_pixel_format_names[] =
+{
+	"V4L2_PIX_FMT_YUV420",
+	"V4L2_PIX_FMT_YUV411P"
+	"V4L2_PIX_FMT_YUV410",
+	"V4L2_PIX_FMT_GREY"
+};
+
+static const PixelFormat av_pixel_formats[] =
+{
+	PIX_FMT_YUV420P,
+	PIX_FMT_YUV411P,
+	PIX_FMT_YUV410P,
+	PIX_FMT_GRAY8
 };
 
 #endif

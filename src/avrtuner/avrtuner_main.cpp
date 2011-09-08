@@ -99,7 +99,8 @@ void log_message(int level, const char *fmt, ...)
 
 	//output...
 	QString str(buf);
-	if(level)	cerr << buf << flush; //log to stderr
+	if(level) cerr << buf << flush; //log to stderr
+	else cout << buf << flush; //log to stdout
 	mainWin->log_message(str); //to log window
 
 	//Clean up the argument list routine

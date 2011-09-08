@@ -22,7 +22,7 @@
   </general>
   <kdevautoproject>
     <general>
-      <activetarget>src/avrecord</activetarget>
+      <activetarget>src/avrtuner/avrtuner</activetarget>
       <useconfiguration>debug</useconfiguration>
     </general>
     <run>
@@ -38,11 +38,11 @@
       <runarguments>
         <avrecord>-c avrecord.cfg -n</avrecord>
         <test/>
-        <avrtuner>avrecord.conf</avrtuner>
+        <avrtuner>avrecord.cfg</avrtuner>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
       </runarguments>
       <debugarguments>
-        <avrtuner>avrecord.conf</avrtuner>
+        <avrtuner>avrecord.cfg</avrtuner>
         <avrecord>-c avrecord.cfg -n</avrecord>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
         <test/>
@@ -226,7 +226,7 @@
       <includestyle>3</includestyle>
       <designerintegration>EmbeddedKDevDesigner</designerintegration>
       <qmake>/usr/bin/qmake-qt3</qmake>
-      <designer></designer>
+      <designer>/usr/bin/designer-qt3</designer>
       <designerpluginpaths/>
     </qt>
     <codecompletion>

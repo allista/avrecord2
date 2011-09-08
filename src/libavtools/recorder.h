@@ -92,7 +92,6 @@ public:
 	///order to give a chance to lock the mutex to another thread.
 	void unlock() { mutex.unlock(); usleep(5); };
 
-
 	///returns number of motion pixels (NOTE: you must enclose call
 	///of this function with lock()-unlock() pair)
 	uint getMotion() { return last_diffs; };
@@ -117,6 +116,8 @@ public:
 
 	///returns width of the image
 	uint getHeight() const { return height; };
+
+	uint getPixelFormat() const { return v_source.pixel_format(); }
 
 private:
 	bool            inited;    ///< true if all is inited
@@ -357,7 +358,7 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 	try	{ win_list   = (const char*)avrecord_config->lookup("schedule.schedule"); }
 	catch(SettingNotFoundException) { ; }
 
-	time_t now = time(0);
+	time(&now);
 	if(!start_date.empty())
 	{
 		tm *s_date = localtime(&now);
@@ -594,7 +595,7 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 	//main record loop
 	while(*signal != SIG_QUIT)
 	{
-		now = time(0);
+		time(&now);
 
 
 		//check if present time between start time and stop time
@@ -798,7 +799,8 @@ void BaseRecorder<_mutex>::print_info(unsigned char *frame)
 {
 	if(print_date)
 	{
-		string date = ctime(&now);
+		const char* time = ctime(&now);
+		string date = (time)? time : "\n";
 		date.erase(date.size()-1);
 		PrintText(frame, date, width-5-TextWidth(date), height-5, width, height);
 	}
@@ -846,17 +848,14 @@ int BaseRecorder<_mutex>::capture_frame()
 	if(!inited) return -1;
 
 	int read;
-	do { read = v_source.Read(v_buffer->wbuffer(), v_bsize); }
-	while(read == 0);
+	read = v_source.Read(v_buffer->wbuffer(), v_bsize);
 	if(read == -1) return -1;
-
+	if(read ==  0) return  0;
 	v_buffer->push(v_bsize);
+
+	if(detect_motion) last_diffs = measure_motion();
 	print_info((*v_buffer)[1]);
-	if(detect_motion)
-	{
-		last_diffs = measure_motion();
-		return last_diffs;
-	}
+	if(detect_motion) return last_diffs;
 	else return 0;
 }
 
@@ -867,9 +866,9 @@ int BaseRecorder<_mutex>::capture_sound()
 	if(!inited) return -1;
 
 	int read;
-	do { read = a_source.Read(a_buffer->wbuffer(), a_bsize); }
-	while(read == 0);
+	read = a_source.Read(a_buffer->wbuffer(), a_bsize);
 	if(read == -1) return -1;
+	if(read ==  0) return  0;
 
 	a_buffer->push(read);
 	if(detect_noise)

@@ -54,8 +54,7 @@ public slots:
 	virtual void fileOpen() { fileOpen(NULL); };///< opens config
 	virtual void fileOpen(const char *fname);   ///< opens config
 	virtual void log_message(QString &str);     ///< appends string to errorlog line
-	virtual void updateMeters(uint diffs, uint noise); ///< updates metters values
-	virtual void updateImage(QImage *img);      ///< updates image
+	virtual void updateMeters(uint motion, uint peak); ///< updates metters values
 
 protected:
 	QFileDialog  *fdialog; ///< dialog for fileselection

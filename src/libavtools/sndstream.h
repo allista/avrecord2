@@ -31,6 +31,8 @@
 #include <libconfig.h++>
 using namespace libconfig;
 
+#include <limits.h>
+
 #include "common.h"
 
 ///soundstream i/o modes
@@ -58,6 +60,11 @@ enum weight_func
 	 SND_PWR4,
 	 SND_PWR8
 };
+
+//when a sample must be clipped set it to CLIP_LEVEL*MAX value
+#define CLIP_LEVEL     0.99
+#define SND_8BIT_MAX   CHAR_MAX*CLIP_LEVEL
+#define SND_16BIT_MAX  SHRT_MAX*CLIP_LEVEL
 
 ///encapsulates alsa api to soundcard.
 class Sndstream

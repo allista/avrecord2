@@ -1,77 +1,74 @@
 <?xml version = '1.0' encoding = 'UTF-8'?>
 <!DOCTYPE KDevPrjSession>
 <KDevPrjSession>
- <DocsAndViews NumberOfDocuments="16" >
+ <DocsAndViews NumberOfDocuments="18" >
   <Doc0 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/recorder.h" >
-   <View0 Encoding="" line="812" Type="Source" />
+   <View0 Encoding="" line="565" Type="Source" />
   </Doc0>
   <Doc1 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/tests/v4l2-test.cpp" >
-   <View0 Encoding="" line="24" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc1>
   <Doc2 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avconfig.cpp" >
-   <View0 Encoding="" line="120" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc2>
   <Doc3 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avconfig.h" >
    <View0 Encoding="" Type="Source" />
   </Doc3>
   <Doc4 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avifile.h" >
-   <View0 Encoding="" line="44" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc4>
   <Doc5 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/vidstream.h" >
-   <View0 Encoding="" line="121" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc5>
   <Doc6 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/sndstream.h" >
-   <View0 Encoding="" line="111" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc6>
   <Doc7 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/main.cpp" >
-   <View0 Encoding="" line="218" Type="Source" />
+   <View0 Encoding="" line="262" Type="Source" />
   </Doc7>
   <Doc8 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/sndstream.cpp" >
-   <View0 Encoding="" line="309" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc8>
   <Doc9 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avifile.cpp" >
-   <View0 Encoding="" line="396" Type="Source" />
+   <View0 Encoding="" line="518" Type="Source" />
   </Doc9>
   <Doc10 NumberOfViews="1" URL="file:///usr/include/libavcodec/avcodec.h" >
-   <View0 Encoding="" line="29" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc10>
   <Doc11 NumberOfViews="1" URL="file:///usr/include/libavutil/avutil.h" >
-   <View0 Encoding="" line="60" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc11>
   <Doc12 NumberOfViews="1" URL="file:///usr/include/libavutil/pixfmt.h" >
-   <View0 Encoding="" line="0" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc12>
   <Doc13 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/avrecord.cfg.template" >
-   <View0 Encoding="" line="0" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc13>
   <Doc14 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/vidstream.cpp" >
-   <View0 Encoding="" line="56" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc14>
   <Doc15 NumberOfViews="1" URL="file:///usr/include/linux/videodev2.h" >
-   <View0 Encoding="" line="263" Type="Source" />
+   <View0 Encoding="" Type="Source" />
   </Doc15>
+  <Doc16 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/buffer-ring.h" >
+   <View0 Encoding="" line="46" Type="Source" />
+  </Doc16>
+  <Doc17 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/fifo.h" >
+   <View0 Encoding="" line="89" Type="Source" />
+  </Doc17>
  </DocsAndViews>
  <pluginList>
   <kdevdebugger>
    <breakpointList>
-    <breakpoint0 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.cpp:66" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
+    <breakpoint0 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/fifo.h:57" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
      <tracedExpressions/>
     </breakpoint0>
-    <breakpoint1 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.cpp:91" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
+    <breakpoint1 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/fifo.h:90" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
      <tracedExpressions/>
     </breakpoint1>
-    <breakpoint2 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.cpp:99" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
+    <breakpoint2 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/fifo.h:67" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
      <tracedExpressions/>
     </breakpoint2>
-    <breakpoint3 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/tunerform.cpp:95" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="0" >
-     <tracedExpressions/>
-    </breakpoint3>
-    <breakpoint4 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/recorder.h:-104445807" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
-     <tracedExpressions/>
-    </breakpoint4>
-    <breakpoint5 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/monitorthread.cpp:-1762662255" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
-     <tracedExpressions/>
-    </breakpoint5>
    </breakpointList>
    <showInternalCommands value="0" />
   </kdevdebugger>
@@ -83,6 +80,9 @@
    <bookmarks>
     <bookmark url="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/sndstream.cpp" >
      <mark line="26" />
+    </bookmark>
+    <bookmark url="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/vidstream.cpp" >
+     <mark line="207" />
     </bookmark>
    </bookmarks>
   </kdevbookmarks>

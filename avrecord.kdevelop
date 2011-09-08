@@ -36,14 +36,14 @@
         <envvar value="1" name="MALLOC_CHECK_" />
       </envvars>
       <runarguments>
-        <avrecord>-c avrecord.conf</avrecord>
+        <avrecord>-c avrecord.cfg -n</avrecord>
         <test/>
         <avrtuner>avrecord.conf</avrtuner>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
       </runarguments>
       <debugarguments>
         <avrtuner>avrecord.conf</avrtuner>
-        <avrecord>-c avrecord.conf</avrecord>
+        <avrecord>-c avrecord.cfg -n</avrecord>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
         <test/>
       </debugarguments>

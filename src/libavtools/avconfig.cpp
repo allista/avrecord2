@@ -233,6 +233,14 @@ bool AVConfig::Init()
 		{
 			if(queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) continue;
 			queryctrl_list.push_back(queryctrl);
+			control.id = queryctrl.id;
+			if(0 == xioctl(video_device, VIDIOC_G_CTRL, &control))
+				control_list.push_back(control);
+			else
+			{
+				log_errno("VIDIOC_G_CTRL");
+				return false;
+			}
 			log_message(0, "Control found: %s", queryctrl.name);
 
 			if(queryctrl.type == V4L2_CTRL_TYPE_MENU)

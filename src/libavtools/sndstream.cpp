@@ -72,7 +72,12 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 	try { amp_level  = audio_settings["amplification_level"]; }
 	catch(SettingNotFoundException)
 	{
-		log_message(0, "Sndstream: no <amplification_level> setting was found. Using default: 1.");
+		log_message(0, "Sndstream: no <amplification_level> setting was found. Using default: 1.0");
+		amp_level = 1;
+	}
+	catch(SettingTypeException)
+	{
+		log_message(1, "Sndstream: <amplification_level> setting must be a floating point value. Using default: 1.0");
 		amp_level = 1;
 	}
 	amp_level = (amp_level <= 0)? 1 : amp_level;
@@ -145,10 +150,10 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 	}
 
 	/* Set period size to 0 for default. */
-	try { frames = audio_settings["buffer_lenght"]; }
+	try { frames = audio_settings["buffer_length"]; }
 	catch(...)
 	{
-		log_message(1, "Sndstream: no buffer_longht setting. Setting to auto.");
+		log_message(1, "Sndstream: no buffer_length setting. Setting to auto.");
 		frames = 0;
 	}
 	ret = snd_pcm_hw_params_set_period_size_near(snd_dev, params, &frames, &dir);
@@ -189,16 +194,16 @@ void Sndstream::Close()
 	sig_offset = 0;
 }
 
-uint Sndstream::Read(void* buffer, uint size)
+int Sndstream::Read(void* buffer, uint size)
 {
-	if(!opened() || dev_mode != SND_R) return false;
+	if(!opened() || dev_mode != SND_R) return -1;
 	if(size < _bsize)
 	{
 		log_message(1, "Sndstream: read buffer too small - needed %d bytes buffer", _bsize);
-		return 0;
+		return -1;
 	}
 
-	int ret = false;
+	int ret = 0;
 	ret = snd_pcm_readi(snd_dev, buffer, frames);
 	if(ret == -EAGAIN) return 0;
 	else if(ret == -EPIPE)
@@ -206,12 +211,12 @@ uint Sndstream::Read(void* buffer, uint size)
 		/* EPIPE means overrun */
 		if(snd_pcm_prepare(snd_dev) < 0)
 			log_message(1, "Sndstream: cant recover from overrun");
-		return 0;
+		return -1;
 	}
 	else if(ret < 0)
 	{
 		log_message(1, "Sndstream: error from read: %s", snd_strerror(ret));
-		return 0;
+		return -1;
 	}
 	else if(ret < (int)frames)
 	{

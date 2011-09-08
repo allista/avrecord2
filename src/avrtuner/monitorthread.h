@@ -61,7 +61,7 @@ public:
 	uint getDiffs() const
 	{
 		if(recorder)
-			return recorder->getDiffs();
+			return recorder->getMotion();
 		else return 0;
 	};
 
@@ -70,7 +70,7 @@ public:
 	uint getNoise() const
 	{
 		if(recorder)
-			return recorder->getNoise();
+			return recorder->getPeak();
 		else return 0;
 	};
 

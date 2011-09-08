@@ -127,19 +127,19 @@ int main(int argc, char *argv[])
 	{
 		if(template_fname.empty())
 		{
-			log_message(1, "No template file was given. Use -t option.");
+			log_message(1, "avrecord: No template file was given. Use -t option.");
 			exit(1);
 		}
 		if(output_fname.empty())
 		{
-			log_message(1, "No output file was given. Use -o option.");
+			log_message(1, "avrecord: No output file was given. Use -o option.");
 			exit(1);
 		}
 
 		AVConfig new_config;
-		new_config.Load(template_fname, true) || exit(1);
-		new_config.Init()                     || exit(1);
-		new_config.SaveAs(output_fname)       || exit(1);
+		if(!new_config.Load(template_fname, true)) exit(1);
+		if(!new_config.Init()                    ) exit(1);
+		if(!new_config.SaveAs(output_fname)      ) exit(1);
 
 		exit(0);
 	}
@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 	//if -d option is passed, fork the process
 	if(daemonize && fork())
 	{
-		log_message(0, "AVRecord is going to daemon mode.");
+		log_message(0, "avrecord: going to daemon mode.");
 		exit(0);
 	}
 
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
 	//if there's still no config, die
 	if(conf_fname.empty())
 	{
-		log_message(1, "No configuration file was found in default locations nor was it's location provided using -c option.")
+		log_message(1, "avrecord: No configuration file was found in default locations nor was it's location provided using -c option.");
 		exit(1);
 	}
 
@@ -211,11 +211,11 @@ int main(int argc, char *argv[])
 
 	//load config file or die
 	AVConfig config;
-	config.Load(conf_fname) || exit(1);
+	if(!config.Load(conf_fname)) exit(1);
 
 	//setup output directory
 	string output_dir;
-	try	{ output_dir = config.lookup("paths.output_dir"); }
+	try	{ output_dir = (const char*)config.lookup("paths.output_dir"); }
 	catch(...) { output_dir = "./"; }
 	if(output_dir.size() && output_dir[0] != '/')
 	{
@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
 	if(!nolog)
 	{
 		//loading from config file
-		try { log_fname = config.lookup("paths.log_file"); }
+		try { log_fname = (const char*)config.lookup("paths.log_file"); }
 		catch(...) { ; };
 		if(log_fname.empty())   log_fname = string(LOG_FILE);
 
@@ -238,7 +238,7 @@ int main(int argc, char *argv[])
 
 		log_stream.open(log_fname.c_str(), ios::out|ios::app);
 		if(!log_stream.is_open())
-			log_message(1, "Can't open log file %s Logging to stderr...", log_fname.c_str());
+			log_message(1, "avrecord: Can't open log file %s Logging to stderr...", log_fname.c_str());
 	}
 
 	struct sigaction sig_handler_action;
@@ -252,12 +252,12 @@ int main(int argc, char *argv[])
 	{
 		if(avrestart)
 		{
-			log_message(0, "Restarting...");
+			log_message(0, "avrecord: Restarting...");
 			avsignal  = SIG_RECORDING;
 			avrestart = 0;
 			sleep(5);
 		}
-		else log_message(0, "Starting...");
+		else log_message(0, "avrecord: Starting...");
 
 		rec.Init(config.getConfig());
 		rec.RecordLoop(&avsignal);
@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 	}
 	while(avrestart);
 
-	log_message(0, "Quiting...");
+	log_message(0, "avrecord: Quiting...");
 	log_stream.close();
 	exit(EXIT_SUCCESS);
 }

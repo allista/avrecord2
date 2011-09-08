@@ -54,7 +54,7 @@ template<class _type>
 Fifo<_type>::Fifo(uint size)
 		: size(size)
 {
-	buffer  = (_type*)av_malloc(size);
+	buffer  = (_type*)av_malloc(size*sizeof(_type));
 	r_point = buffer;
 	w_point = buffer;
 	end     = buffer + size;
@@ -73,7 +73,7 @@ bool Fifo<_type>::read(_type *buf, uint bsize)
 		if(len > bsize)
 			len = bsize;
 
-		memcpy(buf, r_point, len);
+		memcpy(buf, r_point, len*sizeof(_type));
 		buf     += len;
 		r_point += len;
 
@@ -95,7 +95,7 @@ void Fifo<_type>::write(_type *buf, uint bsize)
 		if(len > bsize)
 			len = bsize;
 
-		memcpy(w_point, buf, len);
+		memcpy(w_point, buf, len*sizeof(_type));
 
 		w_point += len;
 		if(w_point >= end)

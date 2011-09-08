@@ -28,6 +28,7 @@ extern "C"
 #  define INT64_C(c)	c ## LL
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
+#include <libswscale/swscale.h>
 }
 
 #include <libconfig.h++>
@@ -77,7 +78,8 @@ public:
 	double getApts() const;
 
 	///write video frame to the file
-	bool writeVFrame(image_buffer &buffer);
+	bool writeVFrame(uint8_t *buffer     ///< video frame data
+					);
 
 	///write audio frame to the file
 	bool writeAFrame(uint8_t *samples,    ///< audio data
@@ -109,6 +111,11 @@ private:
 	Setting *audio_settings_ptr;
 
 	//file streams and codecs
+	PixelFormat      in_fmt;  ///< pixel format of input frame
+	PixelFormat      out_fmt; ///< pixel format of output stream
+	SwsContext      *sws;     ///< scaling and converting context
+	uint8_t         *out_buffer;        ///< output buffer used for pixel format conversions
+	uint             out_buffer_length; ///< output buffer length in bytes
 	AVFormatContext *o_file;  ///< output file context
 	AVStream        *vstream; ///< output video stream
 	AVStream        *astream; ///< output audio stream

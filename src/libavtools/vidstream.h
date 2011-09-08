@@ -87,7 +87,11 @@ public:
 	bool StopCapture();
 
 	///grabs an image from the device and stores it in the 'buffer'
-	int  Read(image_buffer &buffer);
+	//int  Read(image_buffer &buffer);
+	int  Read(void* buffer, uint length);
+
+	///length of the biggest buffer
+	uint bsize() { return _bsize; };
 
 	///pixel format currently in use
 	uint pixel_format() const { return pix_fmt; }
@@ -107,6 +111,16 @@ public:
 	{ return (double)standard.frameperiod.numerator/standard.frameperiod.denominator; }
 
 private:
+	///init stages
+	enum
+	{
+		INIT_NONE              = 0x000,
+  		INIT_VIDEO_DEV_OPENED  = 0x001,
+		INIT_BUFFERS_ALLOCATED = 0x002,
+  		INIT_CAPTURE_STARTED   = 0x004,
+	};
+	uint init;      ///< bitflag that shows what was inited already
+
 	int  device;    ///< pointer to opened video device
 	io   io_method; ///<input/output method used
 	uint pix_fmt;   ///<chosen pixel format
@@ -115,11 +129,12 @@ private:
 
 	v4l2_capability cap;     ///< video capabilities
 	v4l2_input input;        ///< grab source
-	v4l2_standard standard; ///< video standard
+	v4l2_standard standard;  ///< video standard
 	v4l2_format format;      ///< video format
 
 	static const uint NUM_BUFFERS = 4; ///<number of image buffers to request from driver. Hardcoded for now.
 	vector<image_buffer> buffers;      ///< image buffers
+	uint _bsize; ///< biggest buffer length in bytes
 
 	//functions
 	///make an ioctl call to device safe from signal interuption
@@ -127,6 +142,8 @@ private:
 
 	///prepairs to capture a frame 'n'
 	bool fill_buffer(image_buffer &buffer, void *start, uint length, timeval timestamp);
+	///prepairs to capture a frame 'n'
+	void fill_buffer(void* to, uint to_len, void *from, uint from_len);
 
 	///converts yuv422 image to yuv420p
 	//static void yuv422_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h);

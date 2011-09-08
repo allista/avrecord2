@@ -34,6 +34,11 @@ AVIFile::AVIFile()
 	audio_settings_ptr = NULL;
 
 	//file streams and codecs
+	in_fmt  = PIX_FMT_NONE;
+	out_fmt = PIX_FMT_NONE;
+	out_buffer        = NULL;
+	out_buffer_length = 0;
+	sws     = NULL;
 	o_file  = NULL;
 	vstream = NULL;
 	astream = NULL;
@@ -83,6 +88,7 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 {
 	if(opened() || !o_file) return false;
 	Setting &video_settings = *video_settings_ptr;
+	in_fmt = av_pixel_formats[pix_fmt];
 
 	/* Setup video codec id */
 	try
@@ -93,7 +99,7 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 	}
 	catch(SettingNotFoundException)
 	{
-		log_message(1, "No video <codec> setting was found.");
+		log_message(1, "AVIFile: No video <codec> setting was found.");
 		cleanup();
 		return false;
 	}
@@ -131,7 +137,7 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 	}
 	catch(SettingNotFoundException)
 	{
-		log_message(1, "Video <bitrate>, <width> or <height> settings not found.");
+		log_message(1, "AVIFile: Video <bitrate>, <width> or <height> settings not found.");
 		cleanup();
 		return false;
 	}
@@ -148,7 +154,7 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 	/* set intra frame distance in frames depending on codec */
 	vcodec->gop_size       = 12;
 	/* Set the picture format */
-	vcodec->pix_fmt        = av_pixel_formats[pix_fmt];
+	vcodec->pix_fmt        = in_fmt;
 
 	/* Set codec specific parameters. */
 	/* some formats want stream headers to be separate */
@@ -165,6 +171,41 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 		log_message(1, "AVIFile: Codec not found");
 		cleanup();
 		return false;
+	}
+
+	/* check if selectet codec supports given pixel format */
+	if(codec->pix_fmts)
+	{
+		PixelFormat supported_fmt;
+		for(int i = 0; i < sizeof(codec->pix_fmts)/sizeof(PixelFormat); i++)
+		{
+			supported_fmt = codec->pix_fmts[i];
+			if(in_fmt == supported_fmt) break;
+		}
+		if(in_fmt != supported_fmt)
+		{
+			vcodec->pix_fmt = out_fmt = codec->pix_fmts[0];
+
+			sws = sws_getContext(vcodec->width, vcodec->height, in_fmt,
+								 vcodec->width, vcodec->height, out_fmt,
+		 						 SWS_POINT, NULL, NULL, NULL);
+			if(!sws)
+			{
+				log_message(1, "AVIFile: couldn't get SwsContext for pixel format conversion");
+				cleanup();
+				return false;
+			}
+
+			//determine required buffer size and allocate buffer
+			out_buffer_length = avpicture_get_size(out_fmt, vcodec->width, vcodec->height);
+			out_buffer = (uint8_t*)av_malloc(out_buffer_length*sizeof(uint8_t));
+			if(!out_buffer)
+			{
+				log_message(1, "AVIFile: allocate buffer for pixel format conversion");
+				cleanup();
+				return false;
+			}
+		}
 	}
 
 	/* open the codec */
@@ -209,7 +250,7 @@ bool AVIFile::setAParams()
 	}
 	catch(SettingNotFoundException)
 	{
-		log_message(1, "No audio <codec> setting was found.");
+		log_message(1, "AVIFile: No audio <codec> setting was found.");
 		cleanup();
 		return false;
 	}
@@ -247,7 +288,7 @@ bool AVIFile::setAParams()
 	}
 	catch(SettingNotFoundException)
 	{
-		log_message(1, "Audio <bitrate>, <sample_rate> or <channels> setting(s) not found");
+		log_message(1, "AVIFile: Audio <bitrate>, <sample_rate> or <channels> setting(s) not found");
 		cleanup();
 		return false;
 	}
@@ -280,7 +321,7 @@ bool AVIFile::setAParams()
 		afifo   = Fifo<uint8_t>(2 * MAX_AUDIO_PACKET_SIZE);
 	}
 
-	a_bsize = 4 * MAX_AUDIO_PACKET_SIZE; //taked from "ffmpeg" program (ffmpeg library)
+	a_bsize = 4 * MAX_AUDIO_PACKET_SIZE; //taken from "ffmpeg" program (ffmpeg library)
 	abuffer = (uint8_t*)malloc(a_bsize);
 	if(!abuffer)
 	{
@@ -381,23 +422,43 @@ double AVIFile::getApts( ) const
 	return (double)astream->pts.val * astream->time_base.num / astream->time_base.den;
 }
 
-bool AVIFile::writeVFrame(image_buffer &buffer)
+bool AVIFile::writeVFrame(unsigned char *buffer)
 {
 	if(!opened()) return false;
 
-	/* allocate the encoded raw picture */
-	AVFrame *picture = avcodec_alloc_frame();
-	if(!picture)
+	/* allocate output frame */
+	AVFrame *in_picture = avcodec_alloc_frame();
+	AVFrame *out_picture = NULL;
+	if(!in_picture)
 	{
-		log_message(1, "AVIFile: avcodec_alloc_frame - could not allocate frame");
+		log_message(1, "AVIFile: avcodec_alloc_frame - could not allocate frame for in_picture");
 		return false;
 	}
 
 	//fill in the picture
-	avpicture_fill((AVPicture *)picture, (uint8_t*)buffer.start, vcodec->pix_fmt, vcodec->width, vcodec->height);
+	avpicture_fill((AVPicture*)in_picture, buffer, in_fmt,
+					vcodec->width, vcodec->height);
+	if(in_fmt == out_fmt)
+	{
+		out_picture = in_picture;
+		in_picture  = NULL;
+	}
+	else
+	{
+		out_picture = avcodec_alloc_frame();
+		if(!out_picture)
+		{
+			log_message(1, "AVIFile: avcodec_alloc_frame - could not allocate frame for out_picture");
+			return false;
+		}
+		avpicture_fill((AVPicture*)out_picture, out_buffer, out_fmt, vcodec->width, vcodec->height);
+
+		sws_scale(sws, in_picture->data, in_picture->linesize, 0,
+				  vcodec->height, out_picture->data, out_picture->linesize);
+	}
 
 	/* set variable bitrate if requested */
-	if(vbr) picture->quality = vbr;
+	if(vbr) out_picture->quality = vbr;
 
 	//encode and write a video frame using the av_write_frame API.
 	int out_size, ret;
@@ -408,14 +469,14 @@ bool AVIFile::writeVFrame(image_buffer &buffer)
 	{
 		/* raw video case. The API will change slightly in the near future for that */
 		pkt.flags |= PKT_FLAG_KEY;
-		pkt.data   = (uint8_t *)picture;
+		pkt.data   = (uint8_t *)out_picture;
 		pkt.size   = sizeof(AVPicture);
 		ret = av_interleaved_write_frame(o_file, &pkt);
 	}
 	else
 	{
 		/* encode the image */
-		out_size = avcodec_encode_video(vcodec, vbuffer, v_bsize, picture);
+		out_size = avcodec_encode_video(vcodec, vbuffer, v_bsize, out_picture);
 
 		/* zero size means the image was buffered */
 		if(out_size != 0)
@@ -432,7 +493,9 @@ bool AVIFile::writeVFrame(image_buffer &buffer)
 		}
 		else ret = 0;
 	}
-	av_free(picture);
+	if(in_picture) av_free(in_picture);
+	av_free(out_picture);
+
 
 	if(ret != 0)
 	{
@@ -543,6 +606,16 @@ void AVIFile::cleanup()
 	video_settings_ptr = NULL;
 	///pointer to the audio Settings object (libconfig++)
 	audio_settings_ptr = NULL;
+
+	//out_buffer
+	if(out_buffer)
+		av_free(out_buffer);
+	out_buffer = NULL;
+	out_buffer_length = 0;
+
+	if(sws)
+		sws_freeContext(sws);
+	sws = NULL;
 
 	//encoders//
 	if(_opened & INIT_VCODEC)

@@ -28,7 +28,6 @@ shellrcdir = $(kde_datadir)/avrecord
 
 
 confdir = /etc/$(PACKAGE)
-conf_DATA = avrecord.conf.sample avrecord.sample.cfg
 
 servicedir = /etc/init.d/
 service_SCRIPTS = avrecd
@@ -41,3 +40,4 @@ syssbin_PROGRAMS = avrecord
 avrecord_SOURCES = main.cpp
 avrecord_LDFLAGS = $(all_libraries)
 avrecord_LDADD   = $(top_builddir)/src/libavtools/libavtools.la
+conf_DATA = avrecord.cfg.template

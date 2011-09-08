@@ -45,7 +45,7 @@ video:
 	//video codecs (see ffmpeg -formats for details)
 	codecs = [];
 	//choosen video codec
-	codec = "msmpeg4";
+	codec = "libxvid";
 
 	//bits per second
 	bitrate  = 2500000;
@@ -74,7 +74,7 @@ audio:
 	buffer_length = 0;
 
 	//each audio sample will be multiplied on this value
-	amplification_level = 20;
+	amplification_level = 1.0;
 };
 
 switches:
@@ -92,10 +92,10 @@ switches:
 	record_on_noise  = false;
 
 	//if true, print number of motion pixels to the image
-	print_diffs      = true;
+	print_motion_amount    = true;
 
-	//if true, print sound noise level
-	print_level      = false;
+	//if true, print sound peak value
+	print_sound_peak_value = false;
 
 	//if true, print current date to the image
 	print_date       = true;
@@ -116,25 +116,25 @@ detection:
 	latency = 8;	//value: 2 or grater
 
 	//step in frames between the two compared ones
-	frames_step = 5; //value: from 1 or grater
-
-	//when detecting a motion, difference between two pixels is compared with this value
-	noise_level = 2;
-
-	//a motion is detected when number of differing pixels is grater than this value
-	threshold   = 25;
+	frame_step  = 5; //value: from 1 or grater
 
 	//check each n-th pixel for difference
-	pixel_step = 1;
+	pixel_step  = 1;
+
+	//when detecting a motion, difference between two pixels is compared with this value
+	video_noise_level = 2;
 
 	//how many times to erode captured image to remove a noise
-	noise_reduction_level = 1;
+	video_noise_reduction_level = 1;
 
-	//function for sound noise level calculation: 0 - linear (default), 1 - 2pwr root, 2 - 4pwr root, 3 - 8pwr root, 4 - 2pwr, 5 - 4pwr, 6 - 8pwr
-	snd_noise_level_func = 0;
+	//a motion is detected when number of differing pixels is grater than this value
+	motion_threshold   = 25;
 
-	//sound noise is detected when noise level calculated with the "noise_level_function" is grater than this value (0 - 1000)
-	snd_noise_threshold  = 250;
+	//function for sound peak value calculation: 0 - linear (default), 1 - 2pwr root, 2 - 4pwr root, 3 - 8pwr root, 4 - 2pwr, 5 - 4pwr, 6 - 8pwr
+	sound_peak_value_function = 0;
+
+	//sound noise is detected when peak value calculated with the "peak_value_function" is grater than this value (0 - 1000)
+	sound_peak_threshold  = 250;
 };
 
 schedule:

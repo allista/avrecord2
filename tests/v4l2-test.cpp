@@ -60,6 +60,9 @@ using namespace std;
 #include <common.h>
 #include <avconfig.h>
 #include <img_tools.h>
+#include <vidstream.h>
+#include <sndstream.h>
+#include <recorder.h>
 
 
 int main(int argc, char *argv[])
@@ -92,14 +95,23 @@ int main(int argc, char *argv[])
 	if(init) new_cfg += cfg_file;
 
 	AVConfig cfg;
-	//cfg.Load(cfg_file);
-	cfg.New();
+	cfg.Load(cfg_file);
 
 	if(init)
 	{
 		cfg.Init();
-		Config &cfg_obj = cfg;
-		cfg_obj.lookup("video.device");
+
+		Vidstream v_source;
+		v_source.Open(cfg.getVideoSettings());
+		v_source.Close();
+
+		Sndstream a_source;
+		a_source.Open(cfg.getAudioSettings());
+		a_source.Close();
+
+		Recorder recorder;
+		recorder.Init(cfg.getConfig());
+
 		cfg.SaveAs(new_cfg);
 	}
 

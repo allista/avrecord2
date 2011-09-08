@@ -77,7 +77,7 @@ public:
 
 	/// read data from soundstram.
 	/// Number of readed bytes is returned
-	uint Read(void *buffer, uint size);
+	int  Read(void *buffer, uint size);
 
 	/// write data to soundstream.
 	/// Number of written bytes is returned

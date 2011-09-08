@@ -25,14 +25,22 @@
 #include <qapp.h>
 extern QApplication* qApp;
 
+#include <avconfig.h>
 #include "monitorthread.h"
 
 void CaptureThread::Init( QString cfg )
 {
-	if(recorder) delete recorder;
+	if(recorder)
+	{
+		delete recorder;
+		recorder = NULL;
+	}
+
+	AVConfig conf;
+	if(!conf.Load(cfg)) return;
 
 	recorder = new BaseRecorder<QMutex>();
-	if(!recorder->Init(cfg))
+	if(!recorder->Init(conf.getConfig()))
 	{
 		::log_message(1, "CaptureThread: Init: unable to initialize recorder");
 		delete recorder;

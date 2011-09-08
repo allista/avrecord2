@@ -42,9 +42,10 @@ using namespace std;
 Vidstream::Vidstream()
 {
 	device    = -1;
-	io_method = IO_METHOD_USERPTR;
+	io_method = IO_METHOD_MMAP;
 	pix_fmt   = 0;
-	buffers.resize(NUM_BUFFERS);
+	_bsize    = 0;
+	init      = INIT_NONE;
 }
 
 
@@ -59,20 +60,20 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	try{ dev_name = video_settings["device"]; }
 	catch(SettingNotFoundException)
 	{
-		log_message(1, "No <device> setting was found. Using default /dev/video0");
+		log_message(1, "Vidstream: no <device> setting was found. Using default /dev/video0");
 		Close();
 		return false;
 	}
 	if(-1 == stat(dev_name, &st))
 	{
-		log_message(1, "Cannot identify '%s': %d, %s.", dev_name, errno, strerror (errno));
+		log_message(1, "Vidstream: cannot identify '%s': %d, %s.", dev_name, errno, strerror (errno));
 		Close();
 		return false;
 	}
 
 	if(!S_ISCHR(st.st_mode))
 	{
-		log_message(1, "%s is no device.", dev_name);
+		log_message(1, "Vidstream: %s is no device.", dev_name);
 		Close();
 		return false;
 	}
@@ -80,23 +81,24 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	device = open(dev_name, O_RDWR | O_NONBLOCK, 0);
 	if(-1 == device)
 	{
-		log_message(1, "Cannot open '%s': %d, %s.", dev_name, errno, strerror (errno));
+		log_message(1, "Vidstream: cannot open '%s': %d, %s.", dev_name, errno, strerror (errno));
 		Close();
 		return false;
 	}
+	init |= INIT_VIDEO_DEV_OPENED;
 
 	//query device capabilities and check the necessary ones
 	if(-1 == xioctl(VIDIOC_QUERYCAP, &cap))
 	{
 		if(EINVAL == errno)
 		{
-			log_message(1, "%s is no V4L2 device.", dev_name);
+			log_message(1, "Vidstream: %s is no V4L2 device.", dev_name);
 			Close();
 			return false;
 		}
 		else
 		{
-			log_errno("Could not get device capabilities (VIDIOC_QUERYCAP): ");
+			log_errno("Vidstream: could not get device capabilities (VIDIOC_QUERYCAP): ");
 			Close();
 			return false;
 		}
@@ -104,7 +106,7 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 
 	if(!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE))
 	{
-		log_message(1, "%s is no video capture device.", dev_name);
+		log_message(1, "Vidstream: %s is no video capture device.", dev_name);
 		Close();
 		return false;
 	}
@@ -115,32 +117,47 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 		input.index = (int)video_settings["input"];
 		if(-1 == xioctl(VIDIOC_S_INPUT, &input))
 		{
-			log_errno("Unable to set video input (VIDIOC_S_INPUT): ");
+			log_errno("Vidstream: unable to set video input (VIDIOC_S_INPUT): ");
 			Close();
 			return false;
 		}
 	}
 	catch(SettingNotFoundException)
-	{ log_message(0, "No <input> setting was found. Using current device configuration."); }
+	{ log_message(0, "Vidstream: no <input> setting was found. Using current device configuration."); }
 
 	//set desired video standard
+	v4l2_std_id current_standard;
 	try
 	{
-		CLEAR(standard);
-		standard.index = (long long)video_settings["standard"];
-		if(-1 == xioctl(VIDIOC_S_STD, &standard.index))
+		current_standard = (long long)video_settings["standard"];
+		if(-1 == xioctl(VIDIOC_S_STD, &current_standard))
 		{
-			log_errno("Unable to set video standard (VIDIOC_G_STD): ");
+			log_errno("Vidstream: unable to set video standard (VIDIOC_S_STD): ");
 			Close();
 			return false;
 		}
 	}
 	catch(SettingNotFoundException)
-	{ log_message(0, "No <standard> setting was found. Using current device configuration."); }
-
-	if(-1 == xioctl(VIDIOC_ENUMSTD, &standard))
 	{
-		log_errno("Unable to get video standard info (VIDIOC_ENUMSTD): ");
+		log_message(0, "Vidstream: no <standard> setting was found. Using current device configuration.");
+		if(-1 == xioctl(VIDIOC_G_STD, &current_standard))
+		{
+			log_errno("Vidstream: unable to get current video standard (VIDIOC_G_STD): ");
+			Close();
+			return false;
+		}
+	}
+
+	CLEAR(standard);
+	standard.index = 0;
+	while(0 == xioctl(VIDIOC_ENUMSTD, &standard))
+	{
+		if(standard.id == current_standard) break;
+		standard.index++;
+	}
+	if(standard.id != current_standard)
+	{
+		log_errno("Vidstream: unable to get video standard info: ");
 		Close();
 		return false;
 	}
@@ -160,17 +177,17 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 			switch (errno)
 			{
 				case EINVAL:
-					log_errno("Cropping not supported (VIDIOC_G_CROP): ");
+					log_errno("Vidstream: cropping not supported (VIDIOC_G_CROP): ");
 					break;
 				default:
-					log_errno("Unable to set cropping (VIDIOC_G_CROP): ");
+					log_errno("Vidstream: unable to set cropping (VIDIOC_G_CROP): ");
 					break;
 			}
 		}
 	}
 	else
 	{
-		log_errno("Unable query cropping capabilities (VIDIOC_CROPCAP): ");
+		log_errno("Vidstream: unable query cropping capabilities (VIDIOC_CROPCAP): ");
 		Close();
 		return false;
 	}
@@ -183,12 +200,12 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	}
 	catch(SettingNotFoundException)
 	{
-		log_message(1, "No <width> or <height> setting was found.");
+		log_message(1, "Vidstream: no <width> or <height> setting was found.");
 		Close();
 		return false;
 	}
 	CLEAR(format);
-	for(pix_fmt = 0; pix_fmt < sizeof(pixel_formats)/sizeof(pixel_formats[0]); pix_fmt++)
+	for(pix_fmt = 1; pix_fmt < sizeof(pixel_formats)/sizeof(pixel_formats[0]); pix_fmt++)
 	{
 		format.type                = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 		format.fmt.pix.height      = width;
@@ -197,14 +214,14 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 		format.fmt.pix.pixelformat = pixel_formats[pix_fmt];
 		if(-1 == xioctl(VIDIOC_S_FMT, &format))
 		{
-			log_message(0, "Unable set format $s. Errno: %d %s.", pixel_format_names[pix_fmt], errno, strerror(errno));
+			log_message(0, "Vidstream: unable set format $s. Errno: %d %s.", pixel_format_names[pix_fmt], errno, strerror(errno));
 			CLEAR(format);
 		}
 		else break;
 	}
 	if(format.fmt.pix.height == 0)
 	{
-		log_message(1, "Unable to set any of the supported pixel formats.");
+		log_message(1, "Vidstream: unable to set any of the supported pixel formats.");
 		Close();
 		return false;
 	}
@@ -219,6 +236,7 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	//setup input/output mechanism
 	if(cap.capabilities & V4L2_CAP_STREAMING)
 	{
+		buffers.resize(NUM_BUFFERS);
 		v4l2_requestbuffers req;
 
 		///trying memory mapping first
@@ -230,7 +248,7 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 		{
 			if(req.count < 2)
 			{
-				log_message(1, "Insufficient buffer memory on %s.", dev_name);
+				log_message(1, "Vidstream: insufficient buffer memory on %s.", dev_name);
 				Close();
 				return false;
 			}
@@ -242,10 +260,10 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 
 				buf.type        = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 				buf.memory      = V4L2_MEMORY_MMAP;
-				buf.index       = NUM_BUFFERS;
+				buf.index       = b;
 				if(-1 == xioctl(VIDIOC_QUERYBUF, &buf))
 				{
-					log_errno("Failed to query mmap buffers (VIDIOC_QUERYBUF): ");
+					log_errno("Vidstream: failed to query mmap buffers (VIDIOC_QUERYBUF): ");
 					Close();
 					return false;
 				}
@@ -255,10 +273,13 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 
 				if(MAP_FAILED == buffers[b].start)
 				{
-					log_errno("mmap failed: ");
+					log_errno("Vidstream: mmap failed: ");
 					Close();
 					return false;
 				}
+
+				if(_bsize < buf.length) _bsize = buf.length;
+				init |= INIT_BUFFERS_ALLOCATED;
 			}
 
 			io_method = IO_METHOD_MMAP;
@@ -267,13 +288,13 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 		{
 			if(EINVAL != errno)
 			{
-				log_errno("VIDIOC_REQBUFS");
+				log_errno("Vidstream: VIDIOC_REQBUFS");
 				Close();
 				return false;
 			}
 			else
 			{
-				log_message(0, "Device %s does not support memory mapping.", dev_name);
+				log_message(0, "Vidstream: device %s does not support memory mapping.", dev_name);
 
 				///now trying user pointers
 				CLEAR (req);
@@ -283,19 +304,21 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 				if(0 == xioctl(VIDIOC_REQBUFS, &req))
 				{
 					uint page_size = getpagesize();
-					uint buffer_size = (format.fmt.pix.sizeimage + page_size - 1) & ~(page_size - 1);
+					_bsize = (format.fmt.pix.sizeimage + page_size - 1) & ~(page_size - 1);
 
 					for (int b = 0; b < NUM_BUFFERS; b++)
 					{
-						buffers[b].length = buffer_size;
-						buffers[b].start  = memalign(/* boundary */ page_size, buffer_size);
+						buffers[b].length = _bsize;
+						buffers[b].start  = memalign(/* boundary */ page_size, _bsize);
 
 						if(!buffers[b].start)
 						{
-							log_message(1, "Out of memory trying to allocate image buffers (USERPTR METHOD).");
+							log_message(1, "Vidstream: out of memory trying to allocate image buffers (USERPTR METHOD).");
 							Close();
 							return false;
 						}
+
+						init |= INIT_BUFFERS_ALLOCATED;
 					}
 
 					io_method = IO_METHOD_USERPTR;
@@ -303,9 +326,9 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 				else
 				{
 					if(EINVAL == errno)
-						log_message(1, "Device %s does not support user pointers.", dev_name);
+						log_message(1, "Vidstream: device %s does not support user pointers.", dev_name);
 					else
-						log_errno("VIDIOC_REQBUFS");
+						log_errno("Vidstream: VIDIOC_REQBUFS");
 					Close();
 					return false;
 				}
@@ -315,21 +338,22 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 	else if(cap.capabilities & V4L2_CAP_READWRITE)
 	{
 		buffers.resize(1);
-		buffers[0].length = format.fmt.pix.sizeimage;
-		buffers[0].start  = malloc(format.fmt.pix.sizeimage);
+		buffers[0].length = _bsize = format.fmt.pix.sizeimage;
+		buffers[0].start  = malloc(_bsize);
 
 		if(!buffers[0].start)
 		{
-			log_message(1, "Out of memory trying to allocate image buffer (READ METHOD).");
+			log_message(1, "Vidstream: out of memory trying to allocate image buffer (READ METHOD).");
 			Close();
 			return false;
 		}
 
+		init |= INIT_BUFFERS_ALLOCATED;
 		io_method = IO_METHOD_READ;
 	}
 	else
 	{
-		log_message(1, "Device has no I/O capability.");
+		log_message(1, "Vidstream: device has no I/O capability.");
 		Close();
 		return false;
 	}
@@ -350,18 +374,18 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 				control.value = (int)control_s["value"];
 				if(-1 == xioctl(VIDIOC_S_CTRL, &control) && errno != ERANGE && errno != EINVAL)
 				{
-					log_errno("Unable to set control value (VIDIOC_S_CTRL): ");
+					log_errno("Vidstream: unable to set control value (VIDIOC_S_CTRL): ");
 					Close();
 					return false;
 				}
 				control_idx++;
 			}
 			catch(...)
-			{ log_message(1, "Video control %d has no <id> or <value> setting.", control_idx); }
+			{ log_message(1, "Vidstream: video control %d has no <id> or <value> setting.", control_idx); }
 		}
 	}
 	catch(SettingNotFoundException)
-	{ log_message(0, "No <controls> setting group was found."); }
+	{ log_message(0, "Vidstream: no <controls> setting group was found."); }
 
 	return true;
 }
@@ -369,27 +393,33 @@ bool Vidstream::Open(Setting *video_settings_ptr)
 void Vidstream::Close()
 {
 	StopCapture();
-	switch(io_method)
+
+	if(init & INIT_BUFFERS_ALLOCATED)
 	{
-		case IO_METHOD_READ:
-			free(buffers[0].start);
-			break;
+		switch(io_method)
+		{
+			case IO_METHOD_READ:
+				free(buffers[0].start);
+				break;
 
-		case IO_METHOD_MMAP:
-			for(uint i = 0; i < NUM_BUFFERS; i++)
-				if(-1 == munmap(buffers[i].start, buffers[i].length))
-					log_errno("munmap failed: ");
-			break;
+			case IO_METHOD_MMAP:
+				for(uint i = 0; i < NUM_BUFFERS; i++)
+					if(-1 == munmap(buffers[i].start, buffers[i].length))
+						log_errno("Vidstream: munmap failed: ");
+				break;
 
-		case IO_METHOD_USERPTR:
-			for(uint i = 0; i < NUM_BUFFERS; i++)
-				free(buffers[i].start);
-			break;
-	}
+			case IO_METHOD_USERPTR:
+				for(uint i = 0; i < NUM_BUFFERS; i++)
+					free(buffers[i].start);
+				break;
+		}
 	buffers.clear();
+	init ^= INIT_BUFFERS_ALLOCATED;
+	}
 
 	if(device > 0) close(device);
 	device = -1;
+	init ^= INIT_VIDEO_DEV_OPENED;
 }
 
 
@@ -413,7 +443,7 @@ bool Vidstream::StartCapture()
 				buf.index       = i;
 				if(-1 == xioctl(VIDIOC_QBUF, &buf))
 				{
-					log_errno("VIDIOC_QBUF failed: ");
+					log_errno("Vidstream: VIDIOC_QBUF failed: ");
 					Close();
 					return false;
 				}
@@ -422,7 +452,7 @@ bool Vidstream::StartCapture()
 			type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 			if (-1 == xioctl(VIDIOC_STREAMON, &type))
 			{
-				log_errno("VIDIOC_STREAMON failed: ");
+				log_errno("Vidstream: VIDIOC_STREAMON failed: ");
 				Close();
 				return false;
 			}
@@ -456,11 +486,16 @@ bool Vidstream::StartCapture()
 			}
 			break;
 	}
+
+	init |= INIT_CAPTURE_STARTED;
+	return true;
 }
 
 
 bool Vidstream::StopCapture()
 {
+	if(!(init & INIT_CAPTURE_STARTED)) return true;
+
 	v4l2_buf_type type;
 	switch(io_method)
 	{
@@ -473,18 +508,21 @@ bool Vidstream::StopCapture()
 			type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 			if(-1 == xioctl(VIDIOC_STREAMOFF, &type))
 			{
-				log_errno("VIDIOC_STREAMOFF failed: ");
-				Close();
+				log_errno("Vidstream: VIDIOC_STREAMOFF failed: ");
 				return false;
 			}
 			break;
 	}
+
+	init ^= INIT_CAPTURE_STARTED;
+	return true;
 }
 
 
-int Vidstream::Read(image_buffer& buffer)
+int Vidstream::Read(void* buffer, uint length)
+					//image_buffer& buffer)
 {
-	if(device <= 0) return false;
+	if(!(init & INIT_CAPTURE_STARTED) || !buffer) return -1;
 
 	/* Block signals during IOCTL */
 	sigset_t  set, old;
@@ -516,14 +554,16 @@ int Vidstream::Read(image_buffer& buffer)
 			}
 
 			//copy captured frame
-			timeval t;
-			CLEAR(t);
-			if(!fill_buffer(buffer, buffers[0].start, buffers[0].length, t))
-			{
-				Close();
-				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
-				return -1;
-			}
+			fill_buffer(buffer, length, buffers[0].start, buffers[0].length);
+
+			//timeval t;
+			//CLEAR(t);
+			//if(!fill_buffer(buffer, buffers[0].start, buffers[0].length, t))
+			//{
+			//	Close();
+			//	pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+			//	return -1;
+			//}
 			break;
 
 		case IO_METHOD_MMAP:
@@ -543,7 +583,7 @@ int Vidstream::Read(image_buffer& buffer)
 						return -1;
 				}
 			}
-			if(!buf.index < NUM_BUFFERS)
+			if(!(buf.index < NUM_BUFFERS))
 			{
 				log_message(1, "mmap buffer index is out of range");
 				Close();
@@ -552,12 +592,14 @@ int Vidstream::Read(image_buffer& buffer)
 			}
 
 			//copy captured frame
-			if(!fill_buffer(buffer, buffers[buf.index].start, buffers[buf.index].length, buf.timestamp))
-			{
-				Close();
-				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
-				return -1;
-			}
+			fill_buffer(buffer, length, buffers[buf.index].start, buffers[buf.index].length);
+
+			//if(!fill_buffer(buffer, buffers[buf.index].start, buffers[buf.index].length, buf.timestamp))
+			//{
+			//	Close();
+			//	pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+			//	return -1;
+			//}
 
 			if(-1 == xioctl(VIDIOC_QBUF, &buf))
 			{
@@ -602,12 +644,14 @@ int Vidstream::Read(image_buffer& buffer)
 			}
 
 			//copy captured frame
-			if(!fill_buffer(buffer, (void*)buf.m.userptr, buf.length, buf.timestamp))
-			{
-				Close();
-				pthread_sigmask(SIG_UNBLOCK, &old, NULL);
-				return -1;
-			}
+			fill_buffer(buffer, length, (void*)buf.m.userptr, buf.length);
+
+			//if(!fill_buffer(buffer, (void*)buf.m.userptr, buf.length, buf.timestamp))
+			//{
+			//	Close();
+			//	pthread_sigmask(SIG_UNBLOCK, &old, NULL);
+			//	return -1;
+			//}
 
 			if(-1 == xioctl(VIDIOC_QBUF, &buf))
 			{
@@ -647,6 +691,13 @@ bool Vidstream::fill_buffer(image_buffer &buffer, void *start, uint length, time
 	buffer.timestamp.tv_sec = timestamp.tv_sec;
 	buffer.timestamp.tv_usec = timestamp.tv_usec;
 	return true;
+}
+
+
+void Vidstream::fill_buffer(void * to, uint to_len, void * from, uint from_len)
+{
+	to_len = (to_len < from_len)? to_len : from_len;
+	memcpy(to, from, to_len);
 }
 
 // uint Vidstream::ptime(uint frames)
@@ -748,5 +799,3 @@ bool Vidstream::fill_buffer(image_buffer &buffer, void *start, uint length, time
 // 		}
 // 	}
 // }
-
-

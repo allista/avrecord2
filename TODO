@@ -1,6 +1,7 @@
-Switch to V4L2
-Switch to libconfig for settings
-=> request the device for controls, formats, etc. and udpate the INI file
+Switch to V4L2... DONE
+Switch to libconfig for settings... DONE
+=> request the device for... DONE
 => request ffmpeg for supported video and audio codecs
 Switch to gtk2(3?) in avrtuner
-Fix video stuttering
+Switch to SDL in avrtuner for video output (and stop inventing bicycles!)
+Fix video stuttering (if it is still there)

@@ -93,13 +93,13 @@ public:
 	void unlock() { mutex.unlock(); usleep(5); };
 
 
-	///returns number of diff-pixels (NOTE: you must enclose call
+	///returns number of motion pixels (NOTE: you must enclose call
 	///of this function with lock()-unlock() pair)
-	uint getDiffs() { return last_diffs; };
+	uint getMotion() { return last_diffs; };
 
-	///returns sound noise level (NOTE: you must enclose call
+	///returns sound peak value (NOTE: you must enclose call
 	///of this function with lock()-unlock() pair)
-	uint getNoise() { return last_noise_level; };
+	uint getPeak()   { return last_peak_value; };
 
 	///returns last video buffer (NOTE: you must enclose call of this
 	///function with lock()-unlock() pair)
@@ -113,7 +113,7 @@ public:
 	uint getVBSize() const { return v_bsize; };
 
 	///returns width of the image
-	uint getWidth() const { return width; };
+	uint getWidth()  const { return width; };
 
 	///returns width of the image
 	uint getHeight() const { return height; };
@@ -156,8 +156,8 @@ private:
                                ///< correspondig flag is set) is detected
 	bool     record_on_noise;  ///< if true, record only when noise (or motion, if
                                ///< correspondig flag is set) is detected
-	bool     print_diffs;      ///< if true, print number of motion pixels to the image
-	bool     print_level;      ///< if true, print sound noise level
+	bool     print_motion;      ///< if true, print number of motion pixels to the image
+	bool     print_peak;       ///< if true, print sound peak value
 	bool     print_date;       ///< if true, print current date to the image
 
 	//schedule parameters
@@ -180,47 +180,29 @@ private:
 	UTimer   record_timer;            ///< timer, that measures current file duration
 	UTimer   silence_timer;           ///< timer, that measures no_motion time
 
-	uint     noise_level;             ///< when detecting a motion, difference between two pixels is
+	uint     video_noise_level;             ///< when detecting a motion, difference between two pixels is
 	                                  ///< compared with this value
-	uint     threshold;               ///< we detect a motion when number of motion pixels is grater
+	uint     motion_threshold;               ///< we detect a motion when number of motion pixels is grater
 	                                  ///< than this value
-	uint     diff_step;               ///< step in pixels that is used when difference between
+	uint     pixel_step;               ///< step in pixels that is used when difference between
                                       ///< frames is measured
-	uint     frames_step;             ///< step in frames between the two compared ones
-	uint     noise_reduction_level;   ///< shows, how many times we need to erode captured image to
+	uint     frame_step;             ///< step in frames between the two compared ones
+	uint     video_noise_reduction_level;   ///< shows, how many times we need to erode captured image to
 	                                  ///< remove a noise
 
-	uint     snd_noise_level_func;    ///< function for sound noise level calculation: 0 - linear (default)
+	uint     sound_peak_value_function;    ///< function for sound noise level calculation: 0 - linear (default)
                                       ///< 1 - 2pwr root, 2 - 4pwr root, 3 - 8pwr root.
-	uint     snd_noise_threshold;     ///< we detect sound noise when noise level calculated with
+	uint     sound_peak_threshold;     ///< we detect sound noise when noise level calculated with
                                       ///< "noise_level_function" is grater than this value (0 - 1000)
 	uint     last_diffs;              ///< last measured diff-pixels
-	uint     last_noise_level;        ///< last measured noise level
+	uint     last_peak_value;         ///< last measured noise level
 	time_t   now;                     ///< current timestamp
 
 
 	//audio/video parameters
-	string   video_device;            ///< video device file
-	string   video_codec;             ///< name of video codec
-	uint     input_source;            ///< see the Vidstream class for explanations
-	uint     input_mode;              ///< see the Vidstream class for explanations
 	uint     width;                   ///< width of the image
 	uint     height;                  ///< height of the image
-	uint     brightness;              ///< brightness correction
-	uint     contrast;                ///< contrast correction
-	uint     hue;                     ///< hue correction
-	uint     color;                   ///< color correction
-	uint     witeness;                ///< witeness correction
-	uint     frame_rate;              ///< frames per second
-	uint     vid_bitrate;             ///< bits per second
-	uint     var_bitrate;             ///< quantizer value
-	bool     auto_frate;              ///< if true, automaticaly measure frame rate during initialization
 
-	string   audio_codec;             ///< name of audio codec
-	uint     sample_rate;             ///< samples per second
-	uint     aud_bitrate;             ///< bits per second
-	uint     channels;                ///< number of audio channel
-	uint     desired_frames;          ///< number of desired frames per capture operation (0 is auto)
 	uint     amp_level;               ///< amplification level
 	/////////////////
 
@@ -242,10 +224,10 @@ private:
 	bool time_in_window(time_t now);
 
 	///captures video frame and stores it in video buffer ring
-	uint capture_frame();
+	int  capture_frame();
 
 	///captures audio frame and stores it in audio buffer ring
-	uint capture_sound();
+	int  capture_sound();
 
 	///detects motion using current captured frame and previous one
 	uint measure_motion();
@@ -302,8 +284,8 @@ BaseRecorder<_mutex>::BaseRecorder()
 	//flags
 	detect_motion    = false;
 	record_on_motion = false;
-	print_diffs      = false;
-	print_level      = false;
+	print_motion      = false;
+	print_peak      = false;
 	print_date       = false;
 
 	//schedule parameters
@@ -323,8 +305,8 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 	avrecord_config = _avrecord_config_ptr;
 	try
 	{
-		audio_settings_ptr = avrecord_config->lookup("audio");
-		video_settings_ptr = avrecord_config->lookup("video");
+		audio_settings_ptr = &avrecord_config->lookup("audio");
+		video_settings_ptr = &avrecord_config->lookup("video");
 	}
 	catch(SettingNotFoundException)
 	{
@@ -333,28 +315,28 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 	}
 
 	//paths
-	try	{ fname_format = avrecord_config->lookup("paths.filename"); }
+	try	{ fname_format = (const char*)avrecord_config->lookup("paths.filename"); }
 	catch(SettingNotFoundException) { fname_format = "%Y-%m-%d_%H-%M.avi"; }
-	try	{ output_dir   = avrecord_config->lookup("paths.output_dir"); }
+	try	{ output_dir   = (const char*)avrecord_config->lookup("paths.output_dir"); }
 	catch(SettingNotFoundException) { output_dir   = "./"; }
 
 	if(output_dir[output_dir.size()-1] != '/')
 		output_dir += '/';
 
 	//flags
-	try	{ detect_motion    = avrecord_config->lookup("detection.detect_motion"); }
+	try	{ detect_motion    = avrecord_config->lookup("switches.detect_motion");	}
 	catch(SettingNotFoundException) { detect_motion    = true; }
-	try	{ detect_noise     = avrecord_config->lookup("detection.detect_noise"); }
+	try	{ detect_noise     = avrecord_config->lookup("switches.detect_noise"); }
 	catch(SettingNotFoundException) { detect_noise     = false; }
-	try	{ record_on_motion = avrecord_config->lookup("detection.record_on_motion"); }
+	try	{ record_on_motion = avrecord_config->lookup("switches.record_on_motion"); }
 	catch(SettingNotFoundException) { record_on_motion = true; }
-	try	{ record_on_noise  = avrecord_config->lookup("detection.record_on_noise"); }
+	try	{ record_on_noise  = avrecord_config->lookup("switches.record_on_noise"); }
 	catch(SettingNotFoundException) { record_on_noise  = false; }
-	try	{ print_diffs      = avrecord_config->lookup("detection.print_diffs"); }
-	catch(SettingNotFoundException) { print_diffs      = true; }
-	try	{ print_level      = avrecord_config->lookup("detection.print_level"); }
-	catch(SettingNotFoundException) { print_level      = false; }
-	try	{ print_date       = avrecord_config->lookup("detection.print_date"); }
+	try	{ print_motion     = avrecord_config->lookup("switches.print_motion_amount"); }
+	catch(SettingNotFoundException) { print_motion      = true; }
+	try	{ print_peak       = avrecord_config->lookup("switches.print_sound_peak_value"); }
+	catch(SettingNotFoundException) { print_peak      = false; }
+	try	{ print_date       = avrecord_config->lookup("switches.print_date"); }
 	catch(SettingNotFoundException) { print_date       = true; }
 
 	if(record_on_motion)
@@ -362,17 +344,17 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 	if(record_on_noise)
 		detect_noise  = true;
 	if(!detect_motion)
-		print_diffs   = false;
+		print_motion   = false;
 	if(!detect_noise)
-		print_level   = false;
+		print_peak   = false;
 
 	//schedule parameters
 	string start_date, end_date, win_list;
-	try	{ start_date = avrecord_config->lookup("schedule.start_time"); }
+	try	{ start_date = (const char*)avrecord_config->lookup("schedule.start_time"); }
 	catch(SettingNotFoundException) { start_time = 0; }
-	try	{ end_date   = avrecord_config->lookup("schedule.end_time"); }
+	try	{ end_date   = (const char*)avrecord_config->lookup("schedule.end_time"); }
 	catch(SettingNotFoundException) { end_time   = 0; }
-	try	{ win_list   = avrecord_config->lookup("schedule.schedule"); }
+	try	{ win_list   = (const char*)avrecord_config->lookup("schedule.schedule"); }
 	catch(SettingNotFoundException) { ; }
 
 	time_t now = time(0);
@@ -436,40 +418,40 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 	catch(SettingNotFoundException)
 	{ latency               = 2; }
 
-	try	{ noise_level
-		= (int)avrecord_config->lookup("detection.noise_level"); }
+	try	{ video_noise_level
+		= (int)avrecord_config->lookup("detection.video_noise_level"); }
 	catch(SettingNotFoundException)
-	{ noise_level           = 2; }
+	{ video_noise_level           = 2; }
 
-	try	{ threshold
-		= (int)avrecord_config->lookup("detection.threshold"); }
+	try	{ motion_threshold
+		= (int)avrecord_config->lookup("detection.motion_threshold"); }
 	catch(SettingNotFoundException)
-	{ threshold             = 25; }
+	{ motion_threshold             = 25; }
 
-	try	{ diff_step
-		= (int)avrecord_config->lookup("detection.pixels_step"); }
+	try	{ pixel_step
+		= (int)avrecord_config->lookup("detection.pixel_step"); }
 	catch(SettingNotFoundException)
-	{ diff_step             = 1; }
+	{ pixel_step             = 1; }
 
-	try	{ frames_step
-		= (int)avrecord_config->lookup("detection.frames_step"); }
+	try	{ frame_step
+		= (int)avrecord_config->lookup("detection.frame_step"); }
 	catch(SettingNotFoundException)
-	{ frames_step           = 5; }
+	{ frame_step           = 5; }
 
-	try	{ noise_reduction_level
-		= (int)avrecord_config->lookup("detection.noise_reduction_level"); }
+	try	{ video_noise_reduction_level
+		= (int)avrecord_config->lookup("detection.video_noise_reduction_level"); }
 	catch(SettingNotFoundException)
-	{ noise_reduction_level = 1; }
+	{ video_noise_reduction_level = 1; }
 
-	try	{ snd_noise_level_func
-		= (int)avrecord_config->lookup("detection.snd_noise_level_func"); }
+	try	{ sound_peak_value_function
+		= (int)avrecord_config->lookup("detection.sound_peak_value_function"); }
 	catch(SettingNotFoundException)
-	{ snd_noise_level_func  = SND_LIN; }
+	{ sound_peak_value_function  = SND_LIN; }
 
-	try	{ snd_noise_threshold
-		= (int)avrecord_config->lookup("detection.snd_noise_threshold"); }
+	try	{ sound_peak_threshold
+		= (int)avrecord_config->lookup("detection.sound_peak_threshold"); }
 	catch(SettingNotFoundException)
-	{ snd_noise_threshold   = 250; }
+	{ sound_peak_threshold   = 250; }
 	/////////////////
 
 	if(!a_source.Open(audio_settings_ptr))
@@ -485,26 +467,38 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 		return false;
 	}
 
-	if(print_diffs || print_level || print_date)
+	if(print_motion || print_peak || print_date)
 		InitBitmaps();
 
 	av_register_all();
 
 	lock();
 	if(latency < 2) latency = 2;
-	audio_latency	= uint(latency*(1e6/frame_rate)/a_source.ptime()+1);
+	audio_latency	= uint(latency*(1e6/v_source.frame_rate())/a_source.ptime()+1);
 	a_bsize   		= a_source.bsize();
 	a_buffer  		= new BufferRing(a_bsize, audio_latency);
 
 	v_bsize   		= v_source.bsize();
 	v_buffer		= new BufferRing(v_bsize, latency);
 
-	if(frames_step < 1) frames_step = 1;
+	if(frame_step < 1) frame_step = 1;
 	if(detect_motion)
-		m_buffer = new BufferRing(v_bsize, frames_step+2);
+		m_buffer = new BufferRing(v_bsize, frame_step+2);
 	unlock();
 
-	if(noise_reduction_level)
+	try
+	{
+		width  = (*video_settings_ptr)["width"];
+		height = (*video_settings_ptr)["height"];
+	}
+	catch(SettingNotFoundException)
+	{
+		log_message(1, "Recorder: no <width> or <height> setting was found.");
+		Close();
+		return false;
+	}
+
+	if(video_noise_reduction_level)
 		erode_tmp = new unsigned char[width*3];
 	//////////////
 
@@ -558,29 +552,43 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 	else if(
 		!av_output.Init(audio_settings_ptr, video_settings_ptr) ||
 		!av_output.setAParams()                                 ||
-		!av_output.setVParams(v_source->frame_numerator(),
-							  v_source->frame_denomenator(),
-							  v_source->pixel_format())         ||
+		!av_output.setVParams(v_source.frameperiod_numerator(),
+							  v_source.frameperiod_demoninator(),
+							  v_source.pixel_format())          ||
 		!av_output.Open(generate_fname())
 		   )
 	{
-		log_message(1, "Recorder: Init: unable to open output file");
+		log_message(1, "Recorder: Init: unable to open output file.");
 		Close();
 		return false;
 	}
 
-	double  frame_time	= 1.0/frame_rate;
 	double  v_pts = 0;
 	double  a_pts = 0;
 
+	if(!v_source.StartCapture())
+	{
+		log_message(1, "Recorder: Init: unable to start video capture.");
+		Close();
+		return false;
+	}
+
 	//capture the first video frame for motion detection
 	lock();
-	if(detect_motion)
-		capture_frame();
+	if(detect_motion && (capture_frame() < 0))
+	{
+		log_message(1, "Recorder: Init: unable to capture first frame.");
+		Close();
+		return false;
+	}
 
 	//capture the first sound block for noise detection
-	if(detect_noise)
-		capture_sound();
+	if(detect_noise &&	(capture_sound() < 0))
+	{
+		log_message(1, "Recorder: Init: unable to capture sound.");
+		Close();
+		return false;
+	}
 	unlock();
 
 	//main record loop
@@ -636,7 +644,7 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 				if(v_pts < a_pts || a_buffer->empty())
 				{
 					if(!idle) write_frame();
-					else { v_pts += frame_time; v_buffer->pop(); }
+					else { v_pts += v_source.frame_interval(); v_buffer->pop(); }
 				}
 			}
 
@@ -645,10 +653,13 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 			if(!idle)
 			{
 				av_output.Close();
-				if(!av_output.Init() ||
-						!av_output.setAParams(audio_codec, channels, sample_rate, aud_bitrate) ||
-						!av_output.setVParams(video_codec, width, height, frame_rate, vid_bitrate, var_bitrate) ||
-						!av_output.Open(generate_fname()))
+				if(!av_output.Init(audio_settings_ptr, video_settings_ptr) ||
+				   !av_output.setAParams()                                 ||
+				   !av_output.setVParams(v_source.frameperiod_numerator(),
+										 v_source.frameperiod_demoninator(),
+										 v_source.pixel_format())          ||
+					!av_output.Open(generate_fname())
+				  )
 				{
 					log_message(1, "Recorder: Init: unable to open output file");
 					Close();
@@ -674,17 +685,27 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 				continue;
 			}
 
-			capture_sound();
+			if(capture_sound() < 0)
+			{
+				log_message(1, "Recorder: unable to capture sound.");
+				Close();
+				return false;
+			}
 			a_pts += a_source.ptime()*(a_buffer->rsize()/a_bsize)/1e6;
 
 			if(v_pts < a_pts)
 			{
-				capture_frame();
-				v_pts += frame_time;
+				if(capture_frame() < 0)
+				{
+					log_message(1, "Recorder: unable capture video frame.");
+					Close();
+					return false;
+				}
+				v_pts += v_source.frame_interval();
 			}
 
 			if((record_on_motion && last_diffs) ||
-			   (record_on_noise  && last_noise_level))
+			   (record_on_noise  && last_peak_value))
 			{
 				recording = true;
 				record_timer.start();
@@ -694,7 +715,14 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 		}
 		else //record frames
 		{
-			if(capture_sound() && record_on_noise)
+			int capture = capture_sound();
+			if(capture < 0)
+			{
+				log_message(1, "Recorder: unable capture sound.");
+				Close();
+				return false;
+			}
+			if(capture && record_on_noise)
 				silence_timer.reset();
 			if(!idle)
 			{
@@ -711,10 +739,17 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 
 			if(v_pts < a_pts)
 			{
-				if(capture_frame() && record_on_motion)
+				int capture = capture_frame();
+				if(capture < 0)
+				{
+					log_message(1, "Recorder: unable capture video frame.");
+					Close();
+					return false;
+				}
+				if(capture && record_on_motion)
 					silence_timer.reset();
 				if(!idle) write_frame();
-				else { v_pts += frame_time; v_buffer->pop(); }
+				else { v_pts += v_source.frame_interval(); v_buffer->pop(); }
 			}
 
 
@@ -767,16 +802,16 @@ void BaseRecorder<_mutex>::print_info(unsigned char *frame)
 		date.erase(date.size()-1);
 		PrintText(frame, date, width-5-TextWidth(date), height-5, width, height);
 	}
-	if(print_diffs)
+	if(print_motion)
 	{
 		char diffs_str[10] = {'\0'};
 		sprintf(diffs_str, "%d", last_diffs);
 		PrintText(frame, diffs_str,	width-5-TextWidth(diffs_str), 10, width, height);
 	}
-	if(print_level)
+	if(print_peak)
 	{
 		char level_str[10] = {'\0'};
-		sprintf(level_str, "%d", last_noise_level);
+		sprintf(level_str, "%d", last_peak_value);
 		PrintText(frame, level_str,	width-5-TextWidth(level_str), 20, width, height);
 	}
 
@@ -788,7 +823,7 @@ bool BaseRecorder<_mutex>::write_frame()
 {
 	if(!inited || v_buffer->empty())	return false;
 
-	bool err = av_output.writeVFrame(*v_buffer, width, height);
+	bool err = av_output.writeVFrame(*v_buffer);
 	v_buffer->pop();
 	return err;
 }
@@ -806,28 +841,43 @@ bool BaseRecorder<_mutex>::write_sound()
 
 
 template<class _mutex>
-uint BaseRecorder<_mutex>::capture_frame()
+int BaseRecorder<_mutex>::capture_frame()
 {
-	if(!inited)	return false;
+	if(!inited) return -1;
 
-	v_source.Read(v_buffer->wbuffer(), v_bsize);
+	int read;
+	do { read = v_source.Read(v_buffer->wbuffer(), v_bsize); }
+	while(read == 0);
+	if(read == -1) return -1;
+
 	v_buffer->push(v_bsize);
-
-	if(detect_motion) last_diffs = measure_motion();
 	print_info((*v_buffer)[1]);
-	return last_diffs;
+	if(detect_motion)
+	{
+		last_diffs = measure_motion();
+		return last_diffs;
+	}
+	else return 0;
 }
 
 
 template<class _mutex>
-uint BaseRecorder<_mutex>::capture_sound()
+int BaseRecorder<_mutex>::capture_sound()
 {
-	if(!inited) return 0;
+	if(!inited) return -1;
 
-	unsigned int a_readed = a_source.Read(a_buffer->wbuffer(), a_bsize);
-	if(detect_noise) last_noise_level = a_source.Noise();
-	a_buffer->push(a_readed);
-	return last_noise_level;
+	int read;
+	do { read = a_source.Read(a_buffer->wbuffer(), a_bsize); }
+	while(read == 0);
+	if(read == -1) return -1;
+
+	a_buffer->push(read);
+	if(detect_noise)
+	{
+		last_peak_value = a_source.Peak();
+		return last_peak_value;
+	}
+	else return 0;
 }
 
 
@@ -837,11 +887,11 @@ uint BaseRecorder<_mutex>::measure_motion( )
 	if(!inited || !detect_motion) return 0;
 
 	memcpy(m_buffer->wbuffer(), (*v_buffer)[1], v_bsize);
-	for(int i = noise_reduction_level; i > 0; i--)
+	for(int i = video_noise_reduction_level; i > 0; i--)
 		erode(m_buffer->wbuffer());
 	m_buffer->push();
 
-	if(m_buffer->filled_size() <= frames_step) return 1000;
+	if(m_buffer->filled_size() <= frame_step) return 1000;
 
 	return fast_diff(*m_buffer, (*m_buffer)[1]);
 }
@@ -881,19 +931,19 @@ uint BaseRecorder<_mutex>::fast_diff( unsigned char * old_img, unsigned char * n
 {
 	int diffs  = 0;
 	int pixels = width*height;
-	int step   = diff_step;
+	int step   = pixel_step;
 	if(!step%2)  step++;
 
 	for (int i = pixels; i > 0; i -= step)
 	{
 		/* using a temp variable is 12% faster */
 		register unsigned char curdiff= abs(int(*old_img)-int(*new_img));
-		if(curdiff > noise_level*512/(1 + *old_img + *new_img))
+		if(curdiff > video_noise_level*512/(1 + *old_img + *new_img))
 		{ diffs++; *old_img = 255; }
 		old_img +=step;
 		new_img +=step;
 	}
-	diffs -= threshold;
+	diffs -= motion_threshold;
 	return (uint) (diffs<0)? 0 : diffs;
 }
 

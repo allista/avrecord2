@@ -46,13 +46,6 @@ void log_message(int level, const char *fmt, ...);
 static void log_errno(const char *message = NULL)
 { log_message(1, "%s errno: %d, %s.", message, errno, strerror(errno)); }
 
-struct image_buffer    ///< image buffer structure
-{
-	void* start;       ///< the beginning of a buffer
-	size_t length;     ///< buffer length
-	timeval timestamp; ///< image timestamp as returnd by VIDIOC_DQBUF in v4l2_buffer structure
-};
-
 ///supported pixel formats
 ///note, that all these formats are planar, I don't use packed ones because of the text rendering function: for all the planar formats one single function is enough, while each packed format requires it's own function.
 static const uint v4l2_pixel_formats[] =

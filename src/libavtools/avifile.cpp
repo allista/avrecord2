@@ -44,6 +44,8 @@ AVIFile::AVIFile()
 	astream = NULL;
 	vcodec  = NULL;
 	acodec  = NULL;
+	afifo   = NULL;
+	a_fsize = 0;
 
 	//video Output
 	v_bsize = 0;
@@ -176,13 +178,12 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 	/* check if selectet codec supports given pixel format */
 	if(codec->pix_fmts)
 	{
-		PixelFormat supported_fmt;
 		for(int i = 0; i < sizeof(codec->pix_fmts)/sizeof(PixelFormat); i++)
 		{
-			supported_fmt = codec->pix_fmts[i];
-			if(in_fmt == supported_fmt) break;
+			out_fmt = codec->pix_fmts[i];
+			if(in_fmt == out_fmt) break;
 		}
-		if(in_fmt != supported_fmt)
+		if(in_fmt != out_fmt)
 		{
 			vcodec->pix_fmt = out_fmt = codec->pix_fmts[0];
 
@@ -217,12 +218,10 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 	}
 	else _opened |= INIT_VCODEC;
 
-	/// O_o ???
 	if(!(o_file->oformat->flags & AVFMT_RAWPICTURE))
 	{
 		/* allocate output buffer */
-		/* XXX: API change will be done */
-		v_bsize = 200000; //taked from ffmpeg.c from "motion" program
+		v_bsize = vcodec->width * vcodec->height * 3;
 		vbuffer = (uint8_t*)malloc(v_bsize);
 		if(!vbuffer)
 		{
@@ -318,7 +317,7 @@ bool AVIFile::setAParams()
 	if(acodec->frame_size > 1)
 	{
 		a_fsize = acodec->frame_size * 2 * acodec->channels;
-		afifo   = Fifo<uint8_t>(2 * MAX_AUDIO_PACKET_SIZE);
+		afifo   = new Fifo<uint8_t>(2 * MAX_AUDIO_PACKET_SIZE);
 	}
 
 	a_bsize = 4 * MAX_AUDIO_PACKET_SIZE; //taken from "ffmpeg" program (ffmpeg library)
@@ -427,7 +426,7 @@ bool AVIFile::writeVFrame(unsigned char *buffer)
 	if(!opened()) return false;
 
 	/* allocate output frame */
-	AVFrame *in_picture = avcodec_alloc_frame();
+	AVFrame *in_picture  = avcodec_alloc_frame();
 	AVFrame *out_picture = NULL;
 	if(!in_picture)
 	{
@@ -515,9 +514,9 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 
 	if(acodec->frame_size > 1)
 	{
+		if(!afifo->write(samples, size)) return false;
 		uint8_t *tmp = new uint8_t[a_fsize];
-		afifo.write(samples, size);
-		while(afifo.read(tmp, a_fsize))
+		while(afifo->read(tmp, a_fsize))
 		{
 			av_init_packet(&pkt); // init static structure
 			out_size = avcodec_encode_audio(acodec, abuffer, a_bsize, (short*)tmp);
@@ -642,6 +641,10 @@ void AVIFile::cleanup()
 	}
 	o_file  = NULL;
 
+
+	//audion fifo
+	if(afifo) delete afifo;
+	afifo = NULL;
 
 	//Video Output
 	if(vbuffer) av_free(vbuffer);

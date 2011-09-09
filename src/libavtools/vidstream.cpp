@@ -578,14 +578,6 @@ int Vidstream::Read(void* buffer, uint length)
 			//copy captured frame
 			fill_buffer(buffer, length, buffers[0].start, buffers[0].length);
 
-			//timeval t;
-			//CLEAR(t);
-			//if(!fill_buffer(buffer, buffers[0].start, buffers[0].length, t))
-			//{
-			//	Close();
-			//	pthread_sigmask(SIG_UNBLOCK, &old, NULL);
-			//	return -1;
-			//}
 			break;
 
 		case IO_METHOD_MMAP:
@@ -615,13 +607,6 @@ int Vidstream::Read(void* buffer, uint length)
 
 			//copy captured frame
 			fill_buffer(buffer, length, buffers[buf.index].start, buffers[buf.index].length);
-
-			//if(!fill_buffer(buffer, buffers[buf.index].start, buffers[buf.index].length, buf.timestamp))
-			//{
-			//	Close();
-			//	pthread_sigmask(SIG_UNBLOCK, &old, NULL);
-			//	return -1;
-			//}
 
 			if(-1 == xioctl(VIDIOC_QBUF, &buf))
 			{
@@ -667,13 +652,6 @@ int Vidstream::Read(void* buffer, uint length)
 
 			//copy captured frame
 			fill_buffer(buffer, length, (void*)buf.m.userptr, buf.length);
-
-			//if(!fill_buffer(buffer, (void*)buf.m.userptr, buf.length, buf.timestamp))
-			//{
-			//	Close();
-			//	pthread_sigmask(SIG_UNBLOCK, &old, NULL);
-			//	return -1;
-			//}
 
 			if(-1 == xioctl(VIDIOC_QBUF, &buf))
 			{

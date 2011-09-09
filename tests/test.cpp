@@ -44,7 +44,6 @@ using namespace std;
 #include <avifile.h>
 #include <img_tools.h>
 #include <utimer.h>
-#include <configfile.h>
 #include <recorder.h>
 
 uint avsignal  = SIG_RECORDING;

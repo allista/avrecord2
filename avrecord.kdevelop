@@ -22,7 +22,7 @@
   </general>
   <kdevautoproject>
     <general>
-      <activetarget>src/avrtuner/avrtuner</activetarget>
+      <activetarget>tests/gtkapp</activetarget>
       <useconfiguration>debug</useconfiguration>
     </general>
     <run>
@@ -40,18 +40,21 @@
         <test/>
         <avrtuner>avrecord.cfg</avrtuner>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
+        <gtkapp/>
       </runarguments>
       <debugarguments>
         <avrtuner>avrecord.cfg</avrtuner>
         <avrecord>-c avrecord.cfg -n</avrecord>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
         <test/>
+        <gtkapp/>
       </debugarguments>
       <cwd>
         <avrtuner>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrtuner>
         <avrecord>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrecord>
         <v4l2-teset>/home/allis/Workspace/Programming/AVRecord2-trunk/</v4l2-teset>
         <test>/home/allis/Workspace/Programming/AVRecord2-trunk/debug/./src/tests</test>
+        <gtkapp>/home/allis/Workspace/Programming/AVRecord2-trunk/tests/</gtkapp>
       </cwd>
       <globaldebugarguments/>
       <globalcwd>/home/allis/Workspace/Programming/AVRecord2-trunk/optimized</globalcwd>

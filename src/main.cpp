@@ -266,7 +266,7 @@ int main(int argc, char *argv[])
 	}
 	while(avrestart);
 
-	log_message(0, "avrecord: Quiting...");
+	log_message(0, "avrecord: Quiting...\n");
 	log_stream.close();
 	exit(EXIT_SUCCESS);
 }
@@ -295,6 +295,7 @@ static void sig_handler(int signo)
 	switch(signo)
 	{
 		case SIGALRM:
+		case SIGVTALRM:
 			//avsignal  = SIG_; //what else can we do? =)
 			break;
 		case SIGUSR1:
@@ -305,6 +306,8 @@ static void sig_handler(int signo)
 		case SIGINT:
 		case SIGQUIT:
 		case SIGTERM:
+		case SIGABRT:
+		case SIGUSR2:
 			avsignal  = SIG_QUIT;
 			break;
 		case SIGSEGV:
@@ -363,6 +366,7 @@ static void print_usage()
 	cout << "Usage:\n"
 	<< "\tavrecord [-c <config_file>] "
 	<< "[-l <log_file>] [-ndh?]\n"
+	<< "[-i -t <config_file_template> -o <new_config_output>]\n"
 	<< "\t-n\tno log file. Log to stderr instead.\n"
 	<< "\t-d\tstart in the daemon mode.\n"
 	<< "\t-h -?\tprint this message.\n";

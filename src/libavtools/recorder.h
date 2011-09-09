@@ -38,7 +38,6 @@ using namespace libconfig;
 #include "vidstream.h"
 #include "avifile.h"
 #include "utimer.h"
-#include "configfile.h"
 #include "img_tools.h"
 
 
@@ -719,7 +718,7 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 			int capture = capture_sound();
 			if(capture < 0)
 			{
-				log_message(1, "Recorder: unable capture sound.");
+				log_message(1, "Recorder: unable to capture sound");
 				Close();
 				return false;
 			}
@@ -847,8 +846,7 @@ int BaseRecorder<_mutex>::capture_frame()
 {
 	if(!inited) return -1;
 
-	int read;
-	read = v_source.Read(v_buffer->wbuffer(), v_bsize);
+	int read = v_source.Read(v_buffer->wbuffer(), v_bsize);
 	if(read == -1) return -1;
 	if(read ==  0) return  0;
 	v_buffer->push(v_bsize);
@@ -865,12 +863,11 @@ int BaseRecorder<_mutex>::capture_sound()
 {
 	if(!inited) return -1;
 
-	int read;
-	read = a_source.Read(a_buffer->wbuffer(), a_bsize);
+	int read = a_source.Read(a_buffer->wbuffer(), a_bsize);
 	if(read == -1) return -1;
 	if(read ==  0) return  0;
-
 	a_buffer->push(read);
+
 	if(detect_noise)
 	{
 		last_peak_value = a_source.Peak();

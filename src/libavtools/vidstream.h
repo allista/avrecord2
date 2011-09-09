@@ -45,6 +45,13 @@ enum io
 	IO_METHOD_USERPTR
 };
 
+struct image_buffer    ///< image buffer structure
+{
+	void* start;       ///< the beginning of a buffer
+	size_t length;     ///< buffer length
+	timeval timestamp; ///< image timestamp as returnd by VIDIOC_DQBUF in v4l2_buffer structure
+};
+
 ///encapsulates simple grabbing work with v4l device
 class Vidstream
 {

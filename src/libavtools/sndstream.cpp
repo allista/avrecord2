@@ -196,7 +196,7 @@ void Sndstream::Close()
 
 int Sndstream::Read(void* buffer, uint size)
 {
-	if(!opened() || dev_mode != SND_R) return -1;
+	if(!opened() || dev_mode != SND_R) return 0;
 	if(size < _bsize)
 	{
 		log_message(1, "Sndstream: read buffer too small - needed %d bytes buffer", _bsize);
@@ -211,16 +211,17 @@ int Sndstream::Read(void* buffer, uint size)
 		/* EPIPE means overrun */
 		if(snd_pcm_prepare(snd_dev) < 0)
 			log_message(1, "Sndstream: cant recover from overrun");
-		return -1;
+		else log_message(0, "Sndstream: recovered from overrun");
+		return 0;
 	}
 	else if(ret < 0)
 	{
 		log_message(1, "Sndstream: error from read: %s", snd_strerror(ret));
-		return -1;
+		return 0;
 	}
 	else if(ret < (int)frames)
 	{
-		log_message(1, "Sndstream: short read, read %d frames", ret);
+		log_message(0, "Sndstream: short read, read %d frames", ret);
 		size = ret*framesize;
 	}
 
@@ -240,12 +241,13 @@ uint Sndstream::Write(void* buffer, uint size)
 		/* EPIPE means underrun */
 		if(snd_pcm_prepare(snd_dev) < 0)
 			log_message(1, "Sndstream: cant recover from underrun");
+		log_message(0, "Sndstream: recovered from underrun");
 		return 0;
 	}
 	else if(ret < 0)
 	{
 		log_message(1, "Sndstream: error from writei: %s", snd_strerror(ret));
-		return false;
+		return 0;
 	}
 
 	return ret*framesize;

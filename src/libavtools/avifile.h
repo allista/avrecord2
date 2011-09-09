@@ -112,7 +112,7 @@ private:
 	AVStream        *astream; ///< output audio stream
 	AVCodecContext  *vcodec;  ///< video codec
 	AVCodecContext  *acodec;  ///< audio codec
-	Fifo<uint8_t>    afifo;   ///< audio fifo for writing with framesize sensitive codecs (mp2, mp3...)
+	Fifo<uint8_t>   *afifo;   ///< audio fifo for writing with framesize sensitive codecs (mp2, mp3...)
 	uint             a_fsize; ///< audio codec frame size
 
 	//video Output

@@ -31,13 +31,14 @@ template<class _type>
 class Fifo
 {
 public:
-	Fifo(uint size = 0);
-	~Fifo() { free(buffer); };
+	Fifo(uint _size = 0);
+	~Fifo() { if(buffer) av_free(buffer); };
 
-	uint data_size() const { return dsize; }; ///< returns size of stored data
-	bool read(_type* buf, uint bsize);        ///< reads data from fifo
+	uint data_size() const { return dsize; }; ///< return size of stored data
+	bool read(_type* buf, uint bsize);        ///< read data from fifo
 	                                          ///  if data_size is less than bsize, return false
-	void write(_type* buf, uint bsize);       ///< writes data to fifo
+	bool write(_type* buf, uint bsize);       ///< write data to fifo, if size is
+	                                          ///  less then bsize, return false
 
 private:
 	_type   *buffer;  ///< fifo buffer
@@ -51,13 +52,13 @@ private:
 
 
 template<class _type>
-Fifo<_type>::Fifo(uint size)
-		: size(size)
+Fifo<_type>::Fifo(uint _size)
 {
 	if(!size) buffer = r_point = w_point = end = NULL;
 	else
 	{
-		buffer  = (_type*)av_malloc(size*sizeof(_type));
+		size    = _size;
+		buffer  = (_type*)av_malloc(size);
 		r_point = buffer;
 		w_point = buffer;
 		end     = buffer + size;
@@ -68,8 +69,7 @@ Fifo<_type>::Fifo(uint size)
 template<class _type>
 bool Fifo<_type>::read(_type *buf, uint bsize)
 {
-	if(data_size() < bsize) return false;
-	dsize -= bsize;
+	if(dsize < bsize) return false;
 	uint len;
 	while(bsize > 0)
 	{
@@ -77,21 +77,22 @@ bool Fifo<_type>::read(_type *buf, uint bsize)
 		if(len > bsize)
 			len = bsize;
 
-		memcpy(buf, r_point, len*sizeof(_type));
+		memcpy(buf, r_point, len);
 		buf     += len;
 		r_point += len;
 
 		if(r_point >= end)
 			r_point = buffer;
 		bsize -= len;
+		dsize -= len;
 	}
 	return true;
 }
 
 template<class _type>
-void Fifo<_type>::write(_type *buf, uint bsize)
+bool Fifo<_type>::write(_type *buf, uint bsize)
 {
-	dsize += bsize;
+	if(bsize > size) return false;
 	uint len;
 	while(bsize > 0)
 	{
@@ -99,14 +100,26 @@ void Fifo<_type>::write(_type *buf, uint bsize)
 		if(len > bsize)
 			len = bsize;
 
-		memcpy(w_point, buf, len*sizeof(_type));
+		memcpy(w_point, buf, len);
 
+		if(w_point <= r_point && dsize)
+		{
+			if(w_point+len > r_point)
+			{
+				dsize  -= w_point+len - r_point;
+				r_point = w_point;
+			}
+			if(r_point >= end)
+				r_point = buffer;
+		}
 		w_point += len;
 		if(w_point >= end)
 			w_point = buffer;
 		buf   += len;
 		bsize -= len;
+		dsize += len;
 	}
+	return true;
 }
 
 #endif

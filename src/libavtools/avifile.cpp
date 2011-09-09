@@ -143,7 +143,8 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 		cleanup();
 		return false;
 	}
-	if(video_settings.exists("var_bitrate"))
+	if(video_settings.exists("var_bitrate") &&
+	  (int)video_settings["var_bitrate"] > 0)
 	{
 		vbr = video_settings["var_bitrate"];
 		vcodec->flags |= CODEC_FLAG_QSCALE;

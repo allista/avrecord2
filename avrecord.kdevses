@@ -21,7 +21,7 @@
    <View0 Encoding="" Type="Source" />
   </Doc5>
   <Doc6 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avifile.cpp" >
-   <View0 Encoding="" Type="Source" />
+   <View0 Encoding="" line="146" Type="Source" />
   </Doc6>
   <Doc7 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/avrtuner_main.cpp" >
    <View0 Encoding="" Type="Source" />
@@ -41,17 +41,17 @@
   <Doc12 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/sndstream.cpp" >
    <View0 Encoding="" Type="Source" />
   </Doc12>
-  <Doc13 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/configure.in.in" >
-   <View0 Encoding="" line="44" Type="Source" />
-  </Doc13>
-  <Doc14 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/tests/gtkapp.cpp" >
+  <Doc13 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/tests/gtkapp.cpp" >
    <View0 Encoding="" line="31" Type="Source" />
+  </Doc13>
+  <Doc14 NumberOfViews="1" URL="file:///home/allis/Workspace/Programming/AVRecord2-trunk/avrecord.cfg" >
+   <View0 Encoding="" line="14" Type="Source" />
   </Doc14>
  </DocsAndViews>
  <pluginList>
   <kdevdebugger>
    <breakpointList>
-    <breakpoint0 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avifile.cpp:515" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
+    <breakpoint0 location="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avifile.cpp:516" type="1" tracingFormatString="" traceFormatStringEnabled="0" condition="" tracingEnabled="0" enabled="1" >
      <tracedExpressions/>
     </breakpoint0>
    </breakpointList>
@@ -64,8 +64,8 @@
   <kdevbookmarks>
    <bookmarks>
     <bookmark url="/home/allis/Workspace/Programming/AVRecord2-trunk/src/libavtools/avifile.cpp" >
-     <mark line="512" />
-     <mark line="428" />
+     <mark line="513" />
+     <mark line="429" />
     </bookmark>
    </bookmarks>
   </kdevbookmarks>

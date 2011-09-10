@@ -540,7 +540,7 @@ int Vidstream::Read(void* buffer, uint length)
 	FD_ZERO(&fd_set);
 	FD_SET(device, &fd_set);
 
-	timeout.tv_sec = 2;
+	timeout.tv_sec = 1;
 	timeout.tv_usec = 0;
 
 	int ret = select(FD_SETSIZE, &fd_set, NULL, NULL, &timeout);

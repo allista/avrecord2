@@ -1,5 +1,6 @@
 Request ffmpeg for supported video and audio codecs
 Switch to gtk2(3?) in avrtuner
+Fix audio problems after pauses.
 Fix video stuttering (if it is still there)
 
 Switch to V4L2... DONE

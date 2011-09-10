@@ -17,24 +17,38 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+#ifndef AVRTUNERWINDOW_H
+#define AVRTUNERWINDOW_H
 
+/**
+	@author Allis Tauri <allista@gmail.com>
+*/
 #include <gtkmm.h>
 #include <sigc++/sigc++.h>
 using namespace Gtk;
 using namespace Glib;
 
-#include "avrtunerwindow.h"
-
-int main (int argc, char *argv[])
+class AVRTunerWindow: public Window
 {
-	Main gtk_main(argc, argv);
+public:
+	AVRTunerWindow() : Window() {};
+	AVRTunerWindow(GtkWindow* window, const RefPtr<Gtk::Builder>& _builder);
+	virtual ~AVRTunerWindow() {};
 
-	RefPtr<Builder> builder = Builder::create_from_file("gtkapp.glade");
+private:
+	void show_log_toggle();
+	void test_config_toggle();
+	void clear_log_clicked();
 
-	AVRTunerWindow *MainWindow = NULL;
-	builder->get_widget_derived("MainWindow", MainWindow);
+	RefPtr<Builder> builder;
 
-	gtk_main.run(*MainWindow);
+	Notebook *MainStack;
 
-	return 0;
-}
+	ToggleButton *ShowLogButton;
+	ToggleButton *TestConfigButton;
+	Button *ClearLogButton;
+
+	TextView *LogTextview;
+};
+
+#endif

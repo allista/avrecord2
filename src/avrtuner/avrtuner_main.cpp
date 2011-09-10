@@ -22,6 +22,7 @@
 #include <iostream>
 using namespace std;
 
+#include <qapplication.h>
 #include <kapplication.h>
 #include <kaboutdata.h>
 #include <kcmdlineargs.h>

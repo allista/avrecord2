@@ -35,13 +35,6 @@ using namespace libconfig;
 
 #include "common.h"
 
-///soundstream i/o modes
-enum snd_io_mode
-{
-	SND_R,
-	SND_W
-};
-
 ///soundstream pcm formats
 enum pcm_fmt
 {
@@ -75,7 +68,6 @@ public:
 
 	///open soundstream in given mode and format
 	bool Open(Setting *audio_settings_ptr,       ///< pointer to the audio Setting object (libconfig++)
-			  snd_io_mode  mode     = SND_R,     ///< i/o mode
 	          pcm_fmt      fmt      = SND_16BIT, ///< pcm format
 	          weight_func  weight_f = SND_LIN    ///< weighting function
 			 );
@@ -85,10 +77,6 @@ public:
 	/// read data from soundstram.
 	/// Number of readed bytes is returned
 	int  Read(void *buffer, uint size);
-
-	/// write data to soundstream.
-	/// Number of written bytes is returned
-	uint Write(void *buffer, uint size);
 
 	/// it's a peak value after amplification and weighting by the weight function updated on every Read
 	uint Peak() const { return peak_value; };
@@ -101,15 +89,15 @@ public:
 	uint bsize()  const { return _bsize; };
 
 	/// returns time width of a read period in microseconds
-	uint ptime()  const { return _ptime; };
+	uint ptime()  const	{ return cur_ptime; };
 
 private:
-	void   amplify(void *buffer, uint bsize); ///< amplifys data stored in the 'buffer'
+	void   amplify(void *buffer, uint num_frames); ///< amplifys data stored in the 'buffer'
 	double weight(double sample, double max); ///< weights a value of the samle
 
-	snd_pcm_t *snd_dev;          ///< soundcard structure
-	snd_pcm_hw_params_t *params; ///< hardware parameters
-	uint   dev_mode;             ///< i/o mode of the sndstream
+	snd_pcm_t *snd_dev;             ///< soundcard structure
+	snd_pcm_hw_params_t *hw_params; ///< hardware parameters
+	snd_pcm_sw_params_t *sw_params; ///< software parameters
 
 	uint   rate;                 ///< samples per second
 	uint   format;               ///< pcm format
@@ -119,10 +107,12 @@ private:
 	uint   weight_function;      ///< math function for weight calculations
 	uint   peak_value;           ///< current peak value
 
+	snd_pcm_sframes_t frames_available; ///< frames available for capture/playback
 	snd_pcm_uframes_t frames;    ///< number of frames in a single read period
 	uint  framesize;             ///< size of one frame in bytes
-	snd_pcm_uframes_t _bsize;    ///< size of a single read period in bytes
+	uint _bsize;                 ///< size of a single read period in bytes
 	uint _ptime;                 ///< time width of a read period in microseconds
+	uint  cur_ptime;             ///< time width of a red frames in microseconds
 };
 
 #endif

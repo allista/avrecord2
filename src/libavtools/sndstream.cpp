@@ -27,14 +27,14 @@ using namespace std;
 Sndstream::Sndstream()
 {
 	snd_dev   = NULL;
-	params    = NULL;
+	hw_params = NULL;
+	sw_params = NULL;
 
 	frames    = 0;
 	format    = SND_PCM_FORMAT_UNKNOWN;
 	framesize = 0;
 	rate      = 0;
 	channels  = 0;
-	dev_mode  = 0;
 
 	weight_function = SND_LIN;
 	amp_level   = 1;
@@ -45,16 +45,14 @@ Sndstream::Sndstream()
 	_ptime    = 0;
 }
 
-bool Sndstream::Open(Setting *audio_settings_ptr,
-					 snd_io_mode  mode, pcm_fmt fmt, weight_func weight_f)
+bool Sndstream::Open(Setting *audio_settings_ptr, pcm_fmt fmt, weight_func weight_f)
 {
 	if(!audio_settings_ptr) return false;
 	Setting &audio_settings = *audio_settings_ptr;
 
-	int ret     = false;
+	int ret     = 0;
 	int dir     = 0;
 	sig_offset  = 0;
-	dev_mode    = mode;
 	format      = fmt;
 	weight_function = weight_f;
 
@@ -83,36 +81,32 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 	amp_level = (amp_level <= 0)? 1 : amp_level;
 
 	/* Open PCM device. */
-	switch(dev_mode)
-	{
-		case SND_R:
-			ret = snd_pcm_open(&snd_dev, "default", SND_PCM_STREAM_CAPTURE, 0);
-			break;
-
-		case SND_W:
-			ret = snd_pcm_open(&snd_dev, "default", SND_PCM_STREAM_PLAYBACK, 0);
-			break;
-
-		default:
-			log_message(1, "Sndstream: unknown open mode");
-			return false;
-	}
-
-	if(ret < 0)
+	if((ret = snd_pcm_open(&snd_dev, "default", SND_PCM_STREAM_CAPTURE, 0)) < 0)
 	{
 		log_message(1, "Sndstream: unable to open pcm device: %s", snd_strerror(ret));
 		return false;
 	}
 
 	/* Allocate a hardware parameters object. */
-	snd_pcm_hw_params_alloca(&params);
+	if((ret = snd_pcm_hw_params_malloc(&hw_params)) < 0)
+	{
+		log_message(1, "Sndstream: unable to allocate hw_params: %s", snd_strerror(ret));
+		return false;
+	}
 
 	/* Fill it in with default values. */
-	snd_pcm_hw_params_any(snd_dev, params);
+	if((ret = snd_pcm_hw_params_any(snd_dev, hw_params)) < 0)
+	{
+		log_message(1, "Sndstream: unable to initialize hw_params: %s", snd_strerror(ret));
+		return false;
+	}
 
-	/* Set the desired hardware parameters. */
-	/* Interleaved mode */
-	snd_pcm_hw_params_set_access(snd_dev, params, SND_PCM_ACCESS_RW_INTERLEAVED);
+	/* set interleaved mode */
+	if((ret = snd_pcm_hw_params_set_access(snd_dev, hw_params, SND_PCM_ACCESS_RW_INTERLEAVED)) < 0)
+	{
+		log_message(1, "Sndstream: unable to set access mode type: %s", snd_strerror(ret));
+		return false;
+	}
 
 	/* Set sample format */
 	snd_pcm_format_t pcm_format;
@@ -120,12 +114,12 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 	{
 		case SND_8BIT:
 			pcm_format = SND_PCM_FORMAT_S8;
-			snd_pcm_hw_params_set_format(snd_dev, params, pcm_format);
+			snd_pcm_hw_params_set_format(snd_dev, hw_params, pcm_format);
 			break;
 
 		case SND_16BIT:
 			pcm_format = SND_PCM_FORMAT_S16;
-			snd_pcm_hw_params_set_format(snd_dev, params, pcm_format);
+			snd_pcm_hw_params_set_format(snd_dev, hw_params, pcm_format);
 			break;
 
 		default:
@@ -134,16 +128,14 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 	}
 
 	/* Set channels number */
-	ret = snd_pcm_hw_params_set_channels(snd_dev, params, channels);
-	if(ret < 0)
+	if((ret = snd_pcm_hw_params_set_channels(snd_dev, hw_params, channels)) < 0)
 	{
 		log_message(1, "Sndstream: unable to set channels number: %s", snd_strerror(ret));
 		return false;
 	}
 
 	/* Set sampling rate */
-	ret = snd_pcm_hw_params_set_rate_near(snd_dev, params, &rate, &dir);
-	if(ret < 0)
+	if((ret = snd_pcm_hw_params_set_rate_near(snd_dev, hw_params, &rate, &dir)) < 0)
 	{
 		log_message(1, "Sndstream: unable to set sample rate near: %s", snd_strerror(ret));
 		return false;
@@ -156,24 +148,65 @@ bool Sndstream::Open(Setting *audio_settings_ptr,
 		log_message(1, "Sndstream: no buffer_length setting. Setting to auto.");
 		frames = 0;
 	}
-	ret = snd_pcm_hw_params_set_period_size_near(snd_dev, params, &frames, &dir);
-	if(ret < 0)
+	if((ret = snd_pcm_hw_params_set_period_size_near(snd_dev, hw_params, &frames, &dir)) < 0)
 	{
 		log_message(1, "Sndstream: unable to set period size: %s.",	snd_strerror(ret));
 		return false;
 	}
 
 	/* Calculate one period buffer size and period time */
-	snd_pcm_hw_params_get_period_size(params, &frames, &dir);
-	snd_pcm_hw_params_get_period_time(params, &_ptime, &dir);
+	snd_pcm_hw_params_get_period_size(hw_params, &frames, &dir);
+	snd_pcm_hw_params_get_period_time(hw_params, &_ptime, &dir);
 	framesize = snd_pcm_format_size(pcm_format, channels);
 	_bsize = frames * framesize;
+	cur_ptime = _ptime;
 
 	/* Write the parameters to the driver */
-	ret = snd_pcm_hw_params(snd_dev, params);
-	if(ret < 0)
+	if((ret = snd_pcm_hw_params(snd_dev, hw_params)) < 0)
 	{
 		log_message(1, "Sndstream: unable to set hw parameters: %s", snd_strerror(ret));
+		return false;
+	}
+
+	//free snd_params structure
+	//snd_pcm_hw_params_free(hw_params);
+	/*
+	strangly this call triggers the message:
+	*** glibc detected *** avrtuner: free(): invalid pointer: 0x00007fffe058fc00 ***
+	*/
+
+	//set software parameters
+	if((ret = snd_pcm_sw_params_malloc(&sw_params)) < 0)
+	{
+		log_message(1, "Sndstream: cannot allocate sw parameters: %s", snd_strerror(ret));
+		return false;
+	}
+	if((ret = snd_pcm_sw_params_current (snd_dev, sw_params)) < 0)
+	{
+		log_message(1, "Sndstream: cannot initialize sw parameters: %s", snd_strerror(ret));
+		return false;
+	}
+	if((ret = snd_pcm_sw_params_set_avail_min (snd_dev, sw_params, frames)) < 0)
+	{
+		log_message(1, "Sndstream: cannot set minimum available count: %s", snd_strerror(ret));
+		return false;
+	}
+	if((ret = snd_pcm_sw_params_set_start_threshold(snd_dev, sw_params, frames)) < 0)
+	{
+		log_message(1, "Sndstream: cannot set start mode: %s", snd_strerror(ret));
+		return false;
+	}
+	if((ret = snd_pcm_sw_params(snd_dev, sw_params)) < 0)
+	{
+		log_message(1, "Sndstream: cannot set software parameters: %s", snd_strerror(ret));
+		exit (1);
+	}
+
+	//prepare the device for capture
+	ret = snd_pcm_prepare(snd_dev);
+	if (ret < 0)
+	{
+		log_message(1, "Sndstream: cannot prepare audio interface for use: %s", snd_strerror(ret));
 		return false;
 	}
 
@@ -187,26 +220,26 @@ void Sndstream::Close()
 
 	snd_pcm_drain(snd_dev);
 	snd_pcm_close(snd_dev);
-	//snd_pcm_hw_params_free(params);
 
-	snd_dev = NULL;
-	params  = NULL;
+	snd_dev    = NULL;
+	hw_params  = NULL;
+	sw_params  = NULL;
 	sig_offset = 0;
 }
 
 int Sndstream::Read(void* buffer, uint size)
 {
-	if(!opened() || dev_mode != SND_R) return 0;
+	if(!opened()) return 0;
 	if(size < _bsize)
 	{
-		log_message(1, "Sndstream: read buffer too small - needed %d bytes buffer", _bsize);
+		log_message(1, "Sndstream: read buffer too small - needed at least %d bytes buffer", _bsize);
 		return -1;
 	}
 
-	int ret = 0;
-	ret = snd_pcm_readi(snd_dev, buffer, frames);
-	if(ret == -EAGAIN) return 0;
-	else if(ret == -EPIPE)
+	cur_ptime = _ptime;
+	frames_available = snd_pcm_readi(snd_dev, buffer, frames);
+	if(frames_available == -EAGAIN) return 0;
+	else if(frames_available== -EPIPE)
 	{
 		/* EPIPE means overrun */
 		if(snd_pcm_prepare(snd_dev) < 0)
@@ -214,50 +247,27 @@ int Sndstream::Read(void* buffer, uint size)
 		else log_message(0, "Sndstream: recovered from overrun");
 		return 0;
 	}
-	else if(ret < 0)
+	else if(frames_available < 0)
 	{
-		log_message(1, "Sndstream: error from read: %s", snd_strerror(ret));
+		log_message(1, "Sndstream: error from read: %s", snd_strerror(frames_available));
 		return 0;
 	}
-	else if(ret < (int)frames)
+	else if(frames_available < frames)
 	{
-		log_message(0, "Sndstream: short read, read %d frames", ret);
-		size = ret*framesize;
+		log_message(0, "Sndstream: short read, read %d frames", frames_available);
+		size = frames_available*framesize;
+		cur_ptime = (uint)(_ptime*((double)frames_available/frames));
 	}
-
-	amplify(buffer, size);
+	amplify(buffer, frames_available);
 
 	return size;
 }
 
-uint Sndstream::Write(void* buffer, uint size)
-{
-	if(!opened() || dev_mode != SND_W) return false;
 
-	int ret = snd_pcm_writei(snd_dev, buffer, size/framesize);
-	if(ret == -EAGAIN) return 0;
-	else if(ret == -EPIPE)
-	{
-		/* EPIPE means underrun */
-		if(snd_pcm_prepare(snd_dev) < 0)
-			log_message(1, "Sndstream: cant recover from underrun");
-		log_message(0, "Sndstream: recovered from underrun");
-		return 0;
-	}
-	else if(ret < 0)
-	{
-		log_message(1, "Sndstream: error from writei: %s", snd_strerror(ret));
-		return 0;
-	}
-
-	return ret*framesize;
-}
-
-void Sndstream::amplify(void *buffer, uint bsize)
+void Sndstream::amplify(void *buffer, uint num_frames)
 {
 	char  *cb = NULL;
 	short *sb = NULL;
-	uint   size = 0;
 	long   max  = 0;
 	long   cur  = 0;
 
@@ -265,15 +275,14 @@ void Sndstream::amplify(void *buffer, uint bsize)
 	{
 		case SND_8BIT:
 			cb		= (char*)buffer;
-			size	= bsize/sizeof(char);
 
 			if(!sig_offset)
 			{
-				for(int i = 0; i < size; i++)
-					sig_offset += cb[i]; sig_offset /= size;
+				for(int i = 0; i < num_frames; i++)
+					sig_offset += cb[i]; sig_offset /= num_frames;
 			}
 
-			for(int i = 0; i < size; i++)
+			for(int i = 0; i < num_frames; i++)
 			{
 				cur		= (cb[i] - sig_offset) * amp_level;
 				if(labs(cur) > SND_8BIT_MAX)
@@ -288,15 +297,14 @@ void Sndstream::amplify(void *buffer, uint bsize)
 
 		case SND_16BIT:
 			sb  = (short*)buffer;
-			size = bsize/sizeof(short);
 
 			if(!sig_offset)
 			{
-				for(int i = 0; i < size; i++)
-					sig_offset += sb[i]; sig_offset /= size;
+				for(int i = 0; i < num_frames; i++)
+					sig_offset += sb[i]; sig_offset /= num_frames;
 			}
 
-			for(int i = 0; i < size; i++)
+			for(int i = 0; i < num_frames; i++)
 			{
 				cur		= (sb[i] - sig_offset) * amp_level;
 				if(labs(cur) > SND_16BIT_MAX)

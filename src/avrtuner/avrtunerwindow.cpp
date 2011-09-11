@@ -19,9 +19,8 @@
  ***************************************************************************/
 
 #include <fstream>
-#icnlude <strstream>
-#include <iostream>
 
+#include <common.h>
 #include "avrtunerwindow.h"
 
 AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const Glib::RefPtr<Builder> & _builder)
@@ -30,6 +29,9 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const Glib::RefPtr<Builder> &
 	builder = _builder;
 
 	//get all nesessary widgets:
+	//statusbar
+	builder->get_widget("FilenameStatusbar", FilenameStatusbar);
+
 	//toolbar
 	builder->get_widget("ConfigToolbar", ConfigToolbar);
 
@@ -84,22 +86,27 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const Glib::RefPtr<Builder> &
 	builder->get_widget("NoiseValueLabel", NoiseValueLabel);
 
 	//connect all signals
+	ConfigChooserButton->signal_file_set().connect(sigc::mem_fun(*this, &AVRTunerWindow::open));
+	ConfigSourceBuffer->signal_changed().connect(sigc::mem_fun(*this, &AVRTunerWindow::config_changed));
+	ConfigSourceBuffer->signal_modified_changed().connect(sigc::mem_fun(*this, &AVRTunerWindow::modified_changed));
+
 	ShowLogButton->signal_toggled().connect(sigc::mem_fun(*this, &AVRTunerWindow::show_log_toggle));
 	TestConfigButton->signal_toggled().connect(sigc::mem_fun(*this, &AVRTunerWindow::test_config_toggle));
 	ClearLogButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::clear_log_clicked));
 
+	RevertButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::revert));
 	UndoButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::undo));
 	RedoButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::redo));
+	SaveButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::save));
 	SaveAsButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::save_as));
+	InitButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::init));
 }
 
-void AVRTunerWindow::Init(string _config_fname)
+void AVRTunerWindow::LoadConfiguration(string _config_fname)
 {
 	if(_config_fname.empty()) return;
 	config_fname = _config_fname;
 	revert();
-
-	return true;
 }
 
 void AVRTunerWindow::CaptureThread()
@@ -126,9 +133,33 @@ void AVRTunerWindow::MonitorThread()
 {
 }
 
-void AVRTunerWindow::log_message(string message)
+void AVRTunerWindow::LogMessage(string message)
 { LogTextView->get_buffer()->insert(LogTextView->get_buffer()->end(), message); }
 
+
+void AVRTunerWindow::config_changed()
+{ ConfigSourceBuffer->set_modified(true); }
+
+void AVRTunerWindow::modified_changed()
+{
+	if(ConfigSourceBuffer->get_modified())
+	{
+		FilenameStatusbar->pop();
+		FilenameStatusbar->push(config_fname+" [modified]");
+	}
+	else
+	{
+		FilenameStatusbar->pop();
+		if(config_parsed) FilenameStatusbar->push(config_fname);
+		else FilenameStatusbar->push(config_fname+" [parse errors]");
+	}
+}
+
+void AVRTunerWindow::show_log()
+{
+	ShowLogButton->set_active(true);
+	show_log_toggle();
+}
 
 void AVRTunerWindow::show_log_toggle()
 {
@@ -152,6 +183,15 @@ void AVRTunerWindow::show_log_toggle()
 
 void AVRTunerWindow::test_config_toggle()
 {
+	if(config_fname.empty())
+	{
+		if(ConfigSourceBuffer->get_modified())
+			log_message(1, "Configuration has to be, saved in a file first.");
+		else log_message(1, "No configuration loaded.");
+		show_log();
+		return;
+	}
+
 	if(TestConfigButton->get_active())
 	{
 		MainStack->set_current_page(1);
@@ -161,7 +201,18 @@ void AVRTunerWindow::test_config_toggle()
 		ConfigToolbar->hide();
 		ConfigChooserButton->hide();
 
-		LogTextView->get_buffer()->set_text("Something to test TextView...");
+		if(ConfigSourceBuffer->get_modified())
+			save();
+
+		if(!config_parsed)
+		{
+			TestConfigButton->set_active(false);
+			test_config_toggle();
+			show_log();
+			return;
+		}
+
+		clear_log_clicked();
 	}
 	else
 	{
@@ -177,10 +228,55 @@ void AVRTunerWindow::clear_log_clicked()
 { LogTextView->get_buffer()->set_text(""); }
 
 
+void AVRTunerWindow::open()
+{
+	config_fname = ConfigChooserButton->get_filename();
+	if(!config_fname.empty())
+	{
+		ConfigSourceBuffer->set_modified(true);
+		revert();
+	}
+}
+
 void AVRTunerWindow::revert()
 {
+	if(config_fname.empty()) return;
+	clear_log_clicked();
+
+	ifstream cfg;
+	cfg.open(config_fname.c_str(), ios_base::in);
+	if(!cfg.is_open())
+	{
+		config_fname.clear();
+		log_message(1, "Unable to open %s", config_fname);
+		show_log();
+		return;
+	}
+	cfg.seekg(0);
+
+	string config_text;
+	char   line[1024];
+	while(cfg)
+	{
+		cfg.getline((char*)line, 1024);
+		config_text += line;
+		if(cfg) config_text += '\n';
+	}
+	cfg.close();
+
+	ConfigSourceBuffer->begin_not_undoable_action();
+	ConfigSourceBuffer->set_text(config_text);
+	ConfigSourceBuffer->end_not_undoable_action();
+
 	if(!config.Load(config_fname))
-		show_log_toggle();
+	{
+		config_parsed = false;
+		show_log();
+	}
+	else config_parsed = true;
+
+	ConfigSourceBuffer->set_modified(false);
+	ConfigChooserButton->set_filename(config_fname);
 }
 
 void AVRTunerWindow::undo()
@@ -195,6 +291,36 @@ void AVRTunerWindow::redo()
 		ConfigSourceBuffer->redo();
 }
 
+void AVRTunerWindow::save()
+{
+	if(config_fname.empty())
+	{ save_as(); return; };
+	clear_log_clicked();
+
+	ofstream cfg;
+	cfg.open(config_fname.c_str(), ios_base::out);
+	if(!cfg.is_open())
+	{
+		log_message(1, "Unable to open %s for writing", config_fname);
+		show_log();
+		return;
+	}
+
+	string config_text = ConfigSourceBuffer->get_text();
+	cfg.write(config_text.c_str(), config_text.length());
+	cfg.close();
+
+	if(!config.Load(config_fname))
+	{
+		config_parsed = false;
+		show_log();
+	}
+	else config_parsed = true;
+
+	ConfigSourceBuffer->set_modified(false);
+	ConfigChooserButton->set_filename(config_fname);
+}
+
 void AVRTunerWindow::save_as()
 {
 	FileChooserDialog file_chooser("Save as...", FILE_CHOOSER_ACTION_SAVE);
@@ -207,9 +333,31 @@ void AVRTunerWindow::save_as()
 	{
 		case RESPONSE_OK:
 			config_fname = file_chooser.get_filename();
-
+			ConfigSourceBuffer->set_modified(true);
+			save();
 			break;
+
 		case RESPONSE_CANCEL:
 			break;
 	}
 }
+
+void AVRTunerWindow::init()
+{
+	if(!config_parsed) return;
+
+	MessageDialog dialog(*this,
+						  "Are you sure you whant to initialize configuration by quering video device?", false,
+						  Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_OK_CANCEL);
+	dialog.set_secondary_text("Current video configuration will be lost.");
+
+	if(RESPONSE_OK != dialog.run()) return;
+
+	if(!config.Init() || !config.Save())
+	{
+		show_log();
+		return;
+	}
+	else revert();
+}
+

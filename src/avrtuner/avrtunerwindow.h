@@ -47,8 +47,8 @@ public:
 	AVRTunerWindow(GtkWindow* window, const Glib::RefPtr<Builder>& _builder);
 	virtual ~AVRTunerWindow() { delete ConfigSourceView; };
 
-	///initialize configuration
-	void Init(string _config_fname);
+	///load configuration
+	void LoadConfiguration(string _config_fname);
 
 	///function which run in a thread and in which Recorder loop runs
 	void CaptureThread();
@@ -57,13 +57,14 @@ public:
 	void MonitorThread();
 
 	///append a message to the log textview
-	void log_message(string message);
+	void LogMessage(string message);
 
 private:
 	///core stuff
 	Glib::Mutex mutex;
 	AVConfig    config;
 	string      config_fname;
+	bool        config_parsed;
 	BaseRecorder<Glib::Mutex> *recorder;
 	uint signal; ///< Recorder's IdleLoop control signal
 
@@ -86,10 +87,15 @@ private:
 	bool highlight_motion;  ///< if true, get motion buffer from the catcher, otherwise get video buffer
 
 	///signal handlers
+	void config_changed();
+	void modified_changed();
+
+	void show_log();
 	void show_log_toggle();
 	void test_config_toggle();
 	void clear_log_clicked();
 
+	void open();
 	void revert();
 	void save();
 	void save_as();
@@ -103,6 +109,9 @@ private:
 
 	///toolbar
 	Toolbar *ConfigToolbar;
+
+	///statusbar
+	Statusbar *FilenameStatusbar;
 
 	///area stack
 	Notebook *MainStack;

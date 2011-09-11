@@ -61,7 +61,7 @@ int main (int argc, char *argv[])
 
 	builder->get_widget_derived("MainWindow", MainWindow);
 	if(config_file.size())
-		MainWindow->Init(config_file);
+		MainWindow->LoadConfiguration(config_file);
 	gtk_main.run(*MainWindow);
 
 	return 0;
@@ -88,7 +88,7 @@ void log_message(int level, const char *fmt, ...)
 	//output...
 	if(level) cerr << buf << flush; //log to stderr
 	else cout << buf << flush; //log to stdout
-	MainWindow->log_message(buf); //to log window
+	MainWindow->LogMessage(buf); //to log window
 
 	//Clean up the argument list routine
 	va_end(ap);

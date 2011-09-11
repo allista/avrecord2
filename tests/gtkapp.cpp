@@ -19,17 +19,28 @@
  ***************************************************************************/
 
 #include <gtkmm.h>
+#include <gtksourceviewmm.h>
 #include <sigc++/sigc++.h>
+#include <iostream>
 using namespace Gtk;
 using namespace Glib;
 
 #include "avrtunerwindow.h"
 
+const char *avrtuner_glade_file = "gtkapp.glade";
+
 int main (int argc, char *argv[])
 {
 	Main gtk_main(argc, argv);
 
-	RefPtr<Builder> builder = Builder::create_from_file("gtkapp.glade");
+	RefPtr<Builder> builder;
+	try { builder = Builder::create_from_file(avrtuner_glade_file); }
+	catch(const Error& ex)
+	{
+		std::cerr << "Exception from Gtk::Builder::create_from_file() from file " << avrtuner_glade_file << std::endl;
+		std::cerr << "  Error: " << ex.what() << std::endl;
+		return -1;
+	}
 
 	AVRTunerWindow *MainWindow = NULL;
 	builder->get_widget_derived("MainWindow", MainWindow);

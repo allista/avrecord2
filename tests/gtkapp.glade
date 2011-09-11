@@ -18,10 +18,12 @@
             <child>
               <object class="GtkFileChooserButton" id="FileChooserButton">
                 <property name="visible">True</property>
+                <property name="tooltip_text" translatable="yes">Open configuration file</property>
                 <property name="width_chars">16</property>
               </object>
               <packing>
                 <property name="expand">False</property>
+                <property name="padding">2</property>
                 <property name="position">0</property>
               </packing>
             </child>
@@ -32,9 +34,67 @@
                 <child>
                   <object class="GtkToolButton" id="RevertButton">
                     <property name="visible">True</property>
-                    <property name="label" translatable="yes">toolbutton</property>
+                    <property name="tooltip_text" translatable="yes">Revert</property>
+                    <property name="label" translatable="yes">Revert</property>
                     <property name="use_underline">True</property>
                     <property name="stock_id">gtk-refresh</property>
+                    <accelerator key="r" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToolButton" id="SaveButton">
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Save</property>
+                    <property name="label" translatable="yes">Save</property>
+                    <property name="use_underline">True</property>
+                    <property name="stock_id">gtk-save</property>
+                    <accelerator key="s" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToolButton" id="SaveAsButton">
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">SaveAs</property>
+                    <property name="label" translatable="yes">SaveAs</property>
+                    <property name="use_underline">True</property>
+                    <property name="stock_id">gtk-save-as</property>
+                    <accelerator key="s" signal="clicked" modifiers="GDK_CONTROL_MASK | GDK_MOD1_MASK"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToolButton" id="UndoButton">
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Undo</property>
+                    <property name="label" translatable="yes">Undo</property>
+                    <property name="use_underline">True</property>
+                    <property name="stock_id">gtk-undo</property>
+                    <accelerator key="z" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToolButton" id="RedoButton">
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Redo</property>
+                    <property name="label" translatable="yes">Redo</property>
+                    <property name="use_underline">True</property>
+                    <property name="stock_id">gtk-redo</property>
+                    <accelerator key="y" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
                   </object>
                   <packing>
                     <property name="expand">False</property>
@@ -43,6 +103,7 @@
                 </child>
               </object>
               <packing>
+                <property name="padding">2</property>
                 <property name="position">1</property>
               </packing>
             </child>
@@ -69,46 +130,41 @@
             <property name="show_tabs">False</property>
             <property name="homogeneous">True</property>
             <child>
-              <object class="GtkTextView" id="ConfigTextview">
+              <object class="GtkScrolledWindow" id="ConfigScrolledWindow">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="wrap_mode">word</property>
+                <property name="hscrollbar_policy">automatic</property>
+                <property name="vscrollbar_policy">automatic</property>
+                <child>
+                  <placeholder/>
+                </child>
               </object>
-              <packing>
-                <property name="tab_expand">True</property>
-              </packing>
             </child>
             <child type="tab">
-              <object class="GtkLabel" id="ConfigLabel">
-                <property name="visible">True</property>
-                <property name="label" translatable="yes">Configuration</property>
-              </object>
-              <packing>
-                <property name="tab_fill">False</property>
-              </packing>
+              <placeholder/>
             </child>
             <child>
-              <object class="GtkTextView" id="LogTextview">
+              <object class="GtkScrolledWindow" id="LogScrolledWindow">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="editable">False</property>
-                <property name="wrap_mode">word</property>
-                <property name="accepts_tab">False</property>
+                <property name="hscrollbar_policy">automatic</property>
+                <property name="vscrollbar_policy">automatic</property>
+                <child>
+                  <object class="GtkTextView" id="LogTextView">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="editable">False</property>
+                    <property name="wrap_mode">word</property>
+                    <property name="accepts_tab">False</property>
+                  </object>
+                </child>
               </object>
               <packing>
                 <property name="position">1</property>
-                <property name="tab_expand">True</property>
               </packing>
             </child>
             <child type="tab">
-              <object class="GtkLabel" id="LogLable">
-                <property name="visible">True</property>
-                <property name="label" translatable="yes">Log</property>
-              </object>
-              <packing>
-                <property name="position">1</property>
-                <property name="tab_fill">False</property>
-              </packing>
+              <placeholder/>
             </child>
             <child>
               <placeholder/>
@@ -287,5 +343,4 @@
       </object>
     </child>
   </object>
-  <object class="GtkFileFilter" id="FileFilter"/>
 </interface>

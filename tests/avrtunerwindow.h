@@ -24,16 +24,18 @@
 	@author Allis Tauri <allista@gmail.com>
 */
 #include <gtkmm.h>
+#include <gtksourceviewmm.h>
 #include <sigc++/sigc++.h>
 using namespace Gtk;
 using namespace Glib;
+using namespace gtksourceview;
 
 class AVRTunerWindow: public Window
 {
 public:
 	AVRTunerWindow() : Window() {};
 	AVRTunerWindow(GtkWindow* window, const RefPtr<Gtk::Builder>& _builder);
-	virtual ~AVRTunerWindow() {};
+	virtual ~AVRTunerWindow() { delete ConfigSourceView; };
 
 private:
 	void show_log_toggle();
@@ -48,7 +50,8 @@ private:
 	ToggleButton *TestConfigButton;
 	Button *ClearLogButton;
 
-	TextView *LogTextview;
+	TextView *LogTextView;
+	SourceView *ConfigSourceView;
 };
 
 #endif

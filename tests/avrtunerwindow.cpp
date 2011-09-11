@@ -29,11 +29,26 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const RefPtr< Gtk::Builder > 
 	builder->get_widget("TestConfigButton", TestConfigButton);
 	builder->get_widget("ClearLogButton", ClearLogButton);
 
-	builder->get_widget("LogTextview", LogTextview);
+	builder->get_widget("LogTextView", LogTextView);
+
+	ConfigSourceView = new SourceView();
+	ConfigSourceView->set_show_line_numbers();
+	ConfigSourceView->set_auto_indent();
+	ConfigSourceView->set_highlight_current_line();
+	ConfigSourceView->set_show_line_marks();
+	ConfigSourceView->set_indent_on_tab();
+	ConfigSourceView->set_auto_indent();
+	ConfigSourceView->show();
+
+	ScrolledWindow *ConfigScrolledWindow = NULL;
+	builder->get_widget("ConfigScrolledWindow", ConfigScrolledWindow);
+	ConfigScrolledWindow->add(*ConfigSourceView);
 
 	ShowLogButton->signal_toggled().connect(sigc::mem_fun(*this, &AVRTunerWindow::show_log_toggle));
 	TestConfigButton->signal_toggled().connect(sigc::mem_fun(*this, &AVRTunerWindow::test_config_toggle));
 	ClearLogButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::clear_log_clicked));
+
+
 }
 
 void AVRTunerWindow::show_log_toggle()
@@ -59,7 +74,7 @@ void AVRTunerWindow::test_config_toggle()
 		ShowLogButton->hide();
 		ClearLogButton->hide();
 
-		LogTextview->get_buffer()->set_text("Something to test TextView...");
+		LogTextView->get_buffer()->set_text("Something to test TextView...");
 	}
 	else
 	{
@@ -70,5 +85,5 @@ void AVRTunerWindow::test_config_toggle()
 }
 
 void AVRTunerWindow::clear_log_clicked()
-{ LogTextview->get_buffer()->set_text(""); }
+{ LogTextView->get_buffer()->set_text(""); }
 

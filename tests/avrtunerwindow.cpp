@@ -23,15 +23,30 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const RefPtr< Gtk::Builder > 
 : Window(window)
 {
 	builder = _builder;
+
+	//get all nesessary widgets:
+	//toolbar
+	builder->get_widget("ConfigToolbar", ConfigToolbar);
+
+	//Main Stack
 	builder->get_widget("MainStack", MainStack);
 
+	//all the buttons
 	builder->get_widget("ShowLogButton", ShowLogButton);
 	builder->get_widget("TestConfigButton", TestConfigButton);
 	builder->get_widget("ClearLogButton", ClearLogButton);
+	builder->get_widget("RevertButton", RevertButton);
+	builder->get_widget("SaveButton", SaveButton);
+	builder->get_widget("SaveAsButton", SaveAsButton);
+	builder->get_widget("UndoButton", UndoButton);
+	builder->get_widget("RedoButton", RedoButton);
+	builder->get_widget("InitButton", InitButton);
 
+	//text views: log view
 	builder->get_widget("LogTextView", LogTextView);
 
-	ConfigSourceView = new SourceView();
+	//and config view, which is the sourceview. It couldn't be loaded by gtkmm::builder, therefore it has to be created...
+	ConfigSourceView   = new SourceView();
 	ConfigSourceView->set_show_line_numbers();
 	ConfigSourceView->set_auto_indent();
 	ConfigSourceView->set_highlight_current_line();
@@ -40,14 +55,24 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const RefPtr< Gtk::Builder > 
 	ConfigSourceView->set_auto_indent();
 	ConfigSourceView->show();
 
+	//source buffer setup
+	gtksourceview::init();
+	RefPtr<SourceLanguageManager> LanguageManager = SourceLanguageManager::create();
+	ConfigSourceBuffer = SourceBuffer::create(LanguageManager->get_language("cpp"));
+	ConfigSourceView->set_source_buffer(ConfigSourceBuffer);
+
+	//...and placed manualy into the scrolled window
 	ScrolledWindow *ConfigScrolledWindow = NULL;
 	builder->get_widget("ConfigScrolledWindow", ConfigScrolledWindow);
 	ConfigScrolledWindow->add(*ConfigSourceView);
 
+	//connect all signals
 	ShowLogButton->signal_toggled().connect(sigc::mem_fun(*this, &AVRTunerWindow::show_log_toggle));
 	TestConfigButton->signal_toggled().connect(sigc::mem_fun(*this, &AVRTunerWindow::test_config_toggle));
 	ClearLogButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::clear_log_clicked));
 
+	UndoButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::undo));
+	RedoButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::redo));
 
 }
 
@@ -57,11 +82,13 @@ void AVRTunerWindow::show_log_toggle()
 	{
 		MainStack->set_current_page(1);
 		ClearLogButton->show();
+		ConfigToolbar->hide();
 	}
 	else
 	{
 		MainStack->set_current_page(0);
 		ClearLogButton->hide();
+		ConfigToolbar->show();
 	}
 }
 
@@ -73,6 +100,7 @@ void AVRTunerWindow::test_config_toggle()
 		ShowLogButton->set_active(1);
 		ShowLogButton->hide();
 		ClearLogButton->hide();
+		ConfigToolbar->hide();
 
 		LogTextView->get_buffer()->set_text("Something to test TextView...");
 	}
@@ -81,9 +109,22 @@ void AVRTunerWindow::test_config_toggle()
 		MainStack->set_current_page(0);
 		ShowLogButton->set_active(0);
 		ShowLogButton->show();
+		ConfigToolbar->show();
 	}
 }
 
 void AVRTunerWindow::clear_log_clicked()
 { LogTextView->get_buffer()->set_text(""); }
+
+void AVRTunerWindow::undo()
+{
+	if(ConfigSourceBuffer->can_undo())
+		ConfigSourceBuffer->undo();
+}
+
+void AVRTunerWindow::redo()
+{
+	if(ConfigSourceBuffer->can_redo())
+		ConfigSourceBuffer->redo();
+}
 

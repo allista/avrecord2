@@ -28,7 +28,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToolbar" id="Toolbar">
+              <object class="GtkToolbar" id="ConfigToolbar">
                 <property name="visible">True</property>
                 <property name="toolbar_style">icons</property>
                 <child>
@@ -37,7 +37,7 @@
                     <property name="tooltip_text" translatable="yes">Revert</property>
                     <property name="label" translatable="yes">Revert</property>
                     <property name="use_underline">True</property>
-                    <property name="stock_id">gtk-refresh</property>
+                    <property name="stock_id">gtk-revert-to-saved</property>
                     <accelerator key="r" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
                   </object>
                   <packing>
@@ -95,6 +95,19 @@
                     <property name="use_underline">True</property>
                     <property name="stock_id">gtk-redo</property>
                     <accelerator key="y" signal="clicked" modifiers="GDK_CONTROL_MASK"/>
+                  </object>
+                  <packing>
+                    <property name="expand">False</property>
+                    <property name="homogeneous">True</property>
+                  </packing>
+                </child>
+                <child>
+                  <object class="GtkToolButton" id="InitButton">
+                    <property name="visible">True</property>
+                    <property name="tooltip_text" translatable="yes">Initialize Configuration</property>
+                    <property name="label" translatable="yes">Initialize Configuration</property>
+                    <property name="use_underline">True</property>
+                    <property name="stock_id">gtk-dialog-warning</property>
                   </object>
                   <packing>
                     <property name="expand">False</property>

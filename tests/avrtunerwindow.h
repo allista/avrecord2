@@ -38,20 +38,36 @@ public:
 	virtual ~AVRTunerWindow() { delete ConfigSourceView; };
 
 private:
+	//signal handlers
 	void show_log_toggle();
 	void test_config_toggle();
 	void clear_log_clicked();
+	void revert();
+	void save();
+	void save_as();
+	void undo();
+	void redo();
+	void init();
 
 	RefPtr<Builder> builder;
+
+	Toolbar *ConfigToolbar;
 
 	Notebook *MainStack;
 
 	ToggleButton *ShowLogButton;
 	ToggleButton *TestConfigButton;
 	Button *ClearLogButton;
+	ToolButton *RevertButton;
+	ToolButton *SaveButton;
+	ToolButton *SaveAsButton;
+	ToolButton *UndoButton;
+	ToolButton *RedoButton;
+	ToolButton *InitButton;
 
 	TextView *LogTextView;
 	SourceView *ConfigSourceView;
+	RefPtr<SourceBuffer> ConfigSourceBuffer;
 };
 
 #endif

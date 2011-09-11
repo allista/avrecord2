@@ -75,8 +75,8 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const RefPtr< Gtk::Builder > 
 	//meters
 	builder->get_widget("MotionProgressBar", MotionProgressBar);
 	builder->get_widget("NoiseProgressBar", NoiseProgressBar);
-	builder->get_widget("MotionValueLable", MotionValueLable);
-	builder->get_widget("NoiseValueLable", NoiseValueLable);
+	builder->get_widget("MotionValueLabel", MotionValueLabel);
+	builder->get_widget("NoiseValueLabel", NoiseValueLabel);
 
 	//connect all signals
 	ShowLogButton->signal_toggled().connect(sigc::mem_fun(*this, &AVRTunerWindow::show_log_toggle));

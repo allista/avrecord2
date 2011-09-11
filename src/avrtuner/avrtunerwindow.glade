@@ -16,7 +16,7 @@
           <object class="GtkHBox" id="ToolbarHbox">
             <property name="visible">True</property>
             <child>
-              <object class="GtkFileChooserButton" id="FileChooserButton">
+              <object class="GtkFileChooserButton" id="ConfigChooserButton">
                 <property name="visible">True</property>
                 <property name="tooltip_text" translatable="yes">Open configuration file</property>
                 <property name="width_chars">16</property>
@@ -28,7 +28,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkToolbar" id="Toolbar">
+              <object class="GtkToolbar" id="ConfigToolbar">
                 <property name="visible">True</property>
                 <property name="toolbar_style">icons</property>
                 <child>
@@ -264,7 +264,7 @@
             <property name="n_rows">2</property>
             <property name="n_columns">3</property>
             <child>
-              <object class="GtkProgressBar" id="MotionProgressBbar">
+              <object class="GtkProgressBar" id="MotionProgressBar">
                 <property name="visible">True</property>
               </object>
               <packing>
@@ -275,7 +275,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="MotionLable">
+              <object class="GtkLabel" id="MotionLabel">
                 <property name="visible">True</property>
                 <property name="label" translatable="yes">Motion</property>
               </object>
@@ -310,7 +310,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="NoiseValueLable">
+              <object class="GtkLabel" id="NoiseValueLabel">
                 <property name="visible">True</property>
                 <property name="justify">right</property>
                 <property name="width_chars">6</property>
@@ -330,7 +330,7 @@
               </packing>
             </child>
             <child>
-              <object class="GtkLabel" id="MotionValueLable">
+              <object class="GtkLabel" id="MotionValueLabel">
                 <property name="visible">True</property>
                 <property name="justify">right</property>
                 <property name="width_chars">6</property>

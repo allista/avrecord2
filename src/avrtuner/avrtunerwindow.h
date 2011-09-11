@@ -88,8 +88,8 @@ private:
 	///meters
 	ProgressBar *MotionProgressBar;
 	ProgressBar *NoiseProgressBar;
-	Label *MotionValueLable;
-	Label *NoiseValueLable;
+	Label *MotionValueLabel;
+	Label *NoiseValueLabel;
 };
 
 #endif

@@ -3,7 +3,7 @@
   <general>
     <author>Allis Tauri</author>
     <email>allista@gmail.com</email>
-    <version>1.1.1</version>
+    <version>1.1.2</version>
     <projectmanagement>KDevKDEAutoProject</projectmanagement>
     <primarylanguage>C++</primarylanguage>
     <keywords>
@@ -16,7 +16,7 @@
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
     <description/>
-    <versioncontrol/>
+    <versioncontrol>kdevsubversion</versioncontrol>
     <projectname>avrecord</projectname>
     <defaultencoding/>
   </general>
@@ -40,21 +40,24 @@
         <test/>
         <avrtuner>avrecord.cfg</avrtuner>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
-        <gtkapp></gtkapp>
+        <gtkapp/>
+        <avrtuner_kde3>avrecord.cfg</avrtuner_kde3>
       </runarguments>
       <debugarguments>
         <avrtuner>avrecord.cfg</avrtuner>
         <avrecord>-c avrecord.cfg -n</avrecord>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
         <test/>
-        <gtkapp></gtkapp>
+        <gtkapp/>
+        <avrtuner_kde3>avrecord.cfg</avrtuner_kde3>
       </debugarguments>
       <cwd>
-        <avrtuner>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrtuner>
+        <avrtuner>/home/allis/Workspace/Programming/AVRecord2-trunk/src/avrtuner/</avrtuner>
         <avrecord>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrecord>
         <v4l2-teset>/home/allis/Workspace/Programming/AVRecord2-trunk/</v4l2-teset>
         <test>/home/allis/Workspace/Programming/AVRecord2-trunk/debug/./src/tests</test>
         <gtkapp>/home/allis/Workspace/Programming/AVRecord2-trunk/tests</gtkapp>
+        <avrtuner_kde3>/home/allis/Workspace/Programming/AVRecord2-trunk/</avrtuner_kde3>
       </cwd>
       <globaldebugarguments/>
       <globalcwd>/home/allis/Workspace/Programming/AVRecord2-trunk/optimized</globalcwd>
@@ -213,7 +216,7 @@
     <LICENSEFILE>COPYING</LICENSEFILE>
     <VERSION>0.1</VERSION>
     <YEAR>2007</YEAR>
-    <dest>/home/simon/Workspace/Programming/tmp/avrecord</dest>
+    <dest>/home/allis/Workspace/Programming/tmp/avrecord</dest>
   </substmap>
   <cppsupportpart>
     <filetemplates>
@@ -227,7 +230,7 @@
       <version>3</version>
       <root>/usr/share/qt3</root>
       <includestyle>3</includestyle>
-      <designerintegration>EmbeddedKDevDesigner</designerintegration>
+      <designerintegration>ExternalDesigner</designerintegration>
       <qmake>/usr/bin/qmake-qt3</qmake>
       <designer>/usr/bin/designer-qt3</designer>
       <designerpluginpaths/>
@@ -296,7 +299,7 @@
     <bzip>true</bzip>
     <archname>%n-%v</archname>
     <appname>avrecord2</appname>
-    <version>1.1.1</version>
+    <version>1.1.2</version>
     <release>beta</release>
     <vendor/>
     <licence>GPL</licence>

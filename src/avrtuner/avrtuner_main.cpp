@@ -19,91 +19,45 @@
  ***************************************************************************/
 
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#include <sigc++/sigc++.h>
+
+#include <gtkmm.h>
+using namespace Gtk;
+using namespace Glib;
+
 #include <iostream>
+#include <string>
 using namespace std;
 
-#include <qapplication.h>
-#include <kapplication.h>
-#include <kaboutdata.h>
-#include <kcmdlineargs.h>
-#include <klocale.h>
-#include <kmainwindow.h>
+#include "avrtunerwindow.h"
 
-#include <common.h>
+static string avrtuner_glade_file = string(DATA_PATH) + "/avrtunerwindow.glade";
 
-#include "tunerform.h"
-
-static const char description[] =
-    I18N_NOOP("A KDE KPart Application");
-
-static const char version[] = "0.1";
-
-static KCmdLineOptions options[] =
+int main (int argc, char *argv[])
 {
-    { "+[URL]", I18N_NOOP( "Config file to open" ), 0 },
-    KCmdLineLastOption
-};
+#ifdef DEBUG_VERSION
+	avrtuner_glade_file = "./avrtunerwindow.glade";
+#endif
 
+	Main gtk_main(argc, argv);
 
-///Main window widget
-TunerForm *mainWin = 0;
+	RefPtr<Builder> builder;
+	try { builder = Builder::create_from_file(avrtuner_glade_file); }
+	catch(const Error& ex)
+	{
+		std::cerr << "Exception from Gtk::Builder::create_from_file() from file " << avrtuner_glade_file << std::endl;
+		std::cerr << "  Error: " << ex.what() << std::endl;
+		return -1;
+	}
 
-int main(int argc, char **argv)
-{
-    KAboutData about("AVRTuner", I18N_NOOP("AVRTuner"), version, description,
-                     KAboutData::License_GPL, "(C) 2007 Allis Tauri", 0, 0, "allista@gmail.com");
-    about.addAuthor( "Allis Tauri", 0, "allista@gmail.com" );
-    KCmdLineArgs::init(argc, argv, &about);
-    KCmdLineArgs::addCmdLineOptions( options );
-    KApplication app;
+	AVRTunerWindow *MainWindow = NULL;
+	builder->get_widget_derived("MainWindow", MainWindow);
 
+	gtk_main.run(*MainWindow);
 
-    if (app.isRestored())
-    {
-        RESTORE(TunerForm);
-    }
-    else
-    {
-        // no session.. just start up normally
-        KCmdLineArgs *args = KCmdLineArgs::parsedArgs();
-
-        mainWin = new TunerForm();
-	if(args->count())
-		mainWin->fileOpen(args->arg(0));
-        app.setMainWidget( mainWin );
-        mainWin->show();
-
-        args->clear();
-    }
-
-    // mainWin has WDestructiveClose flag by default, so it will delete itself.
-    return app.exec();
-}
-
-void log_message(int level, const char *fmt, ...)
-{
-	int     n = 0;
-	char    buf[1024];
-	va_list ap;
-
-	//Next add timstamp and level prefix
-	time_t now = time(0);
-	n += strftime(buf+n, sizeof(buf)-n, "%Y-%m-%d %H:%M:%S ", localtime(&now));
-	n += snprintf(buf+n, sizeof(buf)-n, "[%s] ", level? "ERROR" : "INFO");
-
-	//Next add the user's message
-	va_start(ap, fmt);
-	n += vsnprintf(buf+n, sizeof(buf)-n, fmt, ap);
-
-	//newline for printing to the file
-	strcat(buf, "\n");
-
-	//output...
-	QString str(buf);
-	if(level) cerr << buf << flush; //log to stderr
-	else cout << buf << flush; //log to stdout
-	mainWin->log_message(str); //to log window
-
-	//Clean up the argument list routine
-	va_end(ap);
+	return 0;
 }

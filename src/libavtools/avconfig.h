@@ -74,6 +74,8 @@ public:
 
 	bool SaveAs(string fname); ///< save configuration into another file
 
+	string getFileName() const { return filename; }
+
 	///pointer to the Config object
 	Config  *getConfig() { return &avconfig; }
 

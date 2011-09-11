@@ -17,9 +17,14 @@
  *   Free Software Foundation, Inc.,                                       *
  *   59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.             *
  ***************************************************************************/
+
+#include <fstream>
+#icnlude <strstream>
+#include <iostream>
+
 #include "avrtunerwindow.h"
 
-AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const RefPtr< Gtk::Builder > & _builder)
+AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const Glib::RefPtr<Builder> & _builder)
 : Window(window)
 {
 	builder = _builder;
@@ -63,7 +68,7 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const RefPtr< Gtk::Builder > 
 
 	//source buffer setup
 	gtksourceview::init(); ///< needed for SourceLanguageManager to work properly
-	RefPtr<SourceLanguageManager> LanguageManager = SourceLanguageManager::create();
+	Glib::RefPtr<SourceLanguageManager> LanguageManager = SourceLanguageManager::create();
 	ConfigSourceBuffer = SourceBuffer::create(LanguageManager->get_language("cpp"));
 	ConfigSourceView->set_source_buffer(ConfigSourceBuffer);
 
@@ -87,6 +92,43 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const RefPtr< Gtk::Builder > 
 	RedoButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::redo));
 	SaveAsButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::save_as));
 }
+
+void AVRTunerWindow::Init(string _config_fname)
+{
+	if(_config_fname.empty()) return;
+	config_fname = _config_fname;
+	revert();
+
+	return true;
+}
+
+void AVRTunerWindow::CaptureThread()
+{
+	if(recorder)
+	{
+		delete recorder;
+		recorder = NULL;
+	}
+
+	recorder = new BaseRecorder<Glib::Mutex>();
+	if(!recorder->Init(config.getConfig()))
+	{
+			::log_message(1, "CaptureThread: Init: unable to initialize recorder");
+			delete recorder;
+			recorder = NULL;
+			return;
+	}
+
+
+}
+
+void AVRTunerWindow::MonitorThread()
+{
+}
+
+void AVRTunerWindow::log_message(string message)
+{ LogTextView->get_buffer()->insert(LogTextView->get_buffer()->end(), message); }
+
 
 void AVRTunerWindow::show_log_toggle()
 {
@@ -134,6 +176,13 @@ void AVRTunerWindow::test_config_toggle()
 void AVRTunerWindow::clear_log_clicked()
 { LogTextView->get_buffer()->set_text(""); }
 
+
+void AVRTunerWindow::revert()
+{
+	if(!config.Load(config_fname))
+		show_log_toggle();
+}
+
 void AVRTunerWindow::undo()
 {
 	if(ConfigSourceBuffer->can_undo())
@@ -157,14 +206,10 @@ void AVRTunerWindow::save_as()
 	switch(result)
 	{
 		case RESPONSE_OK:
+			config_fname = file_chooser.get_filename();
 
 			break;
 		case RESPONSE_CANCEL:
 			break;
 	}
 }
-
-void AVRTunerWindow::update_meters()
-{
-}
-

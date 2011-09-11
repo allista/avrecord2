@@ -24,10 +24,8 @@
 #endif
 
 #include <sigc++/sigc++.h>
-
 #include <gtkmm.h>
 using namespace Gtk;
-using namespace Glib;
 
 #include <iostream>
 #include <string>
@@ -37,27 +35,61 @@ using namespace std;
 
 static string avrtuner_glade_file = string(DATA_PATH) + "/avrtunerwindow.glade";
 
+AVRTunerWindow *MainWindow = NULL;
+
 int main (int argc, char *argv[])
 {
 #ifdef DEBUG_VERSION
 	avrtuner_glade_file = "./avrtunerwindow.glade";
 #endif
 
+	string config_file;
+	if(argc > 1) config_file = string(argv[1]);
+	if(config_file.empty())
+		log_message(0, "No configuration filename supplied.");
+
 	Main gtk_main(argc, argv);
 
-	RefPtr<Builder> builder;
+	Glib::RefPtr<Builder> builder;
 	try { builder = Builder::create_from_file(avrtuner_glade_file); }
-	catch(const Error& ex)
+	catch(const Glib::Error& ex)
 	{
 		std::cerr << "Exception from Gtk::Builder::create_from_file() from file " << avrtuner_glade_file << std::endl;
 		std::cerr << "  Error: " << ex.what() << std::endl;
 		return -1;
 	}
 
-	AVRTunerWindow *MainWindow = NULL;
 	builder->get_widget_derived("MainWindow", MainWindow);
-
+	if(config_file.size())
+		MainWindow->Init(config_file);
 	gtk_main.run(*MainWindow);
 
 	return 0;
+}
+
+void log_message(int level, const char *fmt, ...)
+{
+	int     n = 0;
+	char    buf[1024];
+	va_list ap;
+
+	//Next add timstamp and level prefix
+	time_t now = time(0);
+	n += strftime(buf+n, sizeof(buf)-n, "%Y-%m-%d %H:%M:%S ", localtime(&now));
+	n += snprintf(buf+n, sizeof(buf)-n, "[%s] ", level? "ERROR" : "INFO");
+
+	//Next add the user's message
+	va_start(ap, fmt);
+	n += vsnprintf(buf+n, sizeof(buf)-n, fmt, ap);
+
+	//newline for printing to the file
+	strcat(buf, "\n");
+
+	//output...
+	if(level) cerr << buf << flush; //log to stderr
+	else cout << buf << flush; //log to stdout
+	MainWindow->log_message(buf); //to log window
+
+	//Clean up the argument list routine
+	va_end(ap);
 }

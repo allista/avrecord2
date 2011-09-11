@@ -57,7 +57,8 @@ class _void_mutex
 		void lock()    {};
 		void unlock()  {};
 		bool locked()  { return false; };
-		bool tryLock() { return true; };
+		bool trylock() { return true; };
+		bool tryLock() { return trylock(); };
 };
 
 
@@ -513,7 +514,7 @@ void BaseRecorder<_mutex>::Close( )
 	if(!inited)
 		return;
 
-	mutex.tryLock();
+	lock();
 	if(a_buffer)
 		delete a_buffer;
 	a_buffer = NULL;

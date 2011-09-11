@@ -15,10 +15,10 @@
     <ignoreparts/>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description/>
-    <versioncontrol>kdevsubversion</versioncontrol>
+    <description></description>
+    <versioncontrol></versioncontrol>
     <projectname>avrecord</projectname>
-    <defaultencoding/>
+    <defaultencoding></defaultencoding>
   </general>
   <kdevautoproject>
     <general>
@@ -38,13 +38,13 @@
       <runarguments>
         <avrecord>-c avrecord.cfg -n</avrecord>
         <test/>
-        <avrtuner>avrecord.cfg</avrtuner>
+        <avrtuner>../../avrecord.cfg</avrtuner>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
         <gtkapp/>
         <avrtuner_kde3>avrecord.cfg</avrtuner_kde3>
       </runarguments>
       <debugarguments>
-        <avrtuner>avrecord.cfg</avrtuner>
+        <avrtuner>../../avrecord.cfg</avrtuner>
         <avrecord>-c avrecord.cfg -n</avrecord>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
         <test/>
@@ -173,12 +173,12 @@
   </kdevdoctreeview>
   <kdevdebugger>
     <general>
-      <dbgshell/>
+      <dbgshell></dbgshell>
       <programargs>-c ../avrecord.conf</programargs>
       <gdbpath>/usr/bin/gdb</gdbpath>
-      <configGdbScript/>
-      <runShellScript/>
-      <runGdbScript/>
+      <configGdbScript></configGdbScript>
+      <runShellScript></runShellScript>
+      <runGdbScript></runGdbScript>
       <breakonloadinglibs>true</breakonloadinglibs>
       <separatetty>false</separatetty>
       <floatingtoolbar>false</floatingtoolbar>
@@ -200,9 +200,9 @@
   </kdevfilecreate>
   <kdevdocumentation>
     <projectdoc>
-      <docsystem/>
-      <docurl/>
-      <usermanualurl/>
+      <docsystem></docsystem>
+      <docurl></docurl>
+      <usermanualurl></usermanualurl>
     </projectdoc>
   </kdevdocumentation>
   <substmap>
@@ -263,7 +263,7 @@
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet/>
+      <prefixGet></prefixGet>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>

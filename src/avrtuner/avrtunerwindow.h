@@ -23,22 +23,67 @@
 /**
 	@author Allis Tauri <allista@gmail.com>
 */
+
+extern "C"
+{
+#define __STDC_CONSTANT_MACROS
+#include <libswscale/swscale.h>
+}
+#include <SDL/SDL.h>
+
 #include <gtkmm.h>
 #include <gtksourceviewmm.h>
 #include <sigc++/sigc++.h>
 using namespace Gtk;
-using namespace Glib;
 using namespace gtksourceview;
+
+#include <avconfig.h>
+#include <recorder.h>
 
 class AVRTunerWindow: public Window
 {
 public:
 	AVRTunerWindow() : Window() {};
-	AVRTunerWindow(GtkWindow* window, const RefPtr<Gtk::Builder>& _builder);
+	AVRTunerWindow(GtkWindow* window, const Glib::RefPtr<Builder>& _builder);
 	virtual ~AVRTunerWindow() { delete ConfigSourceView; };
+
+	///initialize configuration
+	void Init(string _config_fname);
+
+	///function which run in a thread and in which Recorder loop runs
+	void CaptureThread();
+
+	///function which run in a thread and in which Monitor loop runs
+	void MonitorThread();
+
+	///append a message to the log textview
+	void log_message(string message);
 
 private:
 	///core stuff
+	Glib::Mutex mutex;
+	AVConfig    config;
+	string      config_fname;
+	BaseRecorder<Glib::Mutex> *recorder;
+	uint signal; ///< Recorder's IdleLoop control signal
+
+	///monitor stuff
+	SDL_Event      event;   ///< SDL event
+
+	SDL_Rect       screen_rect; ///< screen dimentions
+	SDL_Surface   *screen;  ///< output screen
+	SDL_Overlay   *overlay; ///< YUV overlay
+	AVPicture      overlay_frame; ///< ffmpeg structure representing overlay. Used for pixel format conversions
+	SwsContext    *sws;     ///< scaling and converting context
+	PixelFormat    in_fmt;  ///< ffmpeg PixelFormat of the input picture
+
+	uint           motion;  ///< number of diff-pixels
+	uint           peak;    ///< sound noise level
+	unsigned char *buffer;  ///< buffer for captured image
+	uint           v_bsize; ///< size of image buffer
+	uint           width;   ///< widht of the image
+	uint           height;  ///< height of the image
+	bool highlight_motion;  ///< if true, get motion buffer from the catcher, otherwise get video buffer
 
 	///signal handlers
 	void show_log_toggle();
@@ -52,11 +97,9 @@ private:
 	void redo();
 	void init();
 
-	void update_meters();
-
 	///all the gtkmm stuff
 	///builder
-	RefPtr<Builder> builder;
+	Glib::RefPtr<Builder> builder;
 
 	///toolbar
 	Toolbar *ConfigToolbar;
@@ -83,7 +126,7 @@ private:
 	///text areas
 	TextView *LogTextView;
 	SourceView *ConfigSourceView;
-	RefPtr<SourceBuffer> ConfigSourceBuffer;
+	Glib::RefPtr<SourceBuffer> ConfigSourceBuffer;
 
 	///meters
 	ProgressBar *MotionProgressBar;

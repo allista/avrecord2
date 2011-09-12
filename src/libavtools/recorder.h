@@ -94,11 +94,13 @@ public:
 
 	///returns number of motion pixels (NOTE: you must enclose call
 	///of this function with lock()-unlock() pair)
-	uint getMotion() { return last_diffs; };
+	uint getMotion() const { return last_diffs; };
+	uint getMotionMax() const { return width*height; } ///< maximum number of motion pixels
 
 	///returns sound peak value (NOTE: you must enclose call
 	///of this function with lock()-unlock() pair)
-	uint getPeak()   { return last_peak_value; };
+	uint getPeak() const { return last_peak_value; };
+	uint getPeakMax() const { return SND_PEAK_MAX; }; ///< maximum peak value
 
 	///returns last video buffer (NOTE: you must enclose call of this
 	///function with lock()-unlock() pair)

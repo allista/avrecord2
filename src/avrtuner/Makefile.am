@@ -7,11 +7,12 @@ avrtuner_kde3_LDADD = $(top_builddir)/src/libavtools/libavtools.la $(LIB_KDEUI) 
 avrtuner_kde3_LDFLAGS = $(KDE_RPATH) $(all_libraries)
 avrtuner_kde3_SOURCES = avrtuner_main_kde3.cpp monitorthread.cpp tunerform.cpp tunerformbase.ui
 
-avrtuner_SOURCES = avrtuner_main.cpp avrtunerwindow.cpp
+avrtuner_SOURCES = avrtuner_main.cpp avrtunerwindow.cpp videomonitor.cpp
 avrtuner_CPPFLAGS = $(GTKMM_CFLAGS) $(GTKSVMM_CFLAGS)
 avrtuner_LDADD = $(top_builddir)/src/libavtools/libavtools.la $(GTKMM_LIBS) \
 	$(GTKSVMM_LIBS) $(SDL_LIBS)
-noinst_HEADERS = avrtunerwindow.h monitorthread.h tunerform.h avrtunerwindow.glade
+noinst_HEADERS = avrtunerwindow.glade avrtunerwindow.h monitorthread.h \
+	tunerform.h videomonitor.h
 
 KDE_ICON = AUTO
 

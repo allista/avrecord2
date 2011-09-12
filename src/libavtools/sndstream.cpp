@@ -325,20 +325,20 @@ double Sndstream::weight( double sample, double max )
 	switch(weight_function)
 	{
 		case SND_LIN:
-			return sample * 1000 / max;
+			return (sample / max)*SND_PEAK_MAX;
 		case SND_RT2:
-			return sqrt(sample / max)*1000;
+			return sqrt(sample / max)*SND_PEAK_MAX;
 		case SND_RT4:
-			return sqrt(sqrt(sample / max))*1000;
+			return sqrt(sqrt(sample / max))*SND_PEAK_MAX;
 		case SND_RT8:
-			return sqrt(sqrt(sqrt(sample / max)))*1000;
+			return sqrt(sqrt(sqrt(sample / max)))*SND_PEAK_MAX;
 		case SND_PWR2:
-			return pow(sample / max, 2)*1000;
+			return pow(sample / max, 2)*SND_PEAK_MAX;
 		case SND_PWR4:
-			return pow(sample / max, 4)*1000;
+			return pow(sample / max, 4)*SND_PEAK_MAX;
 		case SND_PWR8:
-			return pow(sample / max, 8)*1000;
+			return pow(sample / max, 8)*SND_PEAK_MAX;
 		default:
-			return sample * 1000 / max;
+			return (sample / max)*SND_PEAK_MAX;
 	}
 }

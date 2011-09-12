@@ -133,7 +133,7 @@ detection:
 	//function for sound peak value calculation: 0 - linear (default), 1 - 2pwr root, 2 - 4pwr root, 3 - 8pwr root, 4 - 2pwr, 5 - 4pwr, 6 - 8pwr
 	sound_peak_value_function = 0;
 
-	//sound noise is detected when peak value calculated with the "peak_value_function" is grater than this value (0 - 1000)
+	//sound noise is detected when peak value calculated with the "peak_value_function" is grater than this value (0 - 100000)
 	sound_peak_threshold  = 250;
 };
 

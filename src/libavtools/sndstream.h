@@ -54,10 +54,13 @@ enum weight_func
 	 SND_PWR8
 };
 
-//when a sample must be clipped set it to CLIP_LEVEL*MAX value
+///when a sample must be clipped set it to CLIP_LEVEL*MAX value
 #define CLIP_LEVEL     0.99
 #define SND_8BIT_MAX   CHAR_MAX*CLIP_LEVEL
 #define SND_16BIT_MAX  SHRT_MAX*CLIP_LEVEL
+
+///maximum peak value
+#define SND_PEAK_MAX   100000
 
 ///encapsulates alsa api to soundcard.
 class Sndstream

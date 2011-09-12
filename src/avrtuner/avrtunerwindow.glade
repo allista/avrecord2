@@ -314,7 +314,7 @@
               <object class="GtkLabel" id="NoiseValueLabel">
                 <property name="visible">True</property>
                 <property name="justify">right</property>
-                <property name="width_chars">6</property>
+                <property name="width_chars">7</property>
                 <property name="single_line_mode">True</property>
                 <attributes>
                   <attribute name="style" value="normal"/>
@@ -334,7 +334,7 @@
               <object class="GtkLabel" id="MotionValueLabel">
                 <property name="visible">True</property>
                 <property name="justify">right</property>
-                <property name="width_chars">6</property>
+                <property name="width_chars">7</property>
                 <property name="single_line_mode">True</property>
                 <attributes>
                   <attribute name="style" value="normal"/>

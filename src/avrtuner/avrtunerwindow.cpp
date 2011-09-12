@@ -19,15 +19,16 @@
  ***************************************************************************/
 
 #include <fstream>
+#include <stdio.h>
 
 #include <common.h>
 #include "avrtunerwindow.h"
 
-AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const Glib::RefPtr<Builder> & _builder)
-: Window(window)
+AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const Glib::RefPtr<Builder> &builder)
+: Window(window),
+  monitor_thread(NULL),
+  builder(builder)
 {
-	builder = _builder;
-
 	//get all nesessary widgets:
 	//statusbar
 	builder->get_widget("FilenameStatusbar", FilenameStatusbar);
@@ -100,6 +101,15 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const Glib::RefPtr<Builder> &
 	SaveButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::save));
 	SaveAsButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::save_as));
 	InitButton->signal_clicked().connect(sigc::mem_fun(*this, &AVRTunerWindow::init));
+
+	//connect dispatcher
+	signal_update_meters.connect(sigc::mem_fun(*this, &AVRTunerWindow::update_meters));
+}
+
+AVRTunerWindow::~ AVRTunerWindow()
+{
+	stop_monitor();
+	delete ConfigSourceView;
 }
 
 void AVRTunerWindow::LoadConfiguration(string _config_fname)
@@ -109,33 +119,62 @@ void AVRTunerWindow::LoadConfiguration(string _config_fname)
 	revert();
 }
 
-void AVRTunerWindow::CaptureThread()
-{
-	if(recorder)
-	{
-		delete recorder;
-		recorder = NULL;
-	}
-
-	recorder = new BaseRecorder<Glib::Mutex>();
-	if(!recorder->Init(config.getConfig()))
-	{
-			::log_message(1, "CaptureThread: Init: unable to initialize recorder");
-			delete recorder;
-			recorder = NULL;
-			return;
-	}
-
-
-}
-
-void AVRTunerWindow::MonitorThread()
-{
-}
-
 void AVRTunerWindow::LogMessage(string message)
 { LogTextView->get_buffer()->insert(LogTextView->get_buffer()->end(), message); }
 
+
+bool AVRTunerWindow::on_delete_event(GdkEventAny *event)
+{
+	if(ConfigSourceBuffer->get_modified())
+	{
+		MessageDialog dialog(*this,
+							 "Configuration has not been saved. Are you sure you whant to quit?", false,
+							 Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_OK_CANCEL);
+		dialog.set_secondary_text("All modifications will be lost.");
+
+		if(RESPONSE_OK != dialog.run()) return true;
+	}
+	return false;
+}
+
+
+void AVRTunerWindow::stop_monitor()
+{
+	if(!monitor_thread) return;
+
+	monitor.stop();
+	if(monitor_thread->joinable())
+		monitor_thread->join();
+
+	monitor_thread = NULL;
+}
+
+void AVRTunerWindow::update_meters()
+{
+	if(!monitor_thread) return;
+
+	Glib::Mutex::Lock lock(mutex);
+	uint motion = monitor.getMotion();
+	double motion_percent = (double)motion/monitor.getMotionMax();
+	uint peak   = monitor.getPeak();
+	double peak_percent   = (double)peak/monitor.getPeakMax();
+	lock.release();
+
+	motion_percent = (motion_percent < 0)? 0 : motion_percent;
+	motion_percent = (motion_percent > 1)? 1 : motion_percent;
+	peak_percent   = (peak_percent   < 0)? 0 : peak_percent;
+	peak_percent   = (peak_percent   > 1)? 1 : peak_percent;
+
+	char motion_string[10] = {0};
+	char peak_string[10] = {0};
+	sprintf(motion_string, "%d", motion);
+	sprintf(peak_string, "%d", peak);
+
+	MotionProgressBar->set_fraction(motion_percent);
+	MotionValueLabel->set_text(motion_string);
+	NoiseProgressBar->set_fraction(peak_percent);
+	NoiseValueLabel->set_text(peak_string);
+}
 
 void AVRTunerWindow::config_changed()
 { ConfigSourceBuffer->set_modified(true); }
@@ -213,14 +252,29 @@ void AVRTunerWindow::test_config_toggle()
 		}
 
 		clear_log_clicked();
+
+		if(!monitor.Init(config.getConfig(), &signal_update_meters, ShowMotionCheckbox->get_active()))
+		{
+			log_message(1, "Monitor was not initialized properly");
+			TestConfigButton->set_active(false);
+			test_config_toggle();
+			show_log();
+			return;
+		}
+		monitor_thread = Glib::Thread::create(sigc::mem_fun(monitor, &VideoMonitor::run), true);
 	}
 	else
 	{
+		stop_monitor();
 		MainStack->set_current_page(0);
 		ShowLogButton->set_active(0);
 		ShowLogButton->show();
 		ConfigToolbar->show();
 		ConfigChooserButton->show();
+		MotionProgressBar->set_fraction(0);
+		MotionValueLabel->set_text("");
+		NoiseProgressBar->set_fraction(0);
+		NoiseValueLabel->set_text("");
 	}
 }
 
@@ -360,4 +414,3 @@ void AVRTunerWindow::init()
 	}
 	else revert();
 }
-

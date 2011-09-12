@@ -24,13 +24,6 @@
 	@author Allis Tauri <allista@gmail.com>
 */
 
-extern "C"
-{
-#define __STDC_CONSTANT_MACROS
-#include <libswscale/swscale.h>
-}
-#include <SDL/SDL.h>
-
 #include <gtkmm.h>
 #include <gtksourceviewmm.h>
 #include <sigc++/sigc++.h>
@@ -38,55 +31,40 @@ using namespace Gtk;
 using namespace gtksourceview;
 
 #include <avconfig.h>
-#include <recorder.h>
+#include <videomonitor.h>
 
 class AVRTunerWindow: public Window
 {
 public:
-	AVRTunerWindow() : Window() {};
-	AVRTunerWindow(GtkWindow* window, const Glib::RefPtr<Builder>& _builder);
-	virtual ~AVRTunerWindow() { delete ConfigSourceView; };
+	AVRTunerWindow(GtkWindow* window, const Glib::RefPtr<Builder> &builder);
+	virtual ~AVRTunerWindow();
 
 	///load configuration
 	void LoadConfiguration(string _config_fname);
 
-	///function which run in a thread and in which Recorder loop runs
-	void CaptureThread();
-
-	///function which run in a thread and in which Monitor loop runs
-	void MonitorThread();
-
 	///append a message to the log textview
 	void LogMessage(string message);
 
+protected:
+	virtual bool on_delete_event(GdkEventAny *event);
+
 private:
-	///core stuff
+	///video monitor
+	VideoMonitor monitor;
+	Glib::Dispatcher signal_update_meters;
+	Glib::Thread *monitor_thread;
 	Glib::Mutex mutex;
+
+	void stop_monitor();
+
+	///configuration
 	AVConfig    config;
 	string      config_fname;
 	bool        config_parsed;
-	BaseRecorder<Glib::Mutex> *recorder;
-	uint signal; ///< Recorder's IdleLoop control signal
-
-	///monitor stuff
-	SDL_Event      event;   ///< SDL event
-
-	SDL_Rect       screen_rect; ///< screen dimentions
-	SDL_Surface   *screen;  ///< output screen
-	SDL_Overlay   *overlay; ///< YUV overlay
-	AVPicture      overlay_frame; ///< ffmpeg structure representing overlay. Used for pixel format conversions
-	SwsContext    *sws;     ///< scaling and converting context
-	PixelFormat    in_fmt;  ///< ffmpeg PixelFormat of the input picture
-
-	uint           motion;  ///< number of diff-pixels
-	uint           peak;    ///< sound noise level
-	unsigned char *buffer;  ///< buffer for captured image
-	uint           v_bsize; ///< size of image buffer
-	uint           width;   ///< widht of the image
-	uint           height;  ///< height of the image
-	bool highlight_motion;  ///< if true, get motion buffer from the catcher, otherwise get video buffer
 
 	///signal handlers
+	void update_meters();
+
 	void config_changed();
 	void modified_changed();
 

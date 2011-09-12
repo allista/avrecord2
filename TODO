@@ -1,9 +1,6 @@
+Make avrtuner and tests optional
+Add webcam server
 Request ffmpeg for supported video and audio codecs
-Switch to gtk2(3?) in avrtuner... DONE
+
 Fix audio problems after pauses... DONE?
 Fix video stuttering (if it is still there)... there isn't one in fact =)
-
-Switch to V4L2... DONE
-Switch to libconfig for settings... DONE
-Request the device for... DONE
-Switch to SDL in avrtuner for video output (and stop inventing bicycles!)... DONE

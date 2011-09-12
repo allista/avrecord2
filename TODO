@@ -1,4 +1,3 @@
-Draw icons for avrtuner
 Make avrtuner and tests optional
 Add webcam server
 Request ffmpeg for supported video and audio codecs

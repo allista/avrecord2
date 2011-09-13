@@ -1,2 +1,7 @@
-SUBDIRS = src tests po
+SUBDIRS = src po
+
+if COMPILE_TESTS
+SUBDIRS += tests
+endif
+
 ACLOCAL_AMFLAGS = -I m4

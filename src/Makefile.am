@@ -1,5 +1,10 @@
 INCLUDES = -I$(top_srcdir)/src/libavtools $(all_includes)
-SUBDIRS = libavtools avrtuner
+SUBDIRS = libavtools 
+
+if COMPILE_AVRTUNER
+SUBDIRS += avrtuner
+endif
+
 METASOURCES = AUTO
 
 servicedir = /etc/init.d/

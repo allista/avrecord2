@@ -15,15 +15,15 @@
     <ignoreparts/>
     <projectdirectory>.</projectdirectory>
     <absoluteprojectpath>false</absoluteprojectpath>
-    <description></description>
+    <description/>
     <versioncontrol/>
     <projectname>avrecord</projectname>
-    <defaultencoding></defaultencoding>
+    <defaultencoding/>
   </general>
   <kdevautoproject>
     <general>
       <activetarget>src/avrtuner/avrtuner</activetarget>
-      <useconfiguration>debug</useconfiguration>
+      <useconfiguration>optimized</useconfiguration>
     </general>
     <run>
       <mainprogram/>
@@ -88,14 +88,14 @@
         <f77compiler>kdevg77options</f77compiler>
         <cxxflags>-O0 -pedantic -Wall -g3</cxxflags>
         <envvars/>
-        <topsourcedir></topsourcedir>
-        <cppflags></cppflags>
-        <ldflags></ldflags>
-        <ccompilerbinary></ccompilerbinary>
-        <cxxcompilerbinary></cxxcompilerbinary>
-        <f77compilerbinary></f77compilerbinary>
-        <cflags></cflags>
-        <f77flags></f77flags>
+        <topsourcedir/>
+        <cppflags/>
+        <ldflags/>
+        <ccompilerbinary/>
+        <cxxcompilerbinary/>
+        <f77compilerbinary/>
+        <cflags/>
+        <f77flags/>
       </debug>
     </configurations>
     <make>
@@ -170,12 +170,12 @@
   </kdevdoctreeview>
   <kdevdebugger>
     <general>
-      <dbgshell></dbgshell>
+      <dbgshell/>
       <programargs>-c ../avrecord.conf</programargs>
       <gdbpath>/usr/bin/gdb</gdbpath>
-      <configGdbScript></configGdbScript>
-      <runShellScript></runShellScript>
-      <runGdbScript></runGdbScript>
+      <configGdbScript/>
+      <runShellScript/>
+      <runGdbScript/>
       <breakonloadinglibs>true</breakonloadinglibs>
       <separatetty>false</separatetty>
       <floatingtoolbar>false</floatingtoolbar>
@@ -260,7 +260,7 @@
       <includePaths>.;</includePaths>
     </codecompletion>
     <creategettersetter>
-      <prefixGet></prefixGet>
+      <prefixGet/>
       <prefixSet>set</prefixSet>
       <prefixVariable>m_,_</prefixVariable>
       <parameterName>theValue</parameterName>
@@ -296,15 +296,15 @@
     <bzip>true</bzip>
     <archname>%n-%v</archname>
     <appname>avrecord2</appname>
-    <version>1.1.2</version>
+    <version>2.0.0</version>
     <release>beta</release>
-    <vendor/>
+    <vendor></vendor>
     <licence>GPL</licence>
-    <summary/>
-    <group/>
-    <packager/>
-    <description/>
-    <changelog/>
+    <summary></summary>
+    <group></group>
+    <packager></packager>
+    <description></description>
+    <changelog></changelog>
     <devpackage>false</devpackage>
     <docspackage>false</docspackage>
     <appicon>false</appicon>
@@ -313,6 +313,6 @@
     <useRPM>false</useRPM>
     <ftpkde>false</ftpkde>
     <appskde>false</appskde>
-    <url/>
+    <url></url>
   </dist>
 </kdevelop>

@@ -3,10 +3,10 @@
 paths:
 {
 	//path for logfile
-	log_file   = "/etc/avrecord/avrecord.log";
+	log_file   = "./avrecord.log";
 
 	//output directory where generated movies will be saved
-	output_dir = "/home";
+	output_dir = "./";
 
 	//name template for output movies
 	filename   = "movie-%Y-%m-%d_%H-%M.avi";
@@ -83,7 +83,7 @@ switches:
 	detect_motion    = true;
 
 	//if true, do noise detection
-	detect_noise     = false;
+	detect_noise     = true;
 
 	//if true, record only when motion (or noise, if correspondig flag is set) is detected
 	record_on_motion = true;
@@ -95,7 +95,7 @@ switches:
 	print_motion_amount    = true;
 
 	//if true, print sound peak value
-	print_sound_peak_value = false;
+	print_sound_peak_value = true;
 
 	//if true, print current date to the image
 	print_date       = true;
@@ -113,7 +113,7 @@ detection:
 	post_motion_offset = 30; //seconds
 
 	//number of frames to write before the one on wich motion (or noise) was detected
-	latency = 8;	//value: 2 or grater
+	latency = 10;	//value: 2 or grater
 
 	//step in frames between the two compared ones
 	frame_step  = 5; //value: from 1 or grater
@@ -122,13 +122,13 @@ detection:
 	pixel_step  = 1;
 
 	//when detecting a motion, difference between two pixels is compared with this value
-	video_noise_level = 2;
+	video_noise_level = 20;
 
 	//how many times to erode captured image to remove a noise
-	video_noise_reduction_level = 1;
+	video_noise_reduction_level = 0;
 
 	//a motion is detected when number of differing pixels is grater than this value
-	motion_threshold   = 25;
+	motion_threshold   = 100;
 
 	//function for sound peak value calculation: 0 - linear (default), 1 - 2pwr root, 2 - 4pwr root, 3 - 8pwr root, 4 - 2pwr, 5 - 4pwr, 6 - 8pwr
 	sound_peak_value_function = 0;

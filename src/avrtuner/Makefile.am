@@ -16,3 +16,5 @@ conf_DATA = avrtunerwindow.glade
 desktopdir = $(datadir)/applications
 desktop_DATA = avrtuner.desktop
 
+iconsdir = $(datadir)/icons/hicolor/scalable/apps/
+icons_DATA = hi64-avrtuner-icon.svg

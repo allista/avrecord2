@@ -67,6 +67,7 @@ AVRTunerWindow::AVRTunerWindow(GtkWindow * window, const Glib::RefPtr<Builder> &
 	ConfigSourceView->set_show_line_marks();
 	ConfigSourceView->set_indent_on_tab();
 	ConfigSourceView->set_auto_indent();
+	ConfigSourceView->set_wrap_mode(WRAP_WORD);
 	ConfigSourceView->show();
 
 	//source buffer setup
@@ -207,16 +208,16 @@ void AVRTunerWindow::show_log_toggle()
 		MainStack->set_current_page(1);
 		ClearLogButton->show();
 
-		ConfigToolbar->hide();
-		ConfigChooserButton->hide();
+		ConfigToolbar->set_sensitive(false); //hide();
+		ConfigChooserButton->set_sensitive(false); //hide();
 	}
 	else
 	{
 		MainStack->set_current_page(0);
 		ClearLogButton->hide();
 
-		ConfigToolbar->show();
-		ConfigChooserButton->show();
+		ConfigToolbar->set_sensitive(); //hide();
+		ConfigChooserButton->set_sensitive(); //hide();
 	}
 }
 
@@ -225,8 +226,8 @@ void AVRTunerWindow::test_config_toggle()
 	if(config_fname.empty())
 	{
 		if(ConfigSourceBuffer->get_modified())
-			log_message(1, "Configuration has to be, saved in a file first.");
-		else log_message(1, "No configuration loaded.");
+			LogMessage("Configuration has to be saved in a file first.");
+		else LogMessage("No configuration loaded.");
 		show_log();
 		return;
 	}
@@ -237,8 +238,7 @@ void AVRTunerWindow::test_config_toggle()
 		ShowLogButton->set_active(1);
 		ShowLogButton->hide();
 		ClearLogButton->hide();
-		ConfigToolbar->hide();
-		ConfigChooserButton->hide();
+		ShowMotionCheckbox->set_sensitive(false);
 
 		if(ConfigSourceBuffer->get_modified())
 			save();
@@ -255,7 +255,7 @@ void AVRTunerWindow::test_config_toggle()
 
 		if(!monitor.Init(config.getConfig(), &signal_update_meters, ShowMotionCheckbox->get_active()))
 		{
-			log_message(1, "Monitor was not initialized properly");
+			LogMessage("Monitor was not initialized properly");
 			TestConfigButton->set_active(false);
 			test_config_toggle();
 			show_log();
@@ -269,8 +269,7 @@ void AVRTunerWindow::test_config_toggle()
 		MainStack->set_current_page(0);
 		ShowLogButton->set_active(0);
 		ShowLogButton->show();
-		ConfigToolbar->show();
-		ConfigChooserButton->show();
+		ShowMotionCheckbox->set_sensitive();
 		MotionProgressBar->set_fraction(0);
 		MotionValueLabel->set_text("");
 		NoiseProgressBar->set_fraction(0);
@@ -302,7 +301,7 @@ void AVRTunerWindow::revert()
 	if(!cfg.is_open())
 	{
 		config_fname.clear();
-		log_message(1, "Unable to open %s", config_fname);
+		LogMessage(string("Unable to open ")+config_fname);
 		show_log();
 		return;
 	}
@@ -330,7 +329,7 @@ void AVRTunerWindow::revert()
 	else config_parsed = true;
 
 	ConfigSourceBuffer->set_modified(false);
-	ConfigChooserButton->set_filename(config_fname);
+	ConfigChooserButton->unselect_all();
 }
 
 void AVRTunerWindow::undo()
@@ -355,7 +354,7 @@ void AVRTunerWindow::save()
 	cfg.open(config_fname.c_str(), ios_base::out);
 	if(!cfg.is_open())
 	{
-		log_message(1, "Unable to open %s for writing", config_fname);
+		LogMessage(string("Unable to open ")+config_fname+" for writing");
 		show_log();
 		return;
 	}
@@ -372,7 +371,7 @@ void AVRTunerWindow::save()
 	else config_parsed = true;
 
 	ConfigSourceBuffer->set_modified(false);
-	ConfigChooserButton->set_filename(config_fname);
+	ConfigChooserButton->unselect_all();
 }
 
 void AVRTunerWindow::save_as()
@@ -403,14 +402,34 @@ void AVRTunerWindow::init()
 	MessageDialog dialog(*this,
 						  "Are you sure you whant to initialize configuration by quering video device?", false,
 						  Gtk::MESSAGE_QUESTION, Gtk::BUTTONS_OK_CANCEL);
-	dialog.set_secondary_text("Current video configuration will be lost.");
-
+	dialog.set_secondary_text("Initialized configuration should be saved into a new file...");
 	if(RESPONSE_OK != dialog.run()) return;
 
-	if(!config.Init() || !config.Save())
+	FileChooserDialog file_chooser("Save as...", FILE_CHOOSER_ACTION_SAVE);
+	file_chooser.add_button(Stock::CANCEL, RESPONSE_CANCEL);
+	file_chooser.add_button(Stock::SAVE, RESPONSE_OK);
+	file_chooser.set_transient_for(*this);
+
+	string new_config_fname;
+	int result = file_chooser.run();
+	switch(result)
+	{
+		case RESPONSE_OK:
+			new_config_fname = file_chooser.get_filename();
+			break;
+
+		case RESPONSE_CANCEL:
+			return;
+	}
+	if(!config.Init() || !config.SaveAs(new_config_fname))
 	{
 		show_log();
 		return;
 	}
-	else revert();
+	else
+	{
+		config_fname = new_config_fname;
+		ConfigSourceBuffer->set_modified(true);
+		revert();
+	}
 }

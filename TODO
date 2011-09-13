@@ -1,6 +1,8 @@
-Make avrtuner and tests optional
+TODOs:
+Test installation of .desktop, icons and stuff
 Add webcam server
 Request ffmpeg for supported video and audio codecs
 
-Fix audio problems after pauses... DONE?
-Fix video stuttering (if it is still there)... there isn't one in fact =)
+Unconfirmed bugs:
+Audio problems after pauses.
+Video stuttering (if it is still there)... No stuttering, so it seems...

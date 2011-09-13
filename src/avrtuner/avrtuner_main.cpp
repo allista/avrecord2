@@ -88,7 +88,7 @@ void log_message(int level, const char *fmt, ...)
 	//output...
 	if(level) cerr << buf << flush; //log to stderr
 	else cout << buf << flush; //log to stdout
-	MainWindow->LogMessage(buf); //to log window
+	if(MainWindow) MainWindow->LogMessage(buf); //to log window
 
 	//Clean up the argument list routine
 	va_end(ap);

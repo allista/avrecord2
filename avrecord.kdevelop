@@ -298,13 +298,13 @@
     <appname>avrecord2</appname>
     <version>2.0.0</version>
     <release>beta</release>
-    <vendor></vendor>
+    <vendor/>
     <licence>GPL</licence>
-    <summary></summary>
-    <group></group>
-    <packager></packager>
-    <description></description>
-    <changelog></changelog>
+    <summary/>
+    <group/>
+    <packager/>
+    <description/>
+    <changelog/>
     <devpackage>false</devpackage>
     <docspackage>false</docspackage>
     <appicon>false</appicon>
@@ -313,6 +313,6 @@
     <useRPM>false</useRPM>
     <ftpkde>false</ftpkde>
     <appskde>false</appskde>
-    <url></url>
+    <url/>
   </dist>
 </kdevelop>

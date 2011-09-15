@@ -99,6 +99,9 @@ switches:
 
 	//if true, print current date to the image
 	print_date       = true;
+
+	//if ture, start and stop record events will be logged to a log file
+	log_events = false;
 };
 
 detection:

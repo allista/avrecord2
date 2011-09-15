@@ -121,6 +121,8 @@ public:
 
 	uint getPixelFormat() const { return v_source.pixel_format(); }
 
+	double getFrameInterval() const { return v_source.frame_interval(); }
+
 private:
 	bool            inited;    ///< true if all is inited
 
@@ -159,9 +161,10 @@ private:
                                ///< correspondig flag is set) is detected
 	bool     record_on_noise;  ///< if true, record only when noise (or motion, if
                                ///< correspondig flag is set) is detected
-	bool     print_motion;      ///< if true, print number of motion pixels to the image
+	bool     print_motion;     ///< if true, print number of motion pixels to the image
 	bool     print_peak;       ///< if true, print sound peak value
 	bool     print_date;       ///< if true, print current date to the image
+	bool     log_events;       ///< if ture, start and stop record events will be logged to a log file
 
 	//schedule parameters
 	typedef  pair<tm,tm>    t_window; ///< defines a time window
@@ -341,6 +344,8 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 	catch(SettingNotFoundException) { print_peak      = false; }
 	try	{ print_date       = avrecord_config->lookup("switches.print_date"); }
 	catch(SettingNotFoundException) { print_date       = true; }
+	try	{ log_events       = avrecord_config->lookup("switches.log_events"); }
+	catch(SettingNotFoundException) { log_events       = false; }
 
 	if(record_on_motion)
 		detect_motion = true;
@@ -713,7 +718,8 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 				recording = true;
 				record_timer.start();
 				silence_timer.reset();
-				if(idle) log_message(0, "Recorder: IdleLoop: motion or noise detected. Start recording.");
+				if(idle || log_events)
+					log_message(0, "Recorder: motion or noise detected. Start recording.");
 			}
 		}
 		else //record frames
@@ -761,7 +767,8 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 			{
 				recording = false;
 				record_timer.pause();
-				if(idle) log_message(0, "Recorder: IdleLoop: no motion or noise. Pause recording.");
+				if(idle || log_events)
+					log_message(0, "Recorder: no motion or noise for %d seconds. Pause recording.", post_motion_offset);
 			}
 		}
 		unlock();
@@ -890,7 +897,7 @@ uint BaseRecorder<_mutex>::measure_motion( )
 		erode(m_buffer->wbuffer());
 	m_buffer->push();
 
-	if(m_buffer->filled_size() <= frame_step) return 1000;
+	if(m_buffer->filled_size() <= frame_step) return 0;
 
 	return fast_diff(*m_buffer, (*m_buffer)[1]);
 }

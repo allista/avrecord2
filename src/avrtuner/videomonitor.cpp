@@ -108,7 +108,6 @@ bool VideoMonitor::Init(Config *_config, Glib::Dispatcher *signal, bool with_mot
 		}
 	}
 	stop_monitor = false;
-
 	return true;
 }
 
@@ -169,7 +168,7 @@ void VideoMonitor::run()
 		}
 
 		emit_update_meters();
-		usleep(50);
+		usleep(recorder->getFrameInterval()*1000000);
 	}
 
 	stop_capture();

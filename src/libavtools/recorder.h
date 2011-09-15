@@ -650,7 +650,7 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 				if(v_pts < a_pts || a_buffer->empty())
 				{
 					if(!idle) write_frame();
-					else { v_pts += v_source.frame_interval(); v_buffer->pop(); }
+					else { v_pts += v_source.frame_interval(); lock(); v_buffer->pop(); unlock(); }
 				}
 			}
 
@@ -673,7 +673,7 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 				}
 			}
 			else log_message(0, "Recorder: IdleLoop: switched to next file");
-			*signal = SIG_RECORDING;
+			lock(); *signal = SIG_RECORDING; unlock();
 		}
 
 
@@ -754,7 +754,7 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 				if(capture && record_on_motion)
 					silence_timer.reset();
 				if(!idle) write_frame();
-				else { v_pts += v_source.frame_interval(); v_buffer->pop(); }
+				else { v_pts += v_source.frame_interval(); lock(); v_buffer->pop(); unlock(); }
 			}
 
 
@@ -893,9 +893,9 @@ uint BaseRecorder<_mutex>::measure_motion( )
 	memcpy(m_buffer->wbuffer(), (*v_buffer)[1], v_bsize);
 	for(int i = video_noise_reduction_level; i > 0; i--)
 		erode(m_buffer->wbuffer());
-	m_buffer->push();
+	m_buffer->push(v_bsize);
 
-	if(m_buffer->filled_size() <= frame_step) return 0;
+	if(!m_buffer->full()) return 0;
 
 	return fast_diff(*m_buffer, (*m_buffer)[1]);
 }

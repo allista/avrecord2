@@ -31,17 +31,18 @@ class BufferRing
 {
 	public:
 		///Constructor
-		BufferRing(unsigned int _b_size,			///< size of a buffer
-							 unsigned int _r_size = 2		///< number of buffers in the ring
-							);
+		BufferRing(unsigned int _b_size,    ///< size of a buffer
+				   unsigned int _r_size = 2 ///< number of buffers in the ring
+				  );
 		///Destructor
 		~BufferRing();
 
-		unsigned int buffer_size() 	const { return b_size; }; ///< Returns size of a buffer
-		unsigned int ring_size() 		const { return r_size; }; ///< Returns number of buffers in the ring
-		unsigned int filled_size() 	const { return c_size; }; ///< Returns number of buffers currently used
+		unsigned int buffer_size() const { return b_size; }; ///< Returns size of a buffer
+		unsigned int ring_size()   const { return r_size; }; ///< Returns number of buffers in the ring
+		unsigned int filled_size() const { return c_size; }; ///< Returns number of buffers currently used
 
 		bool empty() const { return iw == ir; }; ///< Returns true, if there're no buffers to read
+		bool full()  const { return c_size >= r_size-1; }; ///< true if the buffer is full
 
 		///Returns current write buffer
 		unsigned char* wbuffer() { return buffers[iw]; };
@@ -68,15 +69,14 @@ class BufferRing
 		void reset() { iw = ir = c_size = 0; };
 
 	private:
-		unsigned int		b_size;		///< size of a buffer
-		unsigned int		r_size;		///< number of buffers in the ring
-		unsigned int		c_size;		///< number of buffers currently used
-		unsigned char**	buffers;	///< the ring itself
-		unsigned int*		written;	///< how many bytes was written in i'th buffer
+		unsigned int    b_size;  ///< size of a buffer
+		unsigned int    r_size;  ///< number of buffers in the ring
+		unsigned int    c_size;  ///< number of buffers currently used
+		unsigned char **buffers; ///< the ring itself
+		unsigned int   *written; ///< how many bytes was written in i'th buffer
 
-		unsigned int ir;					///< read index
-		unsigned int iw;					///< write index
-
+		unsigned int    ir;      ///< read index
+		unsigned int    iw;      ///< write index
 };
 
 #endif

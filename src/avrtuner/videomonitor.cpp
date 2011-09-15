@@ -82,6 +82,8 @@ bool VideoMonitor::Init(Config *_config, Glib::Dispatcher *signal, bool with_mot
 	}
 	else
 	{
+		SDL_WM_SetCaption("Video output", "Video output");
+
 		screen_rect.x = 0;
 		screen_rect.y = 0;
 		screen_rect.w = width;
@@ -166,7 +168,6 @@ void VideoMonitor::run()
 			//pool events (or they'll pile up and freez the app O_O)
 			while(SDL_PollEvent(&event));
 		}
-
 		emit_update_meters();
 		usleep(recorder->getFrameInterval()*1000000);
 	}

@@ -582,7 +582,6 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 	}
 
 	//capture the first video frame for motion detection
-	lock();
 	if(detect_motion && (capture_frame() < 0))
 	{
 		log_message(1, "Recorder: Init: unable to capture first frame.");
@@ -597,7 +596,6 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 		Close();
 		return false;
 	}
-	unlock();
 
 	//main record loop
 	while(*signal != SIG_QUIT)
@@ -680,16 +678,14 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 
 
 		//recording or waiting for motion or noise
-		lock();
 		if((record_on_motion || record_on_noise) && !recording) //just listen
 		{
 			if(silence_timer.elapsed() > min_gap && record_timer.elapsed() > min_record_time)
 			{
-				*signal = SIG_CHANGE_FILE;
+				lock(); *signal = SIG_CHANGE_FILE; unlock();
 				silence_timer.reset();
 				record_timer.reset();
 				record_timer.pause();
-				unlock();
 				continue;
 			}
 
@@ -768,10 +764,9 @@ bool BaseRecorder<_mutex>::RecordLoop( uint * signal, bool idle )
 				recording = false;
 				record_timer.pause();
 				if(idle || log_events)
-					log_message(0, "Recorder: no motion or noise for %d seconds. Pause recording.", post_motion_offset);
+					log_message(0, "Recorder: no motion or noise for %d seconds. Pause recording.", post_motion_offset/1000000);
 			}
 		}
-		unlock();
 
 next_loop:
 		continue;
@@ -835,7 +830,7 @@ bool BaseRecorder<_mutex>::write_frame()
 	if(!inited || v_buffer->empty())	return false;
 
 	bool err = av_output.writeVFrame(*v_buffer);
-	v_buffer->pop();
+	lock(); v_buffer->pop(); unlock();
 	return err;
 }
 
@@ -856,6 +851,7 @@ int BaseRecorder<_mutex>::capture_frame()
 {
 	if(!inited) return -1;
 
+	lock();
 	int read = v_source.Read(v_buffer->wbuffer(), v_bsize);
 	if(read == -1) return -1;
 	if(read ==  0) return  0;
@@ -863,6 +859,8 @@ int BaseRecorder<_mutex>::capture_frame()
 
 	if(detect_motion) last_diffs = measure_motion();
 	print_info((*v_buffer)[1]);
+	unlock();
+
 	if(detect_motion) return last_diffs;
 	else return 0;
 }

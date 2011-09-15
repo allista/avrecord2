@@ -121,7 +121,10 @@ void AVRTunerWindow::LoadConfiguration(string _config_fname)
 }
 
 void AVRTunerWindow::LogMessage(string message)
-{ LogTextView->get_buffer()->insert(LogTextView->get_buffer()->end(), message); }
+{
+	LogTextView->get_buffer()->insert(LogTextView->get_buffer()->end(), message);
+	LogTextView->queue_draw();
+}
 
 
 bool AVRTunerWindow::on_delete_event(GdkEventAny *event)

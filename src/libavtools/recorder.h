@@ -90,7 +90,7 @@ public:
 
 	///unlocks recorder's mutex, then sleeps 5 nanoseconds in
 	///order to give a chance to lock the mutex to another thread.
-	void unlock() { mutex.unlock(); usleep(5); };
+	void unlock() { mutex.unlock(); };
 
 	///returns number of motion pixels (NOTE: you must enclose call
 	///of this function with lock()-unlock() pair)
@@ -290,8 +290,8 @@ BaseRecorder<_mutex>::BaseRecorder()
 	//flags
 	detect_motion    = false;
 	record_on_motion = false;
-	print_motion      = false;
-	print_peak      = false;
+	print_motion     = false;
+	print_peak       = false;
 	print_date       = false;
 
 	//schedule parameters

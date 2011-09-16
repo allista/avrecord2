@@ -48,6 +48,11 @@ int main (int argc, char *argv[])
 	if(config_file.empty())
 		log_message(0, "No configuration filename supplied.");
 
+	if(!Glib::thread_supported()) Glib::thread_init();
+	if(!Glib::thread_supported())
+		std::cerr << "Thread system is not initialized.\n" << flush;
+	else std::cout << "Thread system is successfully initialized.\n" << flush;
+
 	Main gtk_main(argc, argv);
 
 	Glib::RefPtr<Builder> builder;

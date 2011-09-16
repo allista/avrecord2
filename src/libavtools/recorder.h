@@ -853,8 +853,8 @@ int BaseRecorder<_mutex>::capture_frame()
 
 	lock();
 	int read = v_source.Read(v_buffer->wbuffer(), v_bsize);
-	if(read == -1) return -1;
-	if(read ==  0) return  0;
+	if(read == -1) { unlock(); return -1; }
+	if(read ==  0) { unlock(); return  0; }
 	v_buffer->push(v_bsize);
 
 	if(detect_motion) last_diffs = measure_motion();

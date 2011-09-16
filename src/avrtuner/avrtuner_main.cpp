@@ -51,7 +51,6 @@ int main (int argc, char *argv[])
 	if(!Glib::thread_supported()) Glib::thread_init();
 	if(!Glib::thread_supported())
 		std::cerr << "Thread system is not initialized.\n" << flush;
-	else std::cout << "Thread system is successfully initialized.\n" << flush;
 
 	Main gtk_main(argc, argv);
 

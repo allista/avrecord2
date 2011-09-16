@@ -38,7 +38,6 @@ Sndstream::Sndstream()
 
 	weight_function = SND_LIN;
 	amp_level   = 1;
-	sig_offset  = 0;
 	peak_value  = 0;
 
 	_bsize    = 0;
@@ -52,7 +51,6 @@ bool Sndstream::Open(Setting *audio_settings_ptr, pcm_fmt fmt, weight_func weigh
 
 	int ret     = 0;
 	int dir     = 0;
-	sig_offset  = 0;
 	format      = fmt;
 	weight_function = weight_f;
 
@@ -224,7 +222,6 @@ void Sndstream::Close()
 	snd_dev    = NULL;
 	hw_params  = NULL;
 	sw_params  = NULL;
-	sig_offset = 0;
 }
 
 int Sndstream::Read(void* buffer, uint size)
@@ -275,45 +272,29 @@ void Sndstream::amplify(void *buffer, uint num_frames)
 	{
 		case SND_8BIT:
 			cb		= (char*)buffer;
-
-			if(!sig_offset)
-			{
-				for(int i = 0; i < num_frames; i++)
-					sig_offset += cb[i]; sig_offset /= num_frames;
-			}
-
 			for(int i = 0; i < num_frames; i++)
 			{
-				cur		= (cb[i] - sig_offset) * amp_level;
+				cur		= cb[i] * amp_level;
 				if(labs(cur) > SND_8BIT_MAX)
 					cur = (cur > 0)? SND_8BIT_MAX : -1*SND_8BIT_MAX;
 				cb[i]	= char(cur);
 				if(abs(cb[i]) > max) max = abs(cb[i]);
 			}
 			max = weight(max, SND_8BIT_MAX);
-
 			break;
 
 
 		case SND_16BIT:
 			sb  = (short*)buffer;
-
-			if(!sig_offset)
-			{
-				for(int i = 0; i < num_frames; i++)
-					sig_offset += sb[i]; sig_offset /= num_frames;
-			}
-
 			for(int i = 0; i < num_frames; i++)
 			{
-				cur		= (sb[i] - sig_offset) * amp_level;
+				cur		= sb[i] * amp_level;
 				if(labs(cur) > SND_16BIT_MAX)
 					cur = (cur > 0)? SND_16BIT_MAX : -1*SND_16BIT_MAX;
 				sb[i]   = short(cur);
 				if(abs(sb[i]) > max) max = abs(sb[i]);
 			}
 			max = weight(max, SND_16BIT_MAX);
-
 			break;
 	}
 

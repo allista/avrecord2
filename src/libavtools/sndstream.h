@@ -106,7 +106,6 @@ private:
 	uint   format;               ///< pcm format
 	uint   channels;             ///< number of channels
 	double amp_level;            ///< ampliffication level
-	double sig_offset;           ///< vertical signal offset
 	uint   weight_function;      ///< math function for weight calculations
 	uint   peak_value;           ///< current peak value
 

@@ -1,0 +1,149 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<HTML><HEAD><TITLE>Man page of avrecord</TITLE>
+</HEAD><BODY>
+<H1>avrecord</H1>
+<BR>Updated: September 17, 2011<BR>
+
+<H2>NAME</H2>
+
+avrecord - program for capturing video and audio upon motion or noise detection
+<P>
+<A NAME="lbAC">&nbsp;</A>
+<H2>SYNOPSIS</H2>
+
+<A NAME="lbAD">&nbsp;</A>
+<H3>Record mode:</H3>
+
+<B>avrecord</B>
+
+[<B>-c</B>
+
+<I>config_file</I>]
+
+[<B>-l</B>
+
+<I>log_file</I>]
+
+[<B>-ndh?</B>]
+
+<A NAME="lbAE">&nbsp;</A>
+<H3>Configuration initialization mode:</H3>
+
+<B>avrecord</B>
+
+<B>-i[</B><I>device_name</I>]
+
+<B>-t</B><I>&nbsp;config_file_template</I><B>&nbsp;-o</B><I>&nbsp;new_config_output</I>
+
+<BR>
+
+<P>
+<A NAME="lbAF">&nbsp;</A>
+<H2>DESCRIPTION</H2>
+
+<B>avrecord</B>
+
+is an audio-video recorder with motion and noise detection. It constantly monitors a video stream from a v4l device looking for difference between consequent frames. It may also monitor sound level in a stream captured by a soundcard. While waiting for motion or noise it buffers data. When something is detected buffered data is written out so the precise moment of the event's beginning is not clipped.
+<P>
+<A NAME="lbAG">&nbsp;</A>
+<H2>CONFIGURATION</H2>
+
+Before you start using <B>avrecord</B> for the first time you should initialize it's configuration using the template file provided (see <B>FILES</B> section). Configuration is initialized by quering your video device capabilities and controls and adding them to the main configuration structure. Initialized configuration is saved then to a new file.
+<P>
+<A NAME="lbAH">&nbsp;</A>
+<H2>OPTIONS</H2>
+
+<A NAME="lbAI">&nbsp;</A>
+<H3>Record mode:</H3>
+
+<B><DL COMPACT>
+<DT>-c config_file<DD>
+</B>
+
+Specify alternative configuration file.
+<B><DT>-l log_file<DD>
+</B>
+
+Specify alternative log file.
+<B><DT>-n<DD>
+</B>
+
+Log to stdout.
+<B><DT>-d<DD>
+</B>
+
+Start in daemon mode.
+<B><DT>-h, -?<DD>
+</B>
+
+Print command help.
+</DL>
+<P>
+
+<A NAME="lbAJ">&nbsp;</A>
+<H3>Configuration initialization mode:</H3>
+
+<B><DL COMPACT>
+<DT>-i[</B><I>device_name</I>]<DD>
+
+
+Initialize configuration. If you specify a device name, please be carefull: there must be no space between the option and the name (e.g. <B>-i</B><I>/dev/video0</I>) If no device name is provided the one specified in a template file is used.
+<B><DT>-t config_file_template<DD>
+</B>
+
+Use specified configuration file as a template for a new configuration.
+<B><DT>-o new_config_output<DD>
+</B>
+
+Write initialized configuration to the file specified.
+<P>
+</DL>
+<A NAME="lbAK">&nbsp;</A>
+<H2>FILES</H2>
+
+<B>/etc/avrecord/avrecord.cfg.template</B>
+
+provides configuration sceleton for the first initializatioin of a configuration. All static configuration options are documented there.
+<P>
+
+<B>./avrecord.cfg,&nbsp;~/.avrecord/avrecord.cfg,&nbsp;/etc/avrecord/avrecord.cfg</B>
+
+configuration files in the order they're loked for by avrecord if the <B>-c</B> option is not used.
+<P>
+
+<B>./avrecord.log</B>
+
+default log file. Usualy log file path is defined in the configuration or by the <B>-l</B> option though.
+<P>
+
+<B>/etc/init.d/avrecd</B>
+
+daemon startup script. It may not work in your particular linux distribution due to startup system differences. It's there mainly for tailoring by distribution maintainers and system administrators.
+<P>
+<P>
+
+<HR>
+<A NAME="index">&nbsp;</A><H2>Index</H2>
+<DL>
+<DT><A HREF="#lbAB">NAME</A><DD>
+<DT><A HREF="#lbAC">SYNOPSIS</A><DD>
+<DL>
+<DT><A HREF="#lbAD">Record mode:</A><DD>
+<DT><A HREF="#lbAE">Configuration initialization mode:</A><DD>
+</DL>
+<DT><A HREF="#lbAF">DESCRIPTION</A><DD>
+<DT><A HREF="#lbAG">CONFIGURATION</A><DD>
+<DT><A HREF="#lbAH">OPTIONS</A><DD>
+<DL>
+<DT><A HREF="#lbAI">Record mode:</A><DD>
+<DT><A HREF="#lbAJ">Configuration initialization mode:</A><DD>
+</DL>
+<DT><A HREF="#lbAK">FILES</A><DD>
+</DL>
+<HR>
+This document was created by
+<A HREF="/cgi-bin/man/man2html">man2html</A>,
+using the manual pages.<BR>
+Time: 13:22:47 GMT, September 17, 2011
+</BODY>
+</HTML>

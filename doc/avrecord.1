@@ -1,0 +1,71 @@
+.\"Created with GNOME Manpages Editor Wizard
+.\"http://sourceforge.net/projects/gmanedit2
+.TH avrecord 1 "September 17, 2011" "" "record video and audio upon motion or noise detection"
+
+.SH NAME
+avrecord \- program for capturing video and audio upon motion or noise detection
+
+.SH SYNOPSIS
+.SS Record mode:
+.B avrecord
+.RB [\| \-c
+.IR config_file \|]
+.RB [\| \-l 
+.IR log_file \|]
+.RB [\| \-ndh? \|]
+.SS Configuration initialization mode:
+.B avrecord
+.B \-i 
+.RI [\| device_name \|]
+.BI \-t \ config_file_template \ -o \ new_config_output
+.br
+
+.SH DESCRIPTION
+.B avrecord
+is an audio-video recorder with motion and noise detection. It constantly monitors a video stream from a v4l device looking for difference between consequent frames. It may also monitor sound level in a stream captured by a soundcard. While waiting for motion or noise it buffers data. When something is detected buffered data is written out so the precise moment of the event's beginning is not clipped.
+
+.SH CONFIGURATION
+Before you start using \fBavrecord\fP for the first time you should initialize it's configuration using the template file provided (see \fBFILES\fP section). Configuration is initialized by quering your video device capabilities and controls and adding them to the main configuration structure. Initialized configuration is saved then to a new file.
+
+.SH OPTIONS
+.SS Record mode:
+.B
+.IP "-c config_file"
+Specify alternative configuration file.
+.B
+.IP "-l log_file"
+Specify alternative log file.
+.B
+.IP -n
+Log to stdout.
+.B
+.IP -d
+Start in daemon mode.
+.B
+.IP "-h, -?"
+Print command help.
+.PP
+.SS Configuration initialization mode:
+.B
+.IP "-i [\fIdevice_name\fP]"
+Initialize configuration. If no device name is provided the one specified in a template file is used.
+.B
+.IP "-t config_file_template"
+Use specified configuration file as a template for a new configuration.
+.B
+.IP "-o new_config_output"
+Write initialized configuration to the file specified.
+
+.SH FILES
+.B /etc/avrecord/avrecord.cfg.template
+provides configuration sceleton for the first initializatioin of a configuration. All static configuration options are documented there.
+.PP
+.B ./avrecord.cfg,\ ~/.avrecord/avrecord.cfg,\ /etc/avrecord/avrecord.cfg
+configuration files in the order they're loked for by avrecord if the \fB-c\fP option is not used.
+.PP
+.B ./avrecord.log
+default log file. Usualy log file path is defined in the configuration or by the \fB-l\fP option though.
+.PP
+.B /etc/init.d/avrecd
+daemon startup script. It may not work in your particular linux distribution due to startup system differences. It's there mainly for tailoring by distribution maintainers and system administrators.
+

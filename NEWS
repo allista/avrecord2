@@ -1,0 +1,17 @@
+A proper manual will be written soon...
+Bugreports'll be very appreciated!
+
+The last version is 2.0.1
+	Various bugfixes (threads crosstalk and CPU consumption in AVRTuner, audio clipping, etc.)
+	log_events option is added to the configuration to enable pause-resume record event logging
+
+Previous version is 2.0.0_rc1.
+It's a major update. The features of the update are:
+	Video capture using V4L2 api
+	Configuration using libconfig
+	Configuration GUI using Gtkmm, Gtksourceviewmm and SDL
+	No KDE or Qt libraries are used
+	Optional compilation of GUI components
+	Bug fixes
+	
+The 1.1.2 version is deprecated and supported no longer

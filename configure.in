@@ -96,6 +96,7 @@ AC_SUBST(CPPFLAGS)
 
 AC_OUTPUT(Makefile \
 		  po/Makefile \
+		  doc/Makefile \
 		  src/Makefile \
 		  src/avrtuner/Makefile \
 		  src/libavtools/Makefile \

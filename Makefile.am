@@ -1,4 +1,4 @@
-SUBDIRS = src po
+SUBDIRS = src po doc
 
 if COMPILE_TESTS
 SUBDIRS += tests

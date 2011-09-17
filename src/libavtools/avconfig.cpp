@@ -55,20 +55,20 @@ bool AVConfig::Load(string fname, bool readonly)
 {
 	if(fname.empty())
 	{
-		log_message(1, "No configuration filename was given.");
+		log_message(1, "AVConfig: No configuration filename was given.");
 		return false;
 	}
 
 	try { avconfig.readFile(fname.c_str()); }
 	catch(FileIOException)
 	{
-		log_message(1, "Configuration file \"%s\" cannot be read.", fname.c_str());
+		log_message(1, "AVConfig: Configuration file \"%s\" cannot be read.", fname.c_str());
 		return false;
 	}
 	catch(ParseException e)
 	{
-		log_message(1, "Parsing of \"%s\" failed on line %d.", fname.c_str(), e.getLine());
-		log_message(0, "%s", e.getError());
+		log_message(1, "AVConfig: Parsing of \"%s\" failed on line %d.", fname.c_str(), e.getLine());
+		log_message(0, "AVConfig: %s", e.getError());
 		return false;
 	}
 
@@ -96,19 +96,19 @@ bool AVConfig::Init()
 	device_name = (*getVideoSettings())["device"];
 	if(-1 == stat(device_name, &st))
 	{
-		log_message(1, "Cannot identify '%s': %d, %s.", device_name, errno, strerror (errno));
+		log_message(1, "AVConfig: Cannot identify '%s': %d, %s.", device_name, errno, strerror (errno));
 		return false;
 	}
 	if(!S_ISCHR(st.st_mode))
 	{
-		log_message(1, "%s is no device.", device_name);
+		log_message(1, "AVConfig: %s is no device.", device_name);
 		return false;
 	}
 
 	video_device = open(device_name, O_RDWR | O_NONBLOCK, 0);
 	if(-1 == video_device)
 	{
-		log_message(1, "Cannot open '%s': %d, %s.", device_name, errno, strerror (errno));
+		log_message(1, "AVConfig: Cannot open '%s': %d, %s.", device_name, errno, strerror (errno));
 		exit (EXIT_FAILURE);
 	}
 
@@ -119,20 +119,20 @@ bool AVConfig::Init()
 	{
 		if (EINVAL == errno)
 		{
-			log_message(1, "%s is no V4L2 device.", device_name);
+			log_message(1, "AVConfig: %s is no V4L2 device.", device_name);
 			exit(1);
 		}
-		else log_message(1, "VIDIOC_QUERYCAP: %d, %s.", errno, strerror(errno));
+		else log_message(1, "AVConfig: VIDIOC_QUERYCAP: %d, %s.", errno, strerror(errno));
 	}
 	if(!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE))
 	{
-		log_message(1, "%s is no video capture device.", device_name);
+		log_message(1, "AVConfig: %s is no video capture device.", device_name);
 		exit(1);
 	}
 	if(cap.capabilities & V4L2_CAP_READWRITE)
-		log_message(0, "%s supports read i/o.", device_name);
+		log_message(0, "AVConfig: %s supports read i/o.", device_name);
 	if(cap.capabilities & V4L2_CAP_STREAMING)
-		log_message(0, "%s supports streaming i/o.", device_name);
+		log_message(0, "AVConfig: %s supports streaming i/o.", device_name);
 
 
 	//enumerate inputs
@@ -144,15 +144,15 @@ bool AVConfig::Init()
 	while(-1 != xioctl(video_device, VIDIOC_ENUMINPUT, &input))
 	{
 		input_list.push_back(input);
-		log_message(0, "Input [%d -- %s] is found.", input.index, input.name);
+		log_message(0, "AVConfig: Input [%d -- %s] is found.", input.index, input.name);
 		input.index++;
 	}
 	if(-1 == xioctl(video_device, VIDIOC_G_INPUT, &current_input))
 	{
-		log_errno("VIDIOC_G_INPUT");
+		log_errno("AVConfig: VIDIOC_G_INPUT");
 		exit(1);
 	}
-	log_message(0, "Currently selected input is: %d -- %s.", current_input, input_list[current_input].name);
+	log_message(0, "AVConfig: Currently selected input is: %d -- %s.", current_input, input_list[current_input].name);
 
 
 	//enumerate standards
@@ -163,7 +163,7 @@ bool AVConfig::Init()
 	standard.index = 0;
 	if(-1 == xioctl(video_device, VIDIOC_G_STD, &current_standard))
 	{
-		log_errno("VIDIOC_G_STD");
+		log_errno("AVConfig: VIDIOC_G_STD");
 		return false;
 	}
 	while(0 == xioctl(video_device, VIDIOC_ENUMSTD, &standard))
@@ -171,16 +171,16 @@ bool AVConfig::Init()
 		if(standard.id & input_list[current_input].std)
 		{
 			standard_list.push_back(standard);
-			log_message(0, "Standard %s is supported by current input.", standard.name);
-			log_message(0, "The framerate defined by this standard is: %d", standard.frameperiod.denominator/standard.frameperiod.numerator);
+			log_message(0, "AVConfig: Standard %s is supported by current input.", standard.name);
+			log_message(0, "AVConfig: The framerate defined by this standard is: %d", standard.frameperiod.denominator/standard.frameperiod.numerator);
 			if(standard.id == current_standard)
-				log_message(0, "Standard %s is currently selected on input.", standard.name);
+				log_message(0, "AVConfig: Standard %s is currently selected on input.", standard.name);
 		}
 		standard.index++;
 	}
 	if(errno != EINVAL || standard.index == 0)
 	{
-		log_errno("VIDIOC_ENUMSTD");
+		log_errno("AVConfig: VIDIOC_ENUMSTD");
 		return false;
 	}
 
@@ -193,7 +193,7 @@ bool AVConfig::Init()
 	v4l2_control control;
 	CLEAR(queryctrl);
 	CLEAR(control);
-	log_message(0, "Quering standard controls");
+	log_message(0, "AVConfig: Quering standard controls");
 	for(queryctrl.id = V4L2_CID_BASE;
 		   queryctrl.id < V4L2_CID_LASTP1 && queryctrl.id >= V4L2_CID_BASE;
 		   queryctrl.id++)
@@ -207,26 +207,26 @@ bool AVConfig::Init()
 				control_list.push_back(control);
 			else
 			{
-				log_errno("VIDIOC_G_CTRL");
+				log_errno("AVConfig: VIDIOC_G_CTRL");
 				return false;
 			}
-			log_message(0, "Control found: %s", queryctrl.name);
+			log_message(0, "AVConfig: Control found: %s", queryctrl.name);
 
 			if(queryctrl.type == V4L2_CTRL_TYPE_MENU)
 			{
-				log_message(0, "Control is a menu");
+				log_message(0, "AVConfig: Control is a menu");
 				enumerate_v4l2_menu(video_device, queryctrl, querymenu_list);
 			}
 		}
 		else
 		{
 			if(errno == EINVAL) continue;
-			log_errno("VIDIOC_QUERYCTRL");
+			log_errno("AVConfig: VIDIOC_QUERYCTRL");
 			return false;
 		}
 	}
 
-	log_message(0, "Quering driver specific controls");
+	log_message(0, "AVConfig: Quering driver specific controls");
 	for(queryctrl.id = V4L2_CID_PRIVATE_BASE; queryctrl.id >= V4L2_CID_PRIVATE_BASE; queryctrl.id++)
 	{
 		if(0 == xioctl(video_device, VIDIOC_QUERYCTRL, &queryctrl))
@@ -238,21 +238,21 @@ bool AVConfig::Init()
 				control_list.push_back(control);
 			else
 			{
-				log_errno("VIDIOC_G_CTRL");
+				log_errno("AVConfig: VIDIOC_G_CTRL");
 				return false;
 			}
-			log_message(0, "Control found: %s", queryctrl.name);
+			log_message(0, "AVConfig: Control found: %s", queryctrl.name);
 
 			if(queryctrl.type == V4L2_CTRL_TYPE_MENU)
 			{
-				log_message(0, "Control is a menu");
+				log_message(0, "AVConfig: Control is a menu");
 				enumerate_v4l2_menu(video_device, queryctrl, querymenu_list);
 			}
 		}
 		else
 		{
 			if(errno == EINVAL) break;
-			log_errno("VIDIOC_QUERYCTRL");
+			log_errno("AVConfig: VIDIOC_QUERYCTRL");
 			return false;
 		}
 	}
@@ -318,7 +318,7 @@ bool AVConfig::Save()
 	try { avconfig.writeFile(filename.c_str()); }
 	catch(FileIOException)
 	{
-		log_message(1, "Cannot write to \"%s\".", filename.c_str());
+		log_message(1, "AVConfig: Cannot write to \"%s\".", filename.c_str());
 		return false;
 	}
 
@@ -329,14 +329,14 @@ bool AVConfig::SaveAs(string fname)
 {
 	if(fname.empty())
 	{
-		log_message(1, "No configuration filename was given.");
+		log_message(1, "AVConfig: No configuration filename was given.");
 		return false;
 	}
 
 	try { avconfig.writeFile(fname.c_str()); }
 	catch(FileIOException)
 	{
-		log_message(1, "Cannot write to \"%s\".", fname.c_str());
+		log_message(1, "AVConfig: Cannot write to \"%s\".", fname.c_str());
 		return false;
 	}
 
@@ -349,7 +349,7 @@ Setting * AVConfig::getSetting(const char * path)
 	Setting *setting = NULL;
 	try { setting = &avconfig.lookup(path); }
 	catch(SettingNotFoundException)
-	{ log_message(1, "Setting \"%s\" not found.", path); }
+	{ log_message(1, "AVConfig: Setting \"%s\" not found.", path); }
 	return setting;
 }
 
@@ -378,11 +378,11 @@ bool AVConfig::enumerate_v4l2_menu(int fd, v4l2_queryctrl queryctrl, map< unsign
 		if(0 == xioctl(fd, VIDIOC_QUERYMENU, &querymenu))
 		{
 			querymenu_list[(unsigned long)querymenu.id].push_back(querymenu);
-			log_message(0, "Menue intem: %s", querymenu.name);
+			log_message(0, "AVConfig: Menu intem: %s", querymenu.name);
 		}
 		else
 		{
-			log_errno("VIDIOC_QUERYMENU");
+			log_errno("AVConfig: VIDIOC_QUERYMENU");
 			return false;
 		}
 	}

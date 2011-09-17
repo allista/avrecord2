@@ -22,7 +22,7 @@
   </general>
   <kdevautoproject>
     <general>
-      <activetarget>src/avrtuner/avrtuner</activetarget>
+      <activetarget>src/avrecord</activetarget>
       <useconfiguration>optimized</useconfiguration>
     </general>
     <run>
@@ -44,7 +44,7 @@
       </runarguments>
       <debugarguments>
         <avrtuner>../../avrecord.cfg</avrtuner>
-        <avrecord>-c avrecord.cfg -n</avrecord>
+        <avrecord>-i /dev/video0 -t src/avrecord.cfg.template -o test.cfg</avrecord>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
         <test/>
         <gtkapp/>

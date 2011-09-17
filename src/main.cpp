@@ -87,25 +87,27 @@ int main(int argc, char *argv[])
 	string conf_fname;
 	string template_fname;
 	string output_fname;
+	string video_dev;
 	if(argc > 1)
 	{
 		int c;
-		while((c = getopt(argc, argv, "c:l:t:o:idnh?"))!=EOF)
+		while((c = getopt(argc, argv, ":c:l:t:o:i::dnh"))!=EOF)
 			switch(c)
 			{
 				case 'c':
-					conf_fname = string(optarg);
+					if(optarg) conf_fname = string(optarg);
 					break;
 				case 'l':
-					log_fname  = string(optarg);
+					if(optarg) log_fname  = string(optarg);
 					break;
 				case 't':
-					template_fname = string(optarg);
+					if(optarg) template_fname = string(optarg);
 					break;
 				case 'o':
-					output_fname = string(optarg);
+					if(optarg) output_fname = string(optarg);
 					break;
 				case 'i':
+					if(optarg) video_dev = string(optarg);
 					initialize = true;
 					break;
 				case 'd':
@@ -118,6 +120,7 @@ int main(int argc, char *argv[])
 				case '?':
 					print_usage();
 					exit(1);
+					break;
 				default: break;
 			}
 	}
@@ -125,6 +128,7 @@ int main(int argc, char *argv[])
 	//if we've been asked to, initialize configuration and die
 	if(initialize)
 	{
+		nolog = true; // log to stdout/stderr
 		if(template_fname.empty())
 		{
 			log_message(1, "avrecord: No template file was given. Use -t option.");
@@ -138,6 +142,9 @@ int main(int argc, char *argv[])
 
 		AVConfig new_config;
 		if(!new_config.Load(template_fname, true)) exit(1);
+		if(!video_dev.empty())
+			new_config.lookup("video.device") = video_dev;
+		log_message(0, "avrecord: Initializign configuration for %s using %s as a template.", (const char*)new_config.lookup("video.device"), template_fname.c_str());
 		if(!new_config.Init()                    ) exit(1);
 		if(!new_config.SaveAs(output_fname)      ) exit(1);
 

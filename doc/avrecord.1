@@ -15,8 +15,7 @@ avrecord \- program for capturing video and audio upon motion or noise detection
 .RB [\| \-ndh? \|]
 .SS Configuration initialization mode:
 .B avrecord
-.B \-i 
-.RI [\| device_name \|]
+.B \-i[\fIdevice_name\fP]
 .BI \-t \ config_file_template \ -o \ new_config_output
 .br
 
@@ -47,8 +46,8 @@ Print command help.
 .PP
 .SS Configuration initialization mode:
 .B
-.IP "-i [\fIdevice_name\fP]"
-Initialize configuration. If no device name is provided the one specified in a template file is used.
+.IP "-i[\fIdevice_name\fP]"
+Initialize configuration. If you specify a device name, please be carefull: there must be no space between the option and the name (e.g. \fB-i\fP\fI/dev/video0\fP) If no device name is provided the one specified in a template file is used.
 .B
 .IP "-t config_file_template"
 Use specified configuration file as a template for a new configuration.

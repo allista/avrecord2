@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
 	if(argc > 1)
 	{
 		int c;
-		while((c = getopt(argc, argv, ":c:l:t:o:i::dnh"))!=EOF)
+		while((c = getopt(argc, argv, "c:l:t:o:i::dnh"))!=EOF)
 			switch(c)
 			{
 				case 'c':

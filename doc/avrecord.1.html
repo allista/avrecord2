@@ -43,12 +43,12 @@ avrecord - program for capturing video and audio upon motion or noise detection
 
 <B>avrecord</B>
 
-is an audio-video recorder with motion and noise detection. It constantly monitors a video stream from a v4l device looking for difference between consequent frames. It may also monitor sound level in a stream captured by a soundcard. While waiting for motion or noise it buffers data. When something is detected buffered data is written out so the precise moment of the event's beginning is not clipped.
+is an audio-video recorder with motion and noise detection. It constantly monitors a video stream from a v4l device looking for difference between consequent frames. It may also monitor sound level in a stream captured by a sound card. While waiting for motion or noise it buffers data. When something is detected buffered data is written out so the precise moment of the event's beginning is not clipped.
 <P>
 <A NAME="lbAG">&nbsp;</A>
 <H2>CONFIGURATION</H2>
 
-Before you start using <B>avrecord</B> for the first time you should initialize it's configuration using the template file provided (see <B>FILES</B> section). Configuration is initialized by quering your video device capabilities and controls and adding them to the main configuration structure. Initialized configuration is saved then to a new file.
+Before you start using <B>avrecord</B> for the first time you should initialize it's configuration using the template file provided (see <B>FILES</B> section). Configuration is initialized by querying your video device capabilities and controls and adding them to the main configuration structure. Initialized configuration is saved then to a new file.
 <P>
 <A NAME="lbAH">&nbsp;</A>
 <H2>OPTIONS</H2>
@@ -87,7 +87,7 @@ Print command help.
 <DT>-i[</B><I>device_name</I>]<DD>
 
 
-Initialize configuration. If you specify a device name, please be carefull: there must be no space between the option and the name (e.g. <B>-i</B><I>/dev/video0</I>) If no device name is provided the one specified in a template file is used.
+Initialize configuration. If you specify a device name, please be careful: there must be no space between the option and the name (e.g. <B>-i</B><I>/dev/video0</I>) If no device name is provided the one specified in a template file is used.
 <B><DT>-t config_file_template<DD>
 </B>
 
@@ -103,22 +103,22 @@ Write initialized configuration to the file specified.
 
 <B>/etc/avrecord/avrecord.cfg.template</B>
 
-provides configuration skeleton for the first initializatioin of a configuration. All static configuration options are documented there.
+provides configuration skeleton for the first initialization of a configuration. All static configuration options are documented there.
 <P>
 
 <B>./avrecord.cfg,&nbsp;~/.avrecord/avrecord.cfg,&nbsp;/etc/avrecord/avrecord.cfg</B>
 
-configuration files in the order they're loked for by avrecord if the <B>-c</B> option is not used.
+configuration files in the order they're locked for by avrecord if the <B>-c</B> option is not used.
 <P>
 
 <B>./avrecord.log</B>
 
-default log file. Usualy log file path is defined in the configuration or by the <B>-l</B> option though.
+default log file. Usually log file path is defined in the configuration or by the <B>-l</B> option though.
 <P>
 
 <B>/etc/init.d/avrecd</B>
 
-daemon startup script. It may not work in your particular linux distribution due to startup system differences. It's there mainly for tailoring by distribution maintainers and system administrators.
+daemon startup script. It may not work in your particular Linux distribution due to startup system differences. It's there mainly for tailoring by distribution maintainers and system administrators.
 <P>
 <P>
 

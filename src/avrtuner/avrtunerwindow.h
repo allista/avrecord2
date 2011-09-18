@@ -53,7 +53,6 @@ private:
 	VideoMonitor monitor;
 	Glib::Dispatcher signal_update_meters;
 	Glib::Thread *monitor_thread;
-	Glib::Mutex mutex;
 
 	void stop_monitor();
 

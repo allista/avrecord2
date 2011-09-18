@@ -51,6 +51,11 @@ public:
 	void stop()
 	{ Glib::Mutex::Lock lock(mutex); stop_monitor = true; };
 
+	///lock Monitor mutex
+	void lock() { mutex.lock(); }
+	///unlock Monitor mutex
+	void unlock() { mutex.unlock(); }
+
 	///motion and noise info
 	uint getMotion() const { return motion; }
 	uint getMotionMax() const { return (recorder)? recorder->getMotionMax() : 1; }

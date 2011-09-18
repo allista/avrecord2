@@ -1,8 +1,3 @@
 TODOs:
-Test installation of .desktop, icons and stuff
 Add webcam server
 Request ffmpeg for supported video and audio codecs
-
-Unconfirmed bugs:
-Audio problems after pauses.
-Video stuttering (if it is still there)... No stuttering, so it seems...

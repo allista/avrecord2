@@ -126,20 +126,23 @@ void VideoMonitor::run()
 	const unsigned char *tmp = NULL;
 	while(true)
 	{
-		Glib::Mutex::Lock lock(mutex);
 		///check if we are to stop
+		Glib::Mutex::Lock lock(mutex); ///< lock monitor
 		if(stop_monitor) break;
 
+		recorder->lock(); ///< lock recorder to get a picture and it's info
 		///get info
 		motion = recorder->getMotion();
 		peak   = recorder->getPeak();
+		lock.release(); ///< unlock monitor
 
 		///get picture
 		if(highlight_motion) tmp = recorder->getMBuffer();
 		else tmp = recorder->getVBuffer();
 		memcpy(buffer, tmp, recorder->getVBSize());
-		lock.release();
+		recorder->unlock(); ///< unlock recorder
 
+		///display grabbed image
 		if(screen && overlay && sws)
 		{
 			SDL_LockYUVOverlay(overlay);
@@ -190,9 +193,9 @@ void VideoMonitor::stop_capture()
 	if(!capture_thread) return;
 
 	///stop CaptureThread
-	Glib::Mutex::Lock lock(mutex);
+	recorder->lock();
 	signal = SIG_QUIT;
-	lock.release();
+	recorder->unlock();
 	if(capture_thread->joinable())
 		capture_thread->join();
 
@@ -201,6 +204,9 @@ void VideoMonitor::stop_capture()
 
 void VideoMonitor::cleanup()
 {
+	///stop capture thread if it's still running
+	if(capture_thread) stop_capture();
+
 	///delete recorder
 	if(recorder) delete recorder;
 	recorder = NULL;

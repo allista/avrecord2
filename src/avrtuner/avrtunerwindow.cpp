@@ -157,12 +157,12 @@ void AVRTunerWindow::update_meters()
 {
 	if(!monitor_thread) return;
 
-	Glib::Mutex::Lock lock(mutex);
+	monitor.lock();
 	uint motion = monitor.getMotion();
 	double motion_percent = (double)motion/monitor.getMotionMax();
 	uint peak   = monitor.getPeak();
 	double peak_percent   = (double)peak/monitor.getPeakMax();
-	lock.release();
+	monitor.unlock();
 
 	motion_percent = (motion_percent < 0)? 0 : motion_percent;
 	motion_percent = (motion_percent > 1)? 1 : motion_percent;

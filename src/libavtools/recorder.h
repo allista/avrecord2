@@ -56,17 +56,34 @@ class _void_mutex
 	public:
 		void lock()    {};
 		void unlock()  {};
-		bool locked()  { return false; };
 		bool trylock() { return true; };
-		bool tryLock() { return trylock(); };
 };
 
+
+///Like Glib::Mutex::Lock -- helper class for exception safe mutex locking
+template<class _mutex>
+class MutexLock
+{
+public:
+	MutexLock(_mutex &mutex)
+	: mutex(mutex)
+	{ lock(); }
+	~MutexLock() { mutex.unlock(); }
+
+	void lock() { mutex.lock(); _locked = true; };
+	bool trylock() { _locked = mutex.trylock(); return _locked; };
+	void unlock() { mutex.unlock(); _locked = false; };
+	bool locked() const { return _locked; };
+private:
+	_mutex &mutex;
+	bool _locked;
+};
 
 ///This class gathers all input/output classes together
 ///and provides very simple interface for recording or just
 ///listenning signals. This is a template class wich is determinated
 ///by a class that provides simple mutex interface:
-///_mutex::lock(), _mutex::unlock()., bool _mutex::locked() and bool _mutex::tryLock();
+///_mutex::lock(), _mutex::unlock()., bool _mutex::trylock();
 template<class _mutex>
 class BaseRecorder
 {
@@ -85,30 +102,29 @@ public:
 	bool RecordLoop(uint *signal, bool idle = false);
 	bool IdleLoop(uint *signal) { return RecordLoop(signal, true); };
 
-	///trys to lock recorder's mutex
+	///lock recorder's mutex
 	void lock() { mutex.lock(); };
 
-	///unlocks recorder's mutex, then sleeps 5 nanoseconds in
-	///order to give a chance to lock the mutex to another thread.
+	///unlocks recorder's mutex
 	void unlock() { mutex.unlock(); };
 
-	///returns number of motion pixels (NOTE: you must enclose call
-	///of this function with lock()-unlock() pair)
+	///number of motion pixels
 	uint getMotion() const { return last_diffs; };
-	uint getMotionMax() const { return width*height; } ///< maximum number of motion pixels
+	///maximum number of motion pixels
+	uint getMotionMax() const { return width*height; }
 
-	///returns sound peak value (NOTE: you must enclose call
-	///of this function with lock()-unlock() pair)
+	///sound peak value
 	uint getPeak() const { return last_peak_value; };
-	uint getPeakMax() const { return SND_PEAK_MAX; }; ///< maximum peak value
+	///maximum peak value
+	uint getPeakMax() const { return SND_PEAK_MAX; };
 
-	///returns last video buffer (NOTE: you must enclose call of this
-	///function with lock()-unlock() pair)
-	const unsigned char *getVBuffer() const { return *v_buffer; };
+	///returns last video buffer
+	///you should call BaseRecorder::lock() befor using this method (and BaseRecorder::unlock() somewhere afterward)
+	const unsigned char *getVBuffer() { return *v_buffer; };
 
 	///returns previous motion buffer (with highlighted diff-pixels)
-	///(NOTE: you must enclose call of this function with lock()-unlock() pair)
-	const unsigned char *getMBuffer() const { return (detect_motion)? *m_buffer : *v_buffer; };
+	///you should call BaseRecorder::lock() befor using this method (and BaseRecorder::unlock() somewhere afterward)
+	const unsigned char *getMBuffer(bool do_print_info = true);
 
 	///returns size of video buffer
 	uint getVBSize() const { return v_bsize; };
@@ -521,7 +537,7 @@ void BaseRecorder<_mutex>::Close( )
 	if(!inited)
 		return;
 
-	lock();
+	MutexLock<_mutex> lock(mutex);
 	if(a_buffer)
 		delete a_buffer;
 	a_buffer = NULL;
@@ -541,8 +557,6 @@ void BaseRecorder<_mutex>::Close( )
 	av_output.Close();
 	a_source.Close();
 	v_source.Close();
-
-	unlock();
 
 	//////////////
 	inited = false;
@@ -787,6 +801,16 @@ exit_loop:
 		return true;
 }
 
+template<class _mutex>
+const unsigned char * BaseRecorder<_mutex>::getMBuffer(bool do_print_info)
+{
+	if(detect_motion)
+	{
+		if(do_print_info) print_info(*m_buffer);
+		return *m_buffer;
+	}
+	else return *v_buffer;
+}
 
 template<class _mutex>
 string BaseRecorder<_mutex>::generate_fname()
@@ -851,15 +875,14 @@ int BaseRecorder<_mutex>::capture_frame()
 {
 	if(!inited) return -1;
 
-	lock();
+	MutexLock<_mutex> lock(mutex);
 	int read = v_source.Read(v_buffer->wbuffer(), v_bsize);
-	if(read == -1) { unlock(); return -1; }
-	if(read ==  0) { unlock(); return  0; }
+	if(read == -1) { return -1; }
+	if(read ==  0) { return  0; }
 	v_buffer->push(v_bsize);
 
 	if(detect_motion) last_diffs = measure_motion();
 	print_info((*v_buffer)[1]);
-	unlock();
 
 	if(detect_motion) return last_diffs;
 	else return 0;
@@ -878,6 +901,7 @@ int BaseRecorder<_mutex>::capture_sound()
 
 	if(detect_noise)
 	{
+		MutexLock<_mutex> lock(mutex);
 		last_peak_value = a_source.Peak();
 		return last_peak_value;
 	}

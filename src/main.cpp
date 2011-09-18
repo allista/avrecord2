@@ -310,6 +310,8 @@ static void sig_handler(int signo)
 			break;
 		case SIGHUP:
 			avrestart = 1;
+			avsignal  = SIG_QUIT;
+			break;
 		case SIGINT:
 		case SIGQUIT:
 		case SIGTERM:
@@ -318,7 +320,7 @@ static void sig_handler(int signo)
 			avsignal  = SIG_QUIT;
 			break;
 		case SIGSEGV:
-			exit(0);
+			exit(1);
 	}
 }
 

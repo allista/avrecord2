@@ -2,13 +2,13 @@
 
 paths:
 {
-	//path for logfile
+	//logfile path
 	log_file   = "./avrecord.log";
 
 	//output directory where generated movies will be saved
 	output_dir = "./";
 
-	//name template for output movies
+	//name template for output movies. For format description see: man date
 	filename   = "movie-%Y-%m-%d_%H-%M.avi";
 };
 
@@ -21,15 +21,15 @@ video:
 	inputs:
 	{
 	};
-	//choosen input
-	input = 1;
+	//chosen input
+	input = 0;
 
-	//standarts supported by device (set on initialization)
+	//standards supported by device (set on initialization)
 	standards:
 	{
 	};
-	//choosen standart
-	standard = "";
+	//chosen standard
+	standard = 255L;
 
 	//device controls (set on initialization)
 	controls:
@@ -39,19 +39,19 @@ video:
 	//captured image width
 	width = 640;
 
-	//captured image heigh
+	//captured image height
 	height = 480;
 
 	//video codecs (see ffmpeg -formats for details)
 	codecs = [];
-	//choosen video codec
-	codec = "libxvid";
+	//chosen video codec
+	codec = "msmpeg4";
 
 	//bits per second
 	bitrate  = 2500000;
 
 	//quantizer value for variable bitrate: 0 for constant bitrate, 2-31 for variable with different quality (2 -- is the best, 31 -- is the worst)
-	var_bitrate  = 2;
+	var_bitrate  = 0;
 };
 
 audio:
@@ -85,10 +85,10 @@ switches:
 	//if true, do noise detection
 	detect_noise     = true;
 
-	//if true, record only when motion (or noise, if correspondig flag is set) is detected
+	//if true, record only when motion (or noise, if corresponding flag is set) is detected
 	record_on_motion = true;
 
-	//if true, record only when noise (or motion, if correspondig flag is set) is detected
+	//if true, record only when noise (or motion, if corresponding flag is set) is detected
 	record_on_noise  = false;
 
 	//if true, print number of motion pixels to the image
@@ -106,20 +106,20 @@ switches:
 
 detection:
 {
-	//time of no_motion that is required for starting new movie file
+	//time of no_motion that is required for starting a new movie file
 	min_gap = 300; //seconds
 
-	//movie duratioin that is required for starting new movie file
+	//movie duration that is required for starting new movie file
 	min_record_time = 30; //minutes
 
-	//when there's no motion, continue recordig during this time
+	//when there's no motion, continue recording during this time
 	post_motion_offset = 30; //seconds
 
-	//number of frames to write before the one on wich motion (or noise) was detected
+	//number of frames to write before the one on whith motion (or noise) was detected
 	latency = 10;	//value: 2 or grater
 
 	//step in frames between the two compared ones
-	frame_step  = 5; //value: from 1 or grater
+	frame_step  = 5; //value: 1 or grater
 
 	//check each n-th pixel for difference
 	pixel_step  = 1;
@@ -130,14 +130,14 @@ detection:
 	//how many times to erode captured image to remove a noise
 	video_noise_reduction_level = 0;
 
-	//a motion is detected when number of differing pixels is grater than this value
-	motion_threshold   = 100;
+	//a motion is detected when number of differing pixels is grater than this value 
+	motion_threshold   = 100; //value: [0 - width*height]
 
 	//function for sound peak value calculation: 0 - linear (default), 1 - 2pwr root, 2 - 4pwr root, 3 - 8pwr root, 4 - 2pwr, 5 - 4pwr, 6 - 8pwr
 	sound_peak_value_function = 0;
 
-	//sound noise is detected when peak value calculated with the "peak_value_function" is grater than this value (0 - 100000)
-	sound_peak_threshold  = 250;
+	//sound noise is detected when peak value calculated with the "peak_value_function" is grater than this 
+	sound_peak_threshold  = 25000; //value: [0 - 100000]
 };
 
 schedule:

@@ -28,6 +28,7 @@ VideoMonitor::VideoMonitor()
 	signal   = SIG_QUIT;
 	stop_monitor = true;
 
+	in_picture = NULL;
 	buffer  = NULL;
 	screen  = NULL;
 	overlay = NULL;
@@ -108,6 +109,15 @@ bool VideoMonitor::Init(Config *_config, Glib::Dispatcher *signal, bool with_mot
 			cleanup();
 			return false;
 		}
+
+		// allocate input frame
+		in_picture = avcodec_alloc_frame();
+		if(!in_picture)
+		{
+			log_message(1, "MonitorThread: avcodec_alloc_frame - could not allocate frame for in_picture");
+			cleanup();
+			return false;
+		}
 	}
 	stop_monitor = false;
 	return true;
@@ -146,14 +156,6 @@ void VideoMonitor::run()
 		if(screen && overlay && sws)
 		{
 			SDL_LockYUVOverlay(overlay);
-
-			// allocate input frame
-			AVFrame *in_picture = avcodec_alloc_frame();
-			if(!in_picture)
-			{
-				log_message(1, "MonitorThread: avcodec_alloc_frame - could not allocate frame for in_picture");
-				continue;
-			}
 
 			//fill in the picture
 			avpicture_fill((AVPicture*)in_picture, buffer, in_fmt,
@@ -214,6 +216,10 @@ void VideoMonitor::cleanup()
 	///delete buffer
 	if(buffer)   delete[] buffer;
 	buffer   = NULL;
+
+	///free input frame
+	if(in_picture)
+		av_free(in_picture);
 
 	///clear SDL stuff
 	SDL_Quit();

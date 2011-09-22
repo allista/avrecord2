@@ -87,6 +87,7 @@ private:
 	SDL_Surface   *screen;  ///< output screen
 	SDL_Overlay   *overlay; ///< YUV overlay
 	AVPicture      overlay_frame; ///< ffmpeg structure representing overlay. Used for pixel format conversions
+	AVFrame       *in_picture; ///< ffmpeg structure representing input frame
 	SwsContext    *sws;     ///< scaling and converting context
 	PixelFormat    in_fmt;  ///< ffmpeg PixelFormat of the input picture
 

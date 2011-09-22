@@ -22,7 +22,7 @@
   </general>
   <kdevautoproject>
     <general>
-      <activetarget>src/avrecord</activetarget>
+      <activetarget>src/avrtuner/avrtuner</activetarget>
       <useconfiguration>optimized</useconfiguration>
     </general>
     <run>

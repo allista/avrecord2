@@ -36,6 +36,8 @@ AVIFile::AVIFile()
 	//file streams and codecs
 	in_fmt  = PIX_FMT_NONE;
 	out_fmt = PIX_FMT_NONE;
+	in_picture = NULL;
+	out_picture = NULL;
 	out_buffer        = NULL;
 	out_buffer_length = 0;
 	sws     = NULL;
@@ -184,8 +186,27 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 			out_fmt = codec->pix_fmts[i];
 			if(in_fmt == out_fmt) break;
 		}
+
+		/* allocate input frame */
+		in_picture  = avcodec_alloc_frame();
+		if(!in_picture)
+		{
+			log_message(1, "AVIFile: avcodec_alloc_frame - could not allocate frame for in_picture");
+			cleanup();
+			return false;
+		}
+
 		if(in_fmt != out_fmt)
 		{
+			/* allocate output frame */
+			out_picture = avcodec_alloc_frame();
+			if(!out_picture)
+			{
+				log_message(1, "AVIFile: avcodec_alloc_frame - could not allocate frame for out_picture");
+				cleanup();
+				return false;
+			}
+
 			vcodec->pix_fmt = out_fmt = codec->pix_fmts[0];
 
 			sws = sws_getContext(vcodec->width, vcodec->height, in_fmt,
@@ -208,6 +229,7 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 				return false;
 			}
 		}
+		else out_picture = in_picture;
 	}
 
 	/* open the codec */
@@ -426,33 +448,12 @@ bool AVIFile::writeVFrame(unsigned char *buffer)
 {
 	if(!opened()) return false;
 
-	/* allocate output frame */
-	AVFrame *in_picture  = avcodec_alloc_frame();
-	AVFrame *out_picture = NULL;
-	if(!in_picture)
-	{
-		log_message(1, "AVIFile: avcodec_alloc_frame - could not allocate frame for in_picture");
-		return false;
-	}
-
 	//fill in the picture
 	avpicture_fill((AVPicture*)in_picture, buffer, in_fmt,
 					vcodec->width, vcodec->height);
-	if(in_fmt == out_fmt)
+	if(in_fmt != out_fmt)
 	{
-		out_picture = in_picture;
-		in_picture  = NULL;
-	}
-	else
-	{
-		out_picture = avcodec_alloc_frame();
-		if(!out_picture)
-		{
-			log_message(1, "AVIFile: avcodec_alloc_frame - could not allocate frame for out_picture");
-			return false;
-		}
 		avpicture_fill((AVPicture*)out_picture, out_buffer, out_fmt, vcodec->width, vcodec->height);
-
 		sws_scale(sws, in_picture->data, in_picture->linesize, 0,
 				  vcodec->height, out_picture->data, out_picture->linesize);
 	}
@@ -493,9 +494,6 @@ bool AVIFile::writeVFrame(unsigned char *buffer)
 		}
 		else ret = 0;
 	}
-	if(in_picture) av_free(in_picture);
-	av_free(out_picture);
-
 
 	if(ret != 0)
 	{
@@ -606,6 +604,14 @@ void AVIFile::cleanup()
 	video_settings_ptr = NULL;
 	///pointer to the audio Settings object (libconfig++)
 	audio_settings_ptr = NULL;
+
+	///free input and output frames
+	if(in_picture)
+		av_free(in_picture);
+	if(out_picture && out_picture != in_picture)
+		av_free(out_picture);
+	in_picture = NULL;
+	out_picture = NULL;
 
 	//out_buffer
 	if(out_buffer)

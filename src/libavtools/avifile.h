@@ -105,6 +105,8 @@ private:
 	PixelFormat      in_fmt;  ///< pixel format of input frame
 	PixelFormat      out_fmt; ///< pixel format of output stream
 	SwsContext      *sws;     ///< scaling and converting context
+	AVFrame         *in_picture; ///< grabbed frame representation for libavcodec
+	AVFrame         *out_picture; ///< frame to encode representation for libavcodec
 	uint8_t         *out_buffer;        ///< output buffer used for pixel format conversions
 	uint             out_buffer_length; ///< output buffer length in bytes
 	AVFormatContext *o_file;  ///< output file context

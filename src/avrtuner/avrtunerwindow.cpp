@@ -20,6 +20,8 @@
 
 #include <fstream>
 #include <stdio.h>
+#include <libgen.h>
+#include <unistd.h>
 
 #include <common.h>
 #include "avrtunerwindow.h"
@@ -299,6 +301,16 @@ void AVRTunerWindow::revert()
 	if(config_fname.empty()) return;
 	clear_log_clicked();
 
+	///change working path to the directory containing config
+	char *c_config_fname = new char[config_fname.size()+1];
+	memcpy(c_config_fname, config_fname.c_str(), config_fname.size()+1);
+	chdir(dirname(c_config_fname));
+
+	memcpy(c_config_fname, config_fname.c_str(), config_fname.size()+1);
+	config_fname = basename(c_config_fname);
+	delete[] c_config_fname;
+
+	///open the file
 	ifstream cfg;
 	cfg.open(config_fname.c_str(), ios_base::in);
 	if(!cfg.is_open())

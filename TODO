@@ -1,7 +1,6 @@
 Avrecord
 	webcam server
 	uvc cameras support
-	detection mask or rectangle
 	query ffmpeg for supported video and audio codecs
 Avrtuner
 	fixed font in editor?

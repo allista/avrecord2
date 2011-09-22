@@ -154,7 +154,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	string mask_filename = "tests/test-mask.bmp";
+	string mask_filename = "./tests/test-mask.bmp";
 	mask_file.open(mask_filename.c_str(), ios::in|ios::binary);
 	if(!mask_file.is_open())
 	{

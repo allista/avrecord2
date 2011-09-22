@@ -36,6 +36,7 @@
 #include <sys/ioctl.h>
 #include <termios.h>
 #include <getopt.h>
+#include <libgen.h>
 
 using namespace std;
 
@@ -207,7 +208,7 @@ int main(int argc, char *argv[])
 	//if there's still no config, die
 	if(conf_fname.empty())
 	{
-		log_message(1, "avrecord: No configuration file was found in default locations nor was it's location provided using -c option.");
+		log_message(1, "avrecord: No configuration file was found in the default locations nor was it's location provided using -c option.");
 		exit(1);
 	}
 
@@ -215,6 +216,13 @@ int main(int argc, char *argv[])
 	//this will be needed in daemon mode
 	if(conf_fname[0] != '/')
 		conf_fname = workdir + conf_fname;
+
+	//now set config path to use as a base directory for all relative paths in the config {paths} group
+	char *c_conf_fname = new char[conf_fname.size()+1];
+	memcpy(c_conf_fname, conf_fname.c_str(), conf_fname.size()+1);
+	string basedir = dirname(c_conf_fname);
+	basedir += "/";
+	delete[] c_conf_fname;
 
 	//load config file or die
 	AVConfig config;
@@ -226,26 +234,35 @@ int main(int argc, char *argv[])
 	catch(...) { output_dir = "./"; }
 	if(output_dir.size() && output_dir[0] != '/')
 	{
-		output_dir = workdir + output_dir;
+		output_dir = basedir + output_dir;
 		*config.getSetting("paths.output_dir") = output_dir.c_str();
 	}
-
 
 	//open logfile
 	if(!nolog)
 	{
 		//loading from config file
 		try { log_fname = (const char*)config.lookup("paths.log_file"); }
-		catch(...) { ; };
+		catch(...) {};
 		if(log_fname.empty())   log_fname = string(LOG_FILE);
 
 		//make sure that we work with absolute paths only
 		//this will be needed in daemon mode
-		if(log_fname[0] != '/') log_fname = workdir + log_fname;
+		if(log_fname[0] != '/') log_fname = basedir + log_fname;
 
 		log_stream.open(log_fname.c_str(), ios::out|ios::app);
 		if(!log_stream.is_open())
 			log_message(1, "avrecord: Can't open log file %s Logging to stderr...", log_fname.c_str());
+	}
+
+	//setup mask file
+	string mask_file;
+	try	{ mask_file = (const char*)config.lookup("paths.mask_file"); }
+	catch(...) {}
+	if(mask_file.size() && mask_file[0] != '/')
+	{
+		mask_file = basedir + mask_file;
+		*config.getSetting("paths.mask_file") = mask_file.c_str();
 	}
 
 	struct sigaction sig_handler_action;

@@ -10,6 +10,8 @@ paths:
 
 	//name template for output movies. For format description see: man date
 	filename   = "movie-%Y-%m-%d_%H-%M.avi";
+
+	mask_file  = "";
 };
 
 video:
@@ -130,13 +132,13 @@ detection:
 	//how many times to erode captured image to remove a noise
 	video_noise_reduction_level = 0;
 
-	//a motion is detected when number of differing pixels is grater than this value 
+	//a motion is detected when number of differing pixels is grater than this value
 	motion_threshold   = 100; //value: [0 - width*height]
 
 	//function for sound peak value calculation: 0 - linear (default), 1 - 2pwr root, 2 - 4pwr root, 3 - 8pwr root, 4 - 2pwr, 5 - 4pwr, 6 - 8pwr
 	sound_peak_value_function = 0;
 
-	//sound noise is detected when peak value calculated with the "peak_value_function" is grater than this 
+	//sound noise is detected when peak value calculated with the "peak_value_function" is grater than this
 	sound_peak_threshold  = 25000; //value: [0 - 100000]
 };
 

@@ -25,6 +25,7 @@
 #include <time.h>
 
 #include <iostream>
+#include <fstream>
 #include <string>
 #include <list>
 using namespace std;
@@ -155,6 +156,8 @@ private:
 	unsigned int    v_bsize;   ///< video buffer size
 
 	BufferRing     *m_buffer;  ///< image buffer ring for motion detection
+	unsigned char  *mask;      ///< buffer that contains mask image
+	uint            mask_size; ///< mask buffer size
 
 	unsigned char  *erode_tmp; ///< temporary buffer to use with erode function
 
@@ -237,7 +240,7 @@ private:
 	///This function uses the most simple algorithm: checking every
 	///n-th pixel of both images it compares the difference between them
 	///with 'noise level' and if the one is lower this pixel is counted.
-	uint fast_diff(unsigned char *old_img, unsigned char *new_img);
+	uint fast_diff(unsigned char *old_img, unsigned char *new_img, unsigned char *mask_img = NULL);
 
 	///checks if current time is between start and stop time
 	int  check_time(time_t now);
@@ -265,6 +268,10 @@ private:
 
 	///generates avi filename according fname_format
 	string generate_fname();
+
+	///load from bmp file and initialize mask image
+	bool init_mask(string fname ///< path to a bmp file with a mask
+				  );
 };
 
 ///This Recorder is for a singlethread applications
@@ -300,6 +307,7 @@ BaseRecorder<_mutex>::BaseRecorder()
 	a_buffer         = NULL;
 	v_buffer         = NULL;
 	m_buffer         = NULL;
+	mask             = NULL;
 	erode_tmp        = NULL;
 
 	//configuration//
@@ -425,37 +433,37 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 	try	{ min_gap
 		= (int)avrecord_config->lookup("detection.min_gap") * 1000000; }
 	catch(SettingNotFoundException)
-	{ min_gap               = 300*1000000; } //300 sec
+	{ min_gap              = 300*1000000; } //300 sec
 
 	try	{ min_record_time
 		= (int)avrecord_config->lookup("detection.min_record_time") * 1000000 * 60; }
 	catch(SettingNotFoundException)
-	{ min_record_time       = 30 * 1000000 * 60; } //30 min
+	{ min_record_time      = 30 * 1000000 * 60; } //30 min
 
 	try	{ post_motion_offset
 		= (int)avrecord_config->lookup("detection.post_motion_offset") * 1000000; }
 	catch(SettingNotFoundException)
-	{ post_motion_offset    = 30 * 1000000; } //30 sec
+	{ post_motion_offset   = 30 * 1000000; } //30 sec
 
 	try	{ latency
 		= (int)avrecord_config->lookup("detection.latency"); }
 	catch(SettingNotFoundException)
-	{ latency               = 2; }
+	{ latency              = 2; }
 
 	try	{ video_noise_level
 		= (int)avrecord_config->lookup("detection.video_noise_level"); }
 	catch(SettingNotFoundException)
-	{ video_noise_level           = 2; }
+	{ video_noise_level    = 2; }
 
 	try	{ motion_threshold
 		= (int)avrecord_config->lookup("detection.motion_threshold"); }
 	catch(SettingNotFoundException)
-	{ motion_threshold             = 25; }
+	{ motion_threshold     = 25; }
 
 	try	{ pixel_step
 		= (int)avrecord_config->lookup("detection.pixel_step"); }
 	catch(SettingNotFoundException)
-	{ pixel_step             = 1; }
+	{ pixel_step           = 1; }
 
 	try	{ frame_step
 		= (int)avrecord_config->lookup("detection.frame_step"); }
@@ -475,7 +483,7 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 	try	{ sound_peak_threshold
 		= (int)avrecord_config->lookup("detection.sound_peak_threshold"); }
 	catch(SettingNotFoundException)
-	{ sound_peak_threshold   = 250; }
+	{ sound_peak_threshold = 250; }
 	/////////////////
 
 	if(!a_source.Open(audio_settings_ptr))
@@ -524,6 +532,11 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 
 	if(video_noise_reduction_level)
 		erode_tmp = new unsigned char[width*3];
+
+	string mask_filename;
+	try { mask_filename = (const char*)avrecord_config->lookup("paths.mask_file"); }
+	catch(SettingNotFoundException) {}
+	if(detect_motion && mask_filename.size()) init_mask(mask_filename);
 	//////////////
 
 	inited = true;
@@ -534,9 +547,6 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 template<class _mutex>
 void BaseRecorder<_mutex>::Close( )
 {
-	if(!inited)
-		return;
-
 	MutexLock<_mutex> lock(mutex);
 	if(a_buffer)
 		delete a_buffer;
@@ -549,6 +559,10 @@ void BaseRecorder<_mutex>::Close( )
 	if(m_buffer)
 		delete m_buffer;
 	m_buffer = NULL;
+
+	if(mask)
+		av_free(mask);
+	mask = NULL;
 
 	if(erode_tmp)
 		delete[] erode_tmp;
@@ -921,7 +935,7 @@ uint BaseRecorder<_mutex>::measure_motion( )
 
 	if(!m_buffer->full()) return 0;
 
-	return fast_diff(*m_buffer, (*m_buffer)[1]);
+	return fast_diff(*m_buffer, (*m_buffer)[1], mask);
 }
 
 
@@ -955,21 +969,31 @@ int  BaseRecorder<_mutex>::check_time(time_t now)
 
 
 template<class _mutex>
-uint BaseRecorder<_mutex>::fast_diff( unsigned char * old_img, unsigned char * new_img )
+uint BaseRecorder<_mutex>::fast_diff( unsigned char * old_img, unsigned char * new_img, unsigned char * mask_img )
 {
 	int diffs  = 0;
 	int pixels = width*height;
 	int step   = pixel_step;
 	if(!step%2)  step++;
+	unsigned char dummy_mask = 255;
+	bool real_mask = true;
+	if(!mask_img)
+	{
+		mask_img = &dummy_mask;
+		real_mask = false;
+	}
 
 	for (int i = pixels; i > 0; i -= step)
 	{
 		/* using a temp variable is 12% faster */
 		register unsigned char curdiff= abs(int(*old_img)-int(*new_img));
-		if(curdiff > video_noise_level*512/(1 + *old_img + *new_img))
+		//130560 = 512*255; the formula is: diff > noise_leve*512/(1+old+new)*(255/mask)
+		if(curdiff > video_noise_level*130560/(1 + *old_img + *new_img)/(*mask_img))
 		{ diffs++; *old_img = 255; }
-		old_img +=step;
-		new_img +=step;
+		old_img  +=step;
+		new_img  +=step;
+		if(real_mask)
+			mask_img +=step;
 	}
 	diffs -= motion_threshold;
 	return (uint) (diffs<0)? 0 : diffs;
@@ -1014,6 +1038,162 @@ int BaseRecorder<_mutex>::erode(unsigned char * img)
 		img[y*width] = img[y*width+width-1] = flag;
 	}
 	return sum;
+}
+
+template<class _mutex>
+bool BaseRecorder<_mutex>::init_mask(string fname)
+{
+	if(!video_settings_ptr) return false;
+	Setting &video_settings = *video_settings_ptr;
+	bool ret = false;
+
+	fstream         mask_file;
+	char           *buffer      = NULL;
+	uint            buf_length;
+
+	AVCodec        *bmp_codec   = NULL;
+	AVCodecContext *bmp_context = NULL;
+	AVFrame        *mask_in     = NULL;
+	AVFrame        *mask_out    = NULL;
+	PixelFormat     in_fmt;
+	PixelFormat     out_fmt     = PIX_FMT_GRAY8;
+	AVPacket        av_packet; ///< this will be needed when libavcodec api will change. For now it is used as a temp variable
+	SwsContext     *sws_cntx    = NULL;
+
+	uint iwidth;
+	uint iheight;
+	uint owidth;
+	uint oheight;
+	try
+	{
+		owidth  = video_settings["width"];
+		oheight = video_settings["height"];
+	}
+	catch(SettingNotFoundException)
+	{
+		log_message(1, "Recorder: Video <width> or <height> settings not found.");
+		goto cleanup;
+	}
+	mask_size = avpicture_get_size(out_fmt, owidth, oheight);
+	mask = (unsigned char*)av_mallocz(mask_size);
+	if(!mask)
+	{
+		log_message(1, "Recorder: failed to allocate %d bytes for mask buffer", mask_size);
+		goto cleanup;
+	}
+
+	/* find the bmp encoder */
+	bmp_codec = avcodec_find_decoder(CODEC_ID_BMP);
+	if(!bmp_codec)
+	{
+		log_message(1, "Recorder: BMP codec not found");
+		goto cleanup;
+	}
+
+	/* open it */
+	bmp_context = avcodec_alloc_context();
+	if(avcodec_open(bmp_context, bmp_codec) < 0)
+	{
+		log_message(1, "Recorder: Could not open BMP codec");
+		goto cleanup;
+	}
+
+	mask_file.open(fname.c_str(), ios::in|ios::binary);
+	if(!mask_file.is_open())
+	{
+		log_message(1, "Recorder: Could not open mask file: %s", fname.c_str());
+		goto cleanup;
+	}
+
+	//get length of the file
+	mask_file.seekg(0, ios::end);
+	buf_length = mask_file.tellg();
+	mask_file.seekg(0, ios::beg);
+	buffer = (char*)av_mallocz(buf_length+FF_INPUT_BUFFER_PADDING_SIZE);
+	if(!buffer)
+	{
+		log_message(1, "Recorder: failed to allocate %d bytes for input buffer", buf_length+FF_INPUT_BUFFER_PADDING_SIZE);
+		goto cleanup;
+	}
+	if(!mask_file.read(buffer, buf_length))
+	{
+		log_message(1, "Recorder: Read error");
+		goto cleanup;
+	}
+
+	mask_in = avcodec_alloc_frame();
+	if(!mask_in)
+	{
+		log_message(1, "Recorder: Faild to allocate mask_in frame");
+		goto cleanup;
+	}
+	av_init_packet(&av_packet);
+	av_packet.size = buf_length;
+	av_packet.data = (uint8_t*)buffer;
+	int got_picture, len;
+	while(av_packet.size > 0)
+	{
+		//one should use avcodec_decode_video2 instead for the first version is documented as deprecated. Yet, in Ubuntu repos (and even in Medibuntu) libavcodec still lacks declaration of the second version
+		len = avcodec_decode_video(bmp_context, mask_in, &got_picture, av_packet.data, av_packet.size);
+		if(len < 0)
+		{
+			log_message(1, "Recorder: Error while decoding file");
+			goto cleanup;
+		}
+		if(got_picture)
+		{
+			iwidth  = bmp_context->width;
+			iheight = bmp_context->height;
+			in_fmt  = bmp_context->pix_fmt;
+			break;
+		}
+
+		/* the picture is allocated by the decoder. no need to
+		free it */
+		av_packet.size -= len;
+		av_packet.data += len;
+	}
+
+	sws_cntx = sws_getContext(iwidth, iheight, in_fmt,
+							  owidth, oheight, out_fmt,
+		 SWS_LANCZOS, NULL, NULL, NULL);
+	if(!sws_cntx)
+	{
+		log_message(1, "Recorder: couldn't get SwsContext for pixel format conversion");
+		goto cleanup;
+	}
+
+	mask_out = avcodec_alloc_frame();
+	if(!mask_out)
+	{
+		log_message(1, "Recorder: Faild to allocate mask_out frame");
+		goto cleanup;
+	}
+	avpicture_fill((AVPicture*)mask_out, (uint8_t*)mask, out_fmt, owidth, oheight);
+
+	if(0 > sws_scale(sws_cntx, mask_in->data, mask_in->linesize, 0,
+	   iheight, mask_out->data, mask_out->linesize))
+	{
+		log_message(1,"Recorder: Unable to convert mask image");
+		goto cleanup;
+	}
+
+	///if all whent well, return true
+	ret = true;
+
+cleanup:
+	///free allocated structures
+	mask_file.close();
+	if(bmp_context) av_free(bmp_context);
+	if(mask_in)     av_free(mask_in);
+	if(mask_out)    av_free(mask_out);
+	if(buffer)      av_free(buffer);
+	if(!ret && mask)
+	{
+		av_free(mask);
+		mask = NULL;
+	}
+	return ret;
 }
 
 #endif

@@ -59,6 +59,7 @@ private:
 	///configuration
 	AVConfig    config;
 	string      config_fname;
+	string      work_dir;
 	bool        config_parsed;
 
 	///signal handlers

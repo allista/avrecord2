@@ -190,13 +190,13 @@ void AVRTunerWindow::modified_changed()
 	if(ConfigSourceBuffer->get_modified())
 	{
 		FilenameStatusbar->pop();
-		FilenameStatusbar->push(config_fname+" [modified]");
+		FilenameStatusbar->push(work_dir+config_fname+" [modified]");
 	}
 	else
 	{
 		FilenameStatusbar->pop();
-		if(config_parsed) FilenameStatusbar->push(config_fname);
-		else FilenameStatusbar->push(config_fname+" [parse errors]");
+		if(config_parsed) FilenameStatusbar->push(work_dir+config_fname);
+		else FilenameStatusbar->push(work_dir+config_fname+" [parse errors]");
 	}
 }
 
@@ -302,13 +302,16 @@ void AVRTunerWindow::revert()
 	clear_log_clicked();
 
 	///change working path to the directory containing config
-	char *c_config_fname = new char[config_fname.size()+1];
+	char c_config_fname[config_fname.size()+1];
 	memcpy(c_config_fname, config_fname.c_str(), config_fname.size()+1);
 	chdir(dirname(c_config_fname));
 
+	char c_work_dir[1024];
+	work_dir = getcwd(c_work_dir, 1024);
+	work_dir += '/';
+
 	memcpy(c_config_fname, config_fname.c_str(), config_fname.size()+1);
 	config_fname = basename(c_config_fname);
-	delete[] c_config_fname;
 
 	///open the file
 	ifstream cfg;

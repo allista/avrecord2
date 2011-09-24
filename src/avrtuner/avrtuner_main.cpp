@@ -45,8 +45,6 @@ int main (int argc, char *argv[])
 
 	string config_file;
 	if(argc > 1) config_file = string(argv[1]);
-	if(config_file.empty())
-		log_message(0, "No configuration filename supplied.");
 
 	if(!Glib::thread_supported()) Glib::thread_init();
 	if(!Glib::thread_supported())
@@ -64,8 +62,7 @@ int main (int argc, char *argv[])
 	}
 
 	builder->get_widget_derived("MainWindow", MainWindow);
-	if(config_file.size())
-		MainWindow->LoadConfiguration(config_file);
+	MainWindow->LoadConfiguration(config_file);
 	gtk_main.run(*MainWindow);
 
 	return 0;

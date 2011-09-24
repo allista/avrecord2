@@ -20,8 +20,11 @@
 
 #include <fstream>
 #include <stdio.h>
+#include <stdlib.h>
 #include <libgen.h>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
 #include <common.h>
 #include "avrtunerwindow.h"
@@ -117,8 +120,11 @@ AVRTunerWindow::~ AVRTunerWindow()
 
 void AVRTunerWindow::LoadConfiguration(string _config_fname)
 {
-	if(_config_fname.empty()) return;
 	config_fname = _config_fname;
+	if(config_fname.empty())
+		if(!restore_session())
+			return;
+
 	revert();
 }
 
@@ -140,6 +146,7 @@ bool AVRTunerWindow::on_delete_event(GdkEventAny *event)
 
 		if(RESPONSE_OK != dialog.run()) return true;
 	}
+	save_session();
 	return false;
 }
 
@@ -450,4 +457,45 @@ void AVRTunerWindow::init()
 		ConfigSourceBuffer->set_modified(true);
 		revert();
 	}
+}
+
+bool AVRTunerWindow::restore_session()
+{
+	string homedir(getenv("HOME"));
+	if(homedir.size()) homedir += "/.avrecord/";
+	else return false;
+
+	session_file = homedir + "avrtuner_session";
+	fstream s_file(session_file.c_str(), ios::in);
+	if(!s_file.is_open())
+	{
+		LogMessage(string("Unable to open ")+session_file);
+		return false;
+	}
+
+	char line[1024] = {0};
+	if(!s_file.getline(line, 1024))
+	{
+		LogMessage(string("Read error: ")+session_file);
+		return false;
+	}
+	s_file.close();
+	config_fname = line;
+	return true;
+}
+
+bool AVRTunerWindow::save_session()
+{
+	string homedir(getenv("HOME"));
+	if(homedir.size()) homedir += "/.avrecord/";
+	else return false;
+
+	mkdir(homedir.c_str(), 0755);
+	session_file = homedir + "avrtuner_session";
+	fstream s_file(session_file.c_str(), ios::out|ios::trunc);
+	if(!s_file.is_open()) return false;
+
+	s_file << work_dir+config_fname << endl;
+	s_file.close();
+	return true;
 }

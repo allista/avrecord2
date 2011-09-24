@@ -112,12 +112,12 @@ public:
 	///number of motion pixels
 	uint getMotion() const { return last_diffs; };
 	///maximum number of motion pixels
-	uint getMotionMax() const { return width*height; }
+	uint getMotionMax() const { return width*height - motion_threshold; }
 
 	///sound peak value
 	uint getPeak() const { return last_peak_value; };
 	///maximum peak value
-	uint getPeakMax() const { return SND_PEAK_MAX; };
+	uint getPeakMax() const { return SND_PEAK_MAX - sound_peak_threshold; };
 
 	///returns last video buffer
 	///you should call BaseRecorder::lock() befor using this method (and BaseRecorder::unlock() somewhere afterward)
@@ -483,7 +483,7 @@ bool BaseRecorder<_mutex>::Init(Config *_avrecord_config_ptr)
 	try	{ sound_peak_threshold
 		= (int)avrecord_config->lookup("detection.sound_peak_threshold"); }
 	catch(SettingNotFoundException)
-	{ sound_peak_threshold = 250; }
+	{ sound_peak_threshold = 25000; }
 	/////////////////
 
 	if(!a_source.Open(audio_settings_ptr))
@@ -917,6 +917,8 @@ int BaseRecorder<_mutex>::capture_sound()
 	{
 		MutexLock<_mutex> lock(mutex);
 		last_peak_value = a_source.Peak();
+		last_peak_value = (last_peak_value > sound_peak_threshold)?
+				last_peak_value - sound_peak_threshold : 0;
 		return last_peak_value;
 	}
 	else return 0;

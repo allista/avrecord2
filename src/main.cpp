@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
 	//compile filenames
 	ifstream tester;
 	string homedir(getenv("HOME"));
-	if(homedir.size()) homedir += "/.avrecord/.";
+	if(homedir.size()) homedir += "/.avrecord/";
 	string workdir(getenv("PWD"));
 	if(workdir.size()) workdir += '/';
 

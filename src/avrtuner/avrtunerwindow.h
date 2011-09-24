@@ -60,6 +60,7 @@ private:
 	AVConfig    config;
 	string      config_fname;
 	string      work_dir;
+	string      session_file;
 	bool        config_parsed;
 
 	///signal handlers
@@ -80,6 +81,9 @@ private:
 	void undo();
 	void redo();
 	void init();
+
+	bool restore_session();
+	bool save_session();
 
 	///all the gtkmm stuff
 	///builder

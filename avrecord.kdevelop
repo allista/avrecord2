@@ -38,7 +38,7 @@
       <runarguments>
         <avrecord>-c avrecord.cfg -n</avrecord>
         <test/>
-        <avrtuner>../../avrecord.cfg</avrtuner>
+        <avrtuner/>
         <v4l2-teset>-i -c avrecord.cfg</v4l2-teset>
         <gtkapp/>
       </runarguments>

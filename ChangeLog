@@ -1,3 +1,20 @@
+2.1.0
+Recorder: 
+1) noise detection works correctely.
+2) detection mask functionality is fully functional. Masking is done by multiplying current pixel difference by a corresponding grayscale value which lies within [0;1], so black area on a mask eliminates motion detection in this area, but gray area only makes it somewhat harder to detect. Equivalent point of view on the masking is that the mask itself represents custom noise threshold map. Note, that general noise threshold is still working as expected.
+AVRTuner: 
+1) meters' max values take thresholds into account
+2) simple session save/restore is added
+3) in statusbar full file path is displayed now.
+avrtuner and avrecord: the base directory for all relative paths defined in a configuration is the path of a directory containing configuration file itself, not the work directory of the process.
+videomonitor and avifile: no more allocations for every frame displayed
+
+2.0.2
+man page is added
+There's a manual in the README file now
+In AVRTuner: bad mutex handling is fixed, no mor flickering in Show Motion mode
+In AVRecord: option -i now takes an optional argument -- video device name. It enables initialization from specified device rather than from /dev/video0
+
 2.0.1
 	Various bugfixes (threads crosstalk and CPU consumption in AVRTuner, audio clipping, etc.)
 	log_events option is added to the configuration to enable pause-resume record event logging

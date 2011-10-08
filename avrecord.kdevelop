@@ -22,8 +22,8 @@
   </general>
   <kdevautoproject>
     <general>
-      <activetarget>src/avrtuner/avrtuner</activetarget>
-      <useconfiguration>optimized</useconfiguration>
+      <activetarget>tests/v4l2-teset</activetarget>
+      <useconfiguration>debug</useconfiguration>
     </general>
     <run>
       <mainprogram/>

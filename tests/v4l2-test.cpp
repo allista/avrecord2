@@ -33,6 +33,7 @@ extern "C"
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>
 }
+#include <jpeglib.h>
 
 #include <iostream>
 #include <fstream>
@@ -71,6 +72,7 @@ using namespace std;
 #include <vidstream.h>
 #include <sndstream.h>
 #include <recorder.h>
+#include <jpegconverter.h>
 
 
 int main(int argc, char *argv[])
@@ -113,9 +115,9 @@ int main(int argc, char *argv[])
 	avcodec_register_all();
 
 	fstream mask_file;
-	char *mask = NULL;
+	uint8_t* mask = NULL;
 	uint mask_len;
-	char *buffer = NULL;
+	uint8_t* buffer = NULL;
 	uint buf_length;
 
 	AVCodec        *bmp_codec = NULL;
@@ -132,7 +134,7 @@ int main(int argc, char *argv[])
 	uint owidth  = cfg.lookup("video.width");
 	uint oheight = cfg.lookup("video.height");
 	mask_len = avpicture_get_size(out_fmt, owidth, oheight);
-	mask = (char*)av_mallocz(mask_len);
+	mask = (uint8_t*)av_mallocz(mask_len);
 
 	av_init_packet(&av_packet);
 
@@ -167,9 +169,9 @@ int main(int argc, char *argv[])
 	log_message(0, "File size is: %d", buf_length);
 	mask_file.seekg(0, ios::beg);
 
-	buffer = (char*)av_mallocz(buf_length+FF_INPUT_BUFFER_PADDING_SIZE);
+	buffer = (uint8_t*)av_mallocz(buf_length+FF_INPUT_BUFFER_PADDING_SIZE);
 
-	if(!mask_file.read(buffer, buf_length))
+	if(!mask_file.read((char*)buffer, buf_length))
 	{
 		log_message(1, "Read error");
 		exit(1);
@@ -177,7 +179,7 @@ int main(int argc, char *argv[])
 	mask_file.close();
 
 	av_packet.size = buf_length;
-	av_packet.data = (uint8_t*)buffer;
+	av_packet.data = buffer;
 	int got_picture, len;
 	while(av_packet.size > 0)
 	{
@@ -209,11 +211,11 @@ int main(int argc, char *argv[])
 					     SWS_LANCZOS, NULL, NULL, NULL);
 	if(!sws)
 	{
-		log_message(1, "MonitorThread: couldn't get SwsContext for pixel format conversion");
+		log_message(1, "MonitorThread: couldn't get SwsContext for scaling pixel format conversion");
 		//return false;
 	}
 
-	avpicture_fill((AVPicture*)mask_out, (uint8_t*)mask, out_fmt, owidth, oheight);
+	avpicture_fill((AVPicture*)mask_out, mask, out_fmt, owidth, oheight);
 
 	if(0 > sws_scale(sws, mask_in->data, mask_in->linesize, 0,
 			  iheight, mask_out->data, mask_out->linesize))
@@ -223,13 +225,59 @@ int main(int argc, char *argv[])
 	}
 
 	av_free(mask_in);
-	av_free(mask_out);
 	av_free(buffer);
 
-	//do something with mask, then
+	mask_filename = "./tests/test-mask.jpg";
+	mask_file.open(mask_filename.c_str(), ios::out|ios::binary|ios::trunc);
+	if(!mask_file.is_open())
+	{
+		log_message(1, "Could not open mask file: %s", mask_filename);
+		exit(1);
+	}
 
+	JpegConverter jpgconv;
+	if(!jpgconv.Init(3, cfg.getSetting("video"), cfg.getSetting("webcam")))
+	{
+		log_message(1, "Converter initialization error");
+		exit(1);
+	}
+
+	int out_length = 0;
+	if((out_length = jpgconv.Convert(buffer, mask, mask_len)) < 0)
+	{
+		log_message(1, "Convert error");
+		exit(1);
+	}
+
+	if(!mask_file.write((char*)buffer, buf_length))
+	{
+		log_message(1, "Write error");
+		exit(1);
+	}
+	mask_file.close();
+
+	av_free(mask_out);
+	av_free(buffer);
 	av_free(mask);
 	//end of load mask test//
+
+	struct test1
+	{
+		int a;
+		int b;
+	};
+
+	struct test2
+	{
+		public: test1 t1;
+		int c;
+	};
+
+	test2 t2;
+	test1* t1 = &t2.t1;
+	t1->a = 1;
+	t1->b = 2;
+	((test2*)t1)->c = 3;
 
 	exit(0);
 }

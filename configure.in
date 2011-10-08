@@ -65,6 +65,12 @@ AC_CHECK_LIB(swscale,
        AC_MSG_ERROR([*** swscale from FFmpeg library not found!])
 )
 
+AC_CHECK_LIB(jpeg,
+       jpeg_set_defaults,
+       LIBS="$LIBS -ljpeg",
+       AC_MSG_ERROR([*** libjpeg library not found!])
+)
+
 PKG_CHECK_MODULES([LIBCONFIGXX], [libconfig++ >= 1.3],,
        AC_MSG_ERROR([libconfig++ 1.3 or newer not found.])
 )

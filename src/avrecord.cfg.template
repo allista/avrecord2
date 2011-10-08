@@ -153,3 +153,9 @@ schedule:
 	//array of timestamp pairs. If not empty, record only when current time is between any pair.
 	schedule   = ""; //"hh:mm:ss-hh:mm:ss;hh:mm:ss-hh:mm:ss;..."
 };
+
+webcam :
+{
+	//jpeg image quality
+	quality = 75; //value: [0:100]
+};

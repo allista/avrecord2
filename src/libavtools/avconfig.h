@@ -95,8 +95,16 @@ private:
 	Config avconfig;  ///< Config object
 	string filename;  ///< name of the configuration file loaded
 
+	string fix_str(void *buf);
 	int  xioctl(int fd, int request, void *arg);
-	bool enumerate_v4l2_menu(int fd, v4l2_queryctrl queryctrl, map<unsigned long, vector<v4l2_querymenu> > &querymenu_list);
+	bool enumerate_v4l2_menu(int fd, v4l2_queryctrl *queryctrl,
+	                            map<unsigned long, vector<v4l2_querymenu> > &querymenu_list);
+	int  query_control(int fd,
+	                     v4l2_queryctrl *queryctrl,
+	                     v4l2_control *control,
+	                     vector<v4l2_queryctrl> &queryctrl_list,
+	                     vector<v4l2_control> &control_list,
+	                     map<unsigned long, vector<v4l2_querymenu> > & querymenu_list);
 };
 
 #endif

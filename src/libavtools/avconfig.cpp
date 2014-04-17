@@ -81,7 +81,6 @@ bool AVConfig::Init()
 	const char *device_name;
 	struct stat st;
 
-
 	//check if there're essential settings
 	if(!getRoot()->exists("audio"))
 		getRoot()->add("audio", Setting::TypeGroup);
@@ -153,35 +152,32 @@ bool AVConfig::Init()
 	log_message(0, "AVConfig: Currently selected input is: %d -- %s.", current_input, input_list[current_input].name);
 
 
-	//enumerate standards
+	//enumerate standards if applied
 	vector<v4l2_standard> standard_list;
 	v4l2_standard standard;
 	v4l2_std_id current_standard;
 	CLEAR(standard);
 	standard.index = 0;
-	if(-1 == xioctl(video_device, VIDIOC_G_STD, &current_standard))
+	if(-1 != xioctl(video_device, VIDIOC_G_STD, &current_standard))
 	{
-		log_errno("AVConfig: VIDIOC_G_STD");
-		return false;
+        while(0 == xioctl(video_device, VIDIOC_ENUMSTD, &standard))
+        {
+            if(standard.id & input_list[current_input].std)
+            {
+                standard_list.push_back(standard);
+                log_message(0, "AVConfig: Standard %s is supported by current input.", standard.name);
+                log_message(0, "AVConfig: The framerate defined by this standard is: %d", standard.frameperiod.denominator/standard.frameperiod.numerator);
+                if(standard.id == current_standard)
+                    log_message(0, "AVConfig: Standard %s is currently selected on input.", standard.name);
+            }
+            standard.index++;
+        }
+        if(errno != EINVAL || standard.index == 0)
+        {
+            log_errno("AVConfig: VIDIOC_ENUMSTD");
+            return false;
+        }
 	}
-	while(0 == xioctl(video_device, VIDIOC_ENUMSTD, &standard))
-	{
-		if(standard.id & input_list[current_input].std)
-		{
-			standard_list.push_back(standard);
-			log_message(0, "AVConfig: Standard %s is supported by current input.", standard.name);
-			log_message(0, "AVConfig: The framerate defined by this standard is: %d", standard.frameperiod.denominator/standard.frameperiod.numerator);
-			if(standard.id == current_standard)
-				log_message(0, "AVConfig: Standard %s is currently selected on input.", standard.name);
-		}
-		standard.index++;
-	}
-	if(errno != EINVAL || standard.index == 0)
-	{
-		log_errno("AVConfig: VIDIOC_ENUMSTD");
-		return false;
-	}
-
 
 	//enumerate controls
 	vector<v4l2_queryctrl> queryctrl_list;
@@ -192,73 +188,38 @@ bool AVConfig::Init()
 	CLEAR(queryctrl);
 	CLEAR(control);
 	log_message(0, "AVConfig: Quering standard controls");
-	for(queryctrl.id = V4L2_CID_BASE;
-		   queryctrl.id < V4L2_CID_LASTP1 && queryctrl.id >= V4L2_CID_BASE;
-		   queryctrl.id++)
+	queryctrl.id = V4L2_CID_BASE;
+	while(queryctrl.id < V4L2_CID_LASTP1)
 	{
-		if(0 == xioctl(video_device, VIDIOC_QUERYCTRL, &queryctrl))
-		{
-			if(queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) continue;
-			queryctrl_list.push_back(queryctrl);
-			control.id = queryctrl.id;
-			if(0 == xioctl(video_device, VIDIOC_G_CTRL, &control))
-				control_list.push_back(control);
-			else
-			{
-				log_errno("AVConfig: VIDIOC_G_CTRL");
-				return false;
-			}
-			log_message(0, "AVConfig: Control found: %s", queryctrl.name);
-
-			if(queryctrl.type == V4L2_CTRL_TYPE_MENU)
-			{
-				log_message(0, "AVConfig: Control is a menu");
-				enumerate_v4l2_menu(video_device, queryctrl, querymenu_list);
-			}
-		}
-		else
-		{
-			if(errno == EINVAL) continue;
-			log_errno("AVConfig: VIDIOC_QUERYCTRL");
-			return false;
-		}
+	    queryctrl.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
+	    control.id    = queryctrl.id;
+	    int res = query_control(video_device, &queryctrl, &control,
+	                            queryctrl_list, control_list, querymenu_list);
+        if(-1 == res)
+        {
+            log_errno("AVConfig: unable to query device control");
+            return false;
+        }
+        else if(0 == res) break;
 	}
-
 	log_message(0, "AVConfig: Quering driver specific controls");
-	for(queryctrl.id = V4L2_CID_PRIVATE_BASE; queryctrl.id >= V4L2_CID_PRIVATE_BASE; queryctrl.id++)
-	{
-		if(0 == xioctl(video_device, VIDIOC_QUERYCTRL, &queryctrl))
-		{
-			if(queryctrl.flags & V4L2_CTRL_FLAG_DISABLED) continue;
-			queryctrl_list.push_back(queryctrl);
-			control.id = queryctrl.id;
-			if(0 == xioctl(video_device, VIDIOC_G_CTRL, &control))
-				control_list.push_back(control);
-			else
-			{
-				log_errno("AVConfig: VIDIOC_G_CTRL");
-				return false;
-			}
-			log_message(0, "AVConfig: Control found: %s", queryctrl.name);
-
-			if(queryctrl.type == V4L2_CTRL_TYPE_MENU)
-			{
-				log_message(0, "AVConfig: Control is a menu");
-				enumerate_v4l2_menu(video_device, queryctrl, querymenu_list);
-			}
-		}
-		else
-		{
-			if(errno == EINVAL) break;
-			log_errno("AVConfig: VIDIOC_QUERYCTRL");
-			return false;
-		}
-	}
-
+	queryctrl.id = V4L2_CID_PRIVATE_BASE;
+    while(true)
+    {
+        queryctrl.id |= V4L2_CTRL_FLAG_NEXT_CTRL;
+        control.id    = queryctrl.id;
+        int res = query_control(video_device, &queryctrl, &control,
+                                queryctrl_list, control_list, querymenu_list);
+        if(-1 == res)
+        {
+            log_errno("AVConfig: unable to query device control");
+            return false;
+        }
+        else if(0 == res) break;
+    }
 
 	//close the device
 	close(video_device);
-
 
 	//construct inputs setting
 	Setting *video = getVideoSettings();
@@ -269,16 +230,18 @@ bool AVConfig::Init()
 	try{ video->remove("inputs"); } catch(...){}
 	Setting &inputs = video->add("inputs", Setting::TypeGroup);
 	for(int i = 0; i < input_list.size(); i++)
-		inputs.add((const char*)input_list[i].name, Setting::TypeInt) = i;
+		inputs.add(fix_str(input_list[i].name), Setting::TypeInt) = i;
 
-	//construct standarts setting
+    //construct standarts setting
 	try{ video->remove("standard"); } catch(...){}
-	video->add("standard", Setting::TypeInt64) = (long long)current_standard;
-
 	try{ video->remove("standards"); } catch(...){}
-	Setting &standards = video->add("standards", Setting::TypeGroup);
-	for(int i = 0; i < standard_list.size(); i++)
-		standards.add((const char*)standard_list[i].name, Setting::TypeInt64) = (long long)standard_list[i].id;
+	if(!standard_list.empty())
+	{
+	    video->add("standard", Setting::TypeInt64) = (long long)current_standard;
+        Setting &standards = video->add("standards", Setting::TypeGroup);
+        for(int i = 0; i < standard_list.size(); i++)
+            standards.add(fix_str(standard_list[i].name), Setting::TypeInt64) = (long long)standard_list[i].id;
+	}
 
 	//construct controls setting
 	try{ video->remove("controls"); } catch(...){}
@@ -286,9 +249,7 @@ bool AVConfig::Init()
 
 	for(int i = 0; i < queryctrl_list.size(); i++)
 	{
-		string control_name = (const char*)queryctrl_list[i].name;
-		replace(control_name.begin(), control_name.end(), ' ', '_');
-		Setting &control = controls.add(control_name.c_str(), Setting::TypeGroup);
+		Setting &control = controls.add(fix_str(queryctrl_list[i].name), Setting::TypeGroup);
 		control.add("id", Setting::TypeInt) = (int)queryctrl_list[i].id;
 		control.add("value", Setting::TypeInt) = (int)control_list[i].value;
 		control.add("default_value", Setting::TypeInt) = (int)queryctrl_list[i].default_value;
@@ -296,7 +257,7 @@ bool AVConfig::Init()
 		{
 			vector<v4l2_querymenu> items = querymenu_list[(int)queryctrl_list[i].id];
 			for(int j = 0; j < items.size(); j++)
-				control.add((const char*)items[j].name, Setting::TypeInt64) = (int)items[j].index;
+				control.add(fix_str(items[j].name), Setting::TypeInt64) = (long long)items[j].index;
 		}
 		else
 		{
@@ -309,19 +270,19 @@ bool AVConfig::Init()
 	return true;
 }
 
+
 bool AVConfig::Save()
 {
 	if(filename.empty()) return false;
-
 	try { avconfig.writeFile(filename.c_str()); }
 	catch(FileIOException)
 	{
 		log_message(1, "AVConfig: Cannot write to \"%s\".", filename.c_str());
 		return false;
 	}
-
 	return true;
 }
+
 
 bool AVConfig::SaveAs(string fname)
 {
@@ -330,17 +291,16 @@ bool AVConfig::SaveAs(string fname)
 		log_message(1, "AVConfig: No configuration filename was given.");
 		return false;
 	}
-
 	try { avconfig.writeFile(fname.c_str()); }
 	catch(FileIOException)
 	{
 		log_message(1, "AVConfig: Cannot write to \"%s\".", fname.c_str());
 		return false;
 	}
-
 	filename = fname;
 	return true;
 }
+
 
 Setting * AVConfig::getSetting(const char * path)
 {
@@ -351,26 +311,27 @@ Setting * AVConfig::getSetting(const char * path)
 	return setting;
 }
 
+
 int AVConfig::xioctl(int fd, int request, void * arg)
 {
 	int r;
-
 	do r = ioctl (fd, request, arg);
 	while (-1 == r && EINTR == errno);
-
 	return r;
 }
 
-bool AVConfig::enumerate_v4l2_menu(int fd, v4l2_queryctrl queryctrl, map< unsigned long, vector < v4l2_querymenu > > & querymenu_list)
+
+bool AVConfig::enumerate_v4l2_menu(int fd, v4l2_queryctrl * queryctrl,
+                                        map<unsigned long, vector<v4l2_querymenu> > & querymenu_list)
 {
 	v4l2_querymenu querymenu;
 	CLEAR(querymenu);
 	querymenu_list.clear();
-	querymenu.id = queryctrl.id;
+	querymenu.id = queryctrl->id;
 	querymenu_list[(unsigned long)querymenu.id] = vector<v4l2_querymenu>(0);
 
-	for(querymenu.index = queryctrl.minimum;
-		querymenu.index <= queryctrl.maximum;
+	for(querymenu.index  = queryctrl->minimum;
+		querymenu.index <= queryctrl->maximum;
 		querymenu.index++)
 	{
 		if(0 == xioctl(fd, VIDIOC_QUERYMENU, &querymenu))
@@ -380,10 +341,53 @@ bool AVConfig::enumerate_v4l2_menu(int fd, v4l2_queryctrl queryctrl, map< unsign
 		}
 		else
 		{
+		    if(errno == EINVAL) continue;
 			log_errno("AVConfig: VIDIOC_QUERYMENU");
 			return false;
 		}
 	}
-
 	return true;
+}
+
+
+int  AVConfig::query_control(int fd,
+                                v4l2_queryctrl *queryctrl,
+                                v4l2_control *control,
+                                vector<v4l2_queryctrl> &queryctrl_list,
+                                vector<v4l2_control> &control_list,
+                                map<unsigned long, vector<v4l2_querymenu> > & querymenu_list)
+{
+    if(0 == xioctl(fd, VIDIOC_QUERYCTRL, queryctrl))
+    {
+        if(queryctrl->flags & V4L2_CTRL_FLAG_DISABLED) return 1;
+        queryctrl_list.push_back(*queryctrl);
+        if(0 == xioctl(fd, VIDIOC_G_CTRL, control))
+            control_list.push_back(*control);
+        else
+        {
+            log_errno("AVConfig: VIDIOC_G_CTRL");
+            return -1;
+        }
+        log_message(0, "AVConfig: Control found: %s", queryctrl->name);
+        if(queryctrl->type == V4L2_CTRL_TYPE_MENU)
+        {
+            log_message(0, "AVConfig: Control is a menu");
+            enumerate_v4l2_menu(fd, queryctrl, querymenu_list);
+        }
+    }
+    else
+    {
+        if(errno == EINVAL) return 0;
+        log_errno("AVConfig: VIDIOC_QUERYCTRL");
+        return -1;
+    }
+    return 1;
+}
+
+string AVConfig::fix_str(void *buf)
+{
+    string s = string((const char*)buf);
+    replace(s.begin(), s.end(), ' ', '_');
+    replace(s.begin(), s.end(), ',', '_');
+    return s;
 }

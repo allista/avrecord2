@@ -42,6 +42,8 @@ Sndstream::Sndstream()
 
 	_bsize    = 0;
 	_ptime    = 0;
+
+	frames_available = 0;
 }
 
 bool Sndstream::Open(Setting *audio_settings_ptr, pcm_fmt fmt, weight_func weight_f)
@@ -157,7 +159,7 @@ bool Sndstream::Open(Setting *audio_settings_ptr, pcm_fmt fmt, weight_func weigh
 	snd_pcm_hw_params_get_period_time(hw_params, &_ptime, &dir);
 	framesize = snd_pcm_format_size(pcm_format, channels);
 	_bsize = frames * framesize;
-	cur_ptime = _ptime;
+
 
 	/* Write the parameters to the driver */
 	if((ret = snd_pcm_hw_params(snd_dev, hw_params)) < 0)
@@ -233,29 +235,41 @@ int Sndstream::Read(void* buffer, uint size)
 		return -1;
 	}
 
-	cur_ptime = _ptime;
-	frames_available = snd_pcm_readi(snd_dev, buffer, frames);
-	if(frames_available == -EAGAIN) return 0;
-	else if(frames_available== -EPIPE)
+	snd_pcm_uframes_t count  = frames;
+	void *obuffer = buffer;
+	while(count > 0)
 	{
-		/* EPIPE means overrun */
-		if(snd_pcm_prepare(snd_dev) < 0)
-			log_message(1, "Sndstream: cant recover from overrun");
-		else log_message(0, "Sndstream: recovered from overrun");
-		return 0;
+	    frames_available = snd_pcm_readi(snd_dev, buffer, count);
+	    if(frames_available == -EPIPE)
+        {
+            /* EPIPE means overrun */
+            if(snd_pcm_prepare(snd_dev) < 0)
+                log_message(1, "Sndstream: can't recover from overrun");
+            else log_message(0, "Sndstream: recovered from overrun");
+            return 0;
+        }
+	    else if (frames_available == -ESTRPIPE)
+	    {
+	        log_message(0, "Sndstream: sound device is suspended, trying to resume");
+	        /* wait until suspend flag is released */
+	        int res = 0;
+	        while((res = snd_pcm_resume(snd_dev)) == -EAGAIN) sleep(1);
+            if(res < 0 && snd_pcm_prepare(snd_dev) < 0)
+                log_message(0, "Sndstream: failed to resume and prepare");
+            return 0;
+        }
+	    else if(frames_available < 0)
+        {
+            log_message(1, "Sndstream: error from read: %s", snd_strerror(frames_available));
+            return 0;
+        }
+	    if(frames_available > 0)
+	    {
+	        count  -= frames_available;
+	        buffer += frames_available * framesize;
+	    }
 	}
-	else if(frames_available < 0)
-	{
-		log_message(1, "Sndstream: error from read: %s", snd_strerror(frames_available));
-		return 0;
-	}
-	else if(frames_available < frames)
-	{
-		log_message(0, "Sndstream: short read, read %d frames", frames_available);
-		size = frames_available*framesize;
-		cur_ptime = (uint)(_ptime*((double)frames_available/frames));
-	}
-	amplify(buffer, frames_available);
+	amplify(obuffer, frames);
 
 	return size;
 }
@@ -272,7 +286,7 @@ void Sndstream::amplify(void *buffer, uint num_frames)
 	{
 		case SND_8BIT:
 			cb		= (char*)buffer;
-			for(int i = 0; i < num_frames; i++)
+			for(uint i = 0; i < num_frames; i++)
 			{
 				cur		= cb[i] * amp_level;
 				if(labs(cur) > SND_8BIT_MAX)
@@ -283,10 +297,9 @@ void Sndstream::amplify(void *buffer, uint num_frames)
 			max = weight(max, SND_8BIT_MAX);
 			break;
 
-
 		case SND_16BIT:
 			sb  = (short*)buffer;
-			for(int i = 0; i < num_frames; i++)
+			for(uint i = 0; i < num_frames; i++)
 			{
 				cur		= sb[i] * amp_level;
 				if(labs(cur) > SND_16BIT_MAX)

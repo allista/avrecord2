@@ -92,7 +92,7 @@ public:
 	uint bsize()  const { return _bsize; };
 
 	/// returns time width of a read period in microseconds
-	uint ptime()  const	{ return cur_ptime; };
+	double ptime()  const	{ return _ptime/1e6; };
 
 private:
 	void   amplify(void *buffer, uint num_frames); ///< amplifys data stored in the 'buffer'
@@ -114,7 +114,6 @@ private:
 	uint  framesize;             ///< size of one frame in bytes
 	uint _bsize;                 ///< size of a single read period in bytes
 	uint _ptime;                 ///< time width of a read period in microseconds
-	uint  cur_ptime;             ///< time width of a red frames in microseconds
 };
 
 #endif

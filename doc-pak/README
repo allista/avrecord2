@@ -1,0 +1,78 @@
+Introduction
+
+AVRecord is an audio-video recorder with motion and noise detection. It constantly monitors a video stream from a v4l device looking for difference between consequent frames. It may also monitor sound level in a stream captured by a sound card. While waiting for motion or noise it buffers data. When something is detected buffered data is written out so the precise moment of the event's beginning is not clipped.
+
+Installation
+
+The installation from source process is typical and fully described in the INSTALL file. There is however one option you should now of: configure --without-avrtuner disables compilation of the AVRTuner GUI program and any checks for GUI libraries which it uses, so using this option you may compile AVRecord on a non-GUI system.
+
+
+Right after installation
+
+There's quite obviously no default configuration for there are too many different video capture devices each providing different set of controls. Therefore before you start using avrecord for the first time you should initialize it's configuration. In order to do so you need a configuration template containing all static (i.e. non initializable) options. Such a template is of course provided and is typically located in /etc/acrecord but any working configuration file will do. For initialization you may use either AVRTuner (if you choose to compile it) or the avrecord itself. Either way is very simple.
+Initialization using AVRTuner is done by opening a template in it, editing the video.device setting if you want to use a device other than /dev/video0 and pressing the Initialize button on the toolbar. Then you'll be asked to choose a file to save initialized configuration and after you've done it new configuration will be automatically loaded into the editor for you to tune it and test it.
+Initialization using avrecord is even simpler. In a terminal type:
+avrecord -i -t /path/to/template -o /path/to/output_file
+Or, if you want to use video device /dev/videoN, use -i/dev/videoN instead just -i. Note the absence of a space between the option and a name. It's a must.
+
+
+Configuration
+
+Configuration is stored in a plaintext file in libconfig format which syntax is C-like and easily understandable. All static options are described in the template provided. Upon initialization the following settings are added into the video section:
+
+inputs :
+{
+    Composite0 = 0;
+    Composite1 = 1;
+    S-Video = 2;
+    Composite3 = 3;
+};
+It's a read-only (i.e. if you change it there will be no effect) setting group which should be considered as a list of possible values for the "input" setting.
+
+standards :
+{
+    NTSC = 45056L;
+    ...
+    PAL = 255L;
+    ...
+    SECAM = 16711680L;
+    ...
+}
+Same as inputs -- a typically long list of possible standard identifiers (e.g. 255L) for the "standard" option.
+
+controls :
+{
+    Brightness :
+{
+      id = 9963776;
+      value = 32767;
+      default_value = 32768;
+      minimum = 0;
+      maximum = 65535;
+      step = 256;
+};
+    Contrast :
+{
+    ...
+};
+    ...
+};
+It's a list of all video controls provided by your camera or capture card driver. A name is usually self-describing and there is a single setting within each control that has an effect -- value of the control. Other settings are for the reference. Note though that id setting must not be changed or the control stop working.
+
+
+Operation
+
+Recording with avrecord is as simple as this: type "avrecord" in a terminal and hit enter. In that case avrecord will be run in normal mode and start looking for a configuration file named avrecord.cfg in these directories: first in a working directory, then in HOME/.avrecord/avrecord.cfg and then in /etc/avrecord/avrecord.cfg. If it fails to find one it quits with an error. Otherwise it will proceed by parsing the configuration file found and initializing itself. In any of these steps there may be some errors (e.g. i/o errors if some files are not found, etc). If any of them is fatal the program quits seemingly quietly. Seemingly, for by then all the messages should be written into a log file which location is either defined in the configuration or is a working directory. If all goes well, you'll see nothing and the program will start recording according to the configuration.
+If you prefer more control over the process though, you may explicitly specify:
+-c /path/to/cofig.file (the path may be absolute or relative)
+and(or)
+-l /path/to/log.file (the path may be absolute or relative)
+You also may choose to set the -n flag to disable logging to the file. All messages will be printed to stdout/stderr instead then.
+If you start the program with -d flag it will run in daemon mode and free the terminal as soon as it initializes successfully. Then you may stop it by sending the QUIT signal. You also may force it to start a new movie file by sending the USR1 signal.
+
+
+Tuning configuration using AVRTuner
+
+To set all the switches and detection parameters according to your need may be a pain, for each time you change something in the configuration you have to start avrecord, record some test movie, then open it in some video player or editor and look at the result. To speed up this process you may compile and install the AVRTuner GUI.
+At first glance it's a small text editor with syntax highlighting in which you open and edit by hand your configuration file. In the inside it is not that simple. First of all, each time you load or save a configuration, it check it's syntax for errors and, if some are found, point at them for you. Then, as was already said, in AVRTuner you may initialize a configuration using loaded file as a template. And last but not least: valid configuration could be tested right here without the need to record anything or even start avrecord.
+Just hit "Test Configuration" and watch: main window will switch from editor mode to testing. Instead of the editor you'll see log output where all logged messages will appear. Underneath it two progress bars will indicate the amounts of motion and noise (if noise detection is switched on in the configuration) currently detected. Finally a video output window will appear in which you'll see what would be recorded with all additional information printed on the image according to the configuration. And if the "Show Motion" checkbox is checked (which is a default) each "motion" pixel in the image will be white, so you'll see something like a ghost following each motion object. It's very useful to see just what exactly the program sees as a motion (which may be a static noise for example) for tuning such settings like motion_threshold, video_noise_level or frame_step.

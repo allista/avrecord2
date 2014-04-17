@@ -1,0 +1,43 @@
+2.1.0
+Recorder: 
+1) noise detection works correctely.
+2) detection mask functionality is fully functional. Masking is done by multiplying current pixel difference by a corresponding grayscale value which lies within [0;1], so black area on a mask eliminates motion detection in this area, but gray area only makes it somewhat harder to detect. Equivalent point of view on the masking is that the mask itself represents custom noise threshold map. Note, that general noise threshold is still working as expected.
+AVRTuner: 
+1) meters' max values take thresholds into account
+2) simple session save/restore is added
+3) in statusbar full file path is displayed now.
+avrtuner and avrecord: the base directory for all relative paths defined in a configuration is the path of a directory containing configuration file itself, not the work directory of the process.
+videomonitor and avifile: no more allocations for every frame displayed
+
+2.0.2
+man page is added
+There's a manual in the README file now
+In AVRTuner: bad mutex handling is fixed, no mor flickering in Show Motion mode
+In AVRecord: option -i now takes an optional argument -- video device name. It enables initialization from specified device rather than from /dev/video0
+
+2.0.1
+	Various bugfixes (threads crosstalk and CPU consumption in AVRTuner, audio clipping, etc.)
+	log_events option is added to the configuration to enable pause-resume record event logging
+
+2.0.0_rc1
+	Video capture using V4L2 api
+	Configuration using libconfig
+	Configuration GUI using Gtkmm and SDL
+	No KDE or Qt
+	Optional compilation of GUI components
+	Bug fixes
+	
+1.1.2
+	Minor fixes due to changes in ffmpeg distribution
+	Other minor fixes
+	
+1.1.1
+	RecordLoop code was simplified
+	The latency system works properly now
+	Latency is now written to output file on program termination, so you don't lose last frames
+	BufferRing::operator[int] and BufferRing::written(int) properly hanle positive arguments now
+	
+1.1.0
+	Bugfix: first-time compilation works properly now -- in tunerformbase.ui global header dependency was changed to local.
+	Latency ring buffers for audio and video was added, so now several frames befor motion may  also be written to output file.
+	Ring buffer for motion detection is now used, so it's possible now to calculate diffirence between distant frames not only two subsequent.

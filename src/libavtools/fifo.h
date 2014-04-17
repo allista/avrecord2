@@ -54,10 +54,10 @@ private:
 template<class _type>
 Fifo<_type>::Fifo(uint _size)
 {
-	if(!size) buffer = r_point = w_point = end = NULL;
+    size = _size;
+    if(!size) buffer = r_point = w_point = end = NULL;
 	else
 	{
-		size    = _size;
 		buffer  = (_type*)av_malloc(size);
 		r_point = buffer;
 		w_point = buffer;

@@ -31,6 +31,8 @@
 #include <cstdlib>
 #include <signal.h>
 
+#include <sys/types.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/ioctl.h>
@@ -52,6 +54,9 @@ bool  initialize    = false;
 char *LOG_FILE      = "avrecord.log";
 bool  nolog         = false; ///< if true, log to stderr
 
+///default pid file
+char *PID_FILE      = "avrecord.pid";
+
 ///ofstream object of opened logfile
 ofstream log_stream;
 
@@ -67,7 +72,7 @@ static void sig_handler(int signo);
 ///sets up our signal handler
 static void setup_signals(struct sigaction *sig_handler_action);
 
-/// Turns Motion into a daemon through forking.
+/// Turns avrecord into a daemon through forking.
 /// The parent process (i.e. the one initially calling this function) will
 /// exit inside this function, while control will be returned to the child
 /// process. Standard input/output are released properly, and the current
@@ -82,8 +87,9 @@ static void print_usage();
 
 ///the main program =)
 int main(int argc, char *argv[])
-{
+    {
 	//parse commandline args
+	string pid_fname;
 	string log_fname;
 	string conf_fname;
 	string template_fname;
@@ -92,11 +98,14 @@ int main(int argc, char *argv[])
 	if(argc > 1)
 	{
 		int c;
-		while((c = getopt(argc, argv, "c:l:t:o:i::dnh"))!=EOF)
+		while((c = getopt(argc, argv, "c:p:l:t:o:i::dnh"))!=EOF)
 			switch(c)
 			{
 				case 'c':
 					if(optarg) conf_fname = string(optarg);
+					break;
+				case 'p':
+					if(optarg) pid_fname  = string(optarg);
 					break;
 				case 'l':
 					if(optarg) log_fname  = string(optarg);
@@ -145,7 +154,8 @@ int main(int argc, char *argv[])
 		if(!new_config.Load(template_fname, true)) exit(1);
 		if(!video_dev.empty())
 			new_config.lookup("video.device") = video_dev;
-		log_message(0, "avrecord: Initializign configuration for %s using %s as a template.", (const char*)new_config.lookup("video.device"), template_fname.c_str());
+		log_message(0, "avrecord: Initializign configuration for %s using %s as a template.",
+		            (const char*)new_config.lookup("video.device"), template_fname.c_str());
 		if(!new_config.Init()                    ) exit(1);
 		if(!new_config.SaveAs(output_fname)      ) exit(1);
 
@@ -158,6 +168,7 @@ int main(int argc, char *argv[])
 		log_message(0, "avrecord: going to daemon mode.");
 		exit(0);
 	}
+	pid_t pid = getpid();
 
 	//compile filenames
 	ifstream tester;
@@ -214,8 +225,7 @@ int main(int argc, char *argv[])
 
 	//make sure, that we work with absolute path only
 	//this will be needed in daemon mode
-	if(conf_fname[0] != '/')
-		conf_fname = workdir + conf_fname;
+	if(conf_fname[0] != '/') conf_fname = workdir + conf_fname;
 
 	//now set config path to use as a base directory for all relative paths in the config {paths} group
 	char *c_conf_fname = new char[conf_fname.size()+1];
@@ -241,10 +251,13 @@ int main(int argc, char *argv[])
 	//open logfile
 	if(!nolog)
 	{
-		//loading from config file
-		try { log_fname = (const char*)config.lookup("paths.log_file"); }
-		catch(...) {};
-		if(log_fname.empty())   log_fname = string(LOG_FILE);
+		//if log filename is not provided loading it from config file
+		if(log_fname.empty())
+		{
+			try { log_fname = (const char*)config.lookup("paths.log_file"); }
+			catch(...) {};
+			if(log_fname.empty()) log_fname = string(LOG_FILE);
+		}
 
 		//make sure that we work with absolute paths only
 		//this will be needed in daemon mode
@@ -254,6 +267,25 @@ int main(int argc, char *argv[])
 		if(!log_stream.is_open())
 			log_message(1, "avrecord: Can't open log file %s Logging to stderr...", log_fname.c_str());
 	}
+
+	//open pidfile
+	//if pid filename is not provided loading it from config file
+	if(pid_fname.empty())
+	{
+		try { pid_fname = (const char*)config.lookup("paths.pid_file"); }
+		catch(...) {};
+		if(pid_fname.empty()) pid_fname = string(PID_FILE);
+	}
+	//make sure that we work with absolute paths only
+	//this will be needed in daemon mode
+	if(pid_fname[0] != '/') pid_fname = basedir + pid_fname;
+	//open pid file, write pid there and close it
+	ofstream pid_stream;
+	pid_stream.open(pid_fname.c_str(), ios::out);
+	if(!pid_stream.is_open())
+		log_message(1, "avrecord: Can't open pid file %s", pid_fname.c_str());
+	pid_stream << pid;
+	pid_stream.close();
 
 	//setup mask file
 	string mask_file;
@@ -285,8 +317,6 @@ int main(int argc, char *argv[])
 
 		rec.Init(config.getConfig());
 		rec.RecordLoop(&avsignal);
-		rec.Close();
-
 	}
 	while(avrestart);
 
@@ -353,7 +383,7 @@ static void become_daemon()
 
 	//changing dir to root enables people to unmount a disk
 	//without having to stop avrecord
-	if(chdir("/")) cerr << "Could not change directory to '/'" << endl;
+	if(chdir("/")) log_message(1, "avrecord: Could not change directory to '/'\n");
 	setpgrp();
 
 	int i;

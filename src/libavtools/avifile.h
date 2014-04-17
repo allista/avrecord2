@@ -26,6 +26,7 @@
 extern "C"
 {
 #  define INT64_C(c)	c ## LL
+#include <libavutil/mathematics.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
 #include <libswscale/swscale.h>

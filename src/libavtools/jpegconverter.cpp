@@ -82,7 +82,7 @@ bool JpegConverter::Init(uint _in_fmt, Setting* video_settings_ptr, Setting* web
 	quality = (quality > 100)? 100 : quality;
 
 	//initialize software scaler for pixel format conversion if needed
-	in_fmt = av_pixel_formats[_in_fmt];
+	in_fmt = av_pixel_formats.find(_in_fmt)->second;
 	if(in_fmt != out_fmt)
 	{
 		tmp_buffer_len = avpicture_get_size(out_fmt, width, height);

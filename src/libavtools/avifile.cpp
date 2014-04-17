@@ -63,7 +63,11 @@ AVIFile::AVIFile()
 
 bool AVIFile::Init(Setting *_audio_settings_ptr, Setting *_video_settings_ptr_ptr)
 {
-	if(!_audio_settings_ptr || !_video_settings_ptr_ptr) return false;
+	if(!_audio_settings_ptr || !_video_settings_ptr_ptr)
+    {
+	    log_message(1, "AVIFile: Init: invalid parameters");
+        return false;
+    }
 	audio_settings_ptr = _audio_settings_ptr;
 	video_settings_ptr = _video_settings_ptr_ptr;
 
@@ -77,9 +81,10 @@ bool AVIFile::Init(Setting *_audio_settings_ptr, Setting *_video_settings_ptr_pt
 	}
 
 	//guess the avi output format
-	o_file->oformat = guess_format("avi", NULL, NULL);
+	o_file->oformat = av_guess_format("avi", NULL, NULL);
 	if(!o_file->oformat)
 	{
+	    log_message(1, "AVIFile: unable to guess avi output forman");
 		cleanup();
 		return false;
 	}
@@ -92,14 +97,14 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 {
 	if(opened() || !o_file) return false;
 	Setting &video_settings = *video_settings_ptr;
-	in_fmt = av_pixel_formats[pix_fmt];
+	in_fmt = av_pixel_formats.find(pix_fmt)->second;
 
 	/* Setup video codec id */
 	try
 	{
 		o_file->oformat->video_codec = get_codec_id(
 				(const char*)video_settings["codec"],
-				CODEC_TYPE_VIDEO);
+				AVMEDIA_TYPE_VIDEO);
 	}
 	catch(SettingNotFoundException)
 	{
@@ -130,7 +135,7 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 	//setup video codec
 	vcodec             = vstream->codec;
 	vcodec->codec_id   = o_file->oformat->video_codec;
-	vcodec->codec_type = CODEC_TYPE_VIDEO;
+	vcodec->codec_type = AVMEDIA_TYPE_VIDEO;
 
 	/* Set default parameters */
 	try
@@ -268,7 +273,7 @@ bool AVIFile::setAParams()
 	{
 		o_file->oformat->audio_codec = get_codec_id(
 				(const char*)audio_settings["codec"],
-				 CODEC_TYPE_AUDIO);
+				 AVMEDIA_TYPE_AUDIO);
 	}
 	catch(SettingNotFoundException)
 	{
@@ -299,11 +304,12 @@ bool AVIFile::setAParams()
 	//setup audio codec
 	acodec             = astream->codec;
 	acodec->codec_id   = o_file->oformat->audio_codec;
-	acodec->codec_type = CODEC_TYPE_AUDIO;
+	acodec->codec_type = AVMEDIA_TYPE_AUDIO;
 
 	/* Set default parameters */
 	try
 	{
+	    acodec->sample_fmt  = AV_SAMPLE_FMT_S16;
 		acodec->bit_rate    = audio_settings["bitrate"];
 		acodec->sample_rate = audio_settings["sample_rate"];
 		acodec->channels    = audio_settings["channels"];
@@ -314,7 +320,7 @@ bool AVIFile::setAParams()
 		cleanup();
 		return false;
 	}
-	acodec->frame_size    = 1; //it's initial value. it will be changed during codec initialization
+	acodec->frame_size = 1; //it's initial value. it will be changed during codec initialization
 	acodec->strict_std_compliance = 0;
 
 	/* Now that all the parameters are set, we can open the video
@@ -359,7 +365,7 @@ bool AVIFile::setAParams()
 
 bool AVIFile::Open(string filename)
 {
-	if(!filename.size())    return false;
+	if(!filename.size()) return false;
 	if(opened() || !o_file) return false;
 	if(!(vcodec || acodec)) return false;
 
@@ -435,13 +441,13 @@ bool AVIFile::Open(string filename)
 double AVIFile::getVpts( ) const
 {
 	if(!vstream) return 0;
-	return (double)vstream->pts.val * vstream->time_base.num / vstream->time_base.den;
+	return vstream->pts.val * av_q2d(vstream->time_base);
 }
 
 double AVIFile::getApts( ) const
 {
 	if(!astream) return 0;
-	return (double)astream->pts.val * astream->time_base.num / astream->time_base.den;
+	return astream->pts.val * av_q2d(astream->time_base);
 }
 
 bool AVIFile::writeVFrame(unsigned char *buffer)
@@ -469,7 +475,7 @@ bool AVIFile::writeVFrame(unsigned char *buffer)
 	if(o_file->oformat->flags & AVFMT_RAWPICTURE)
 	{
 		/* raw video case. The API will change slightly in the near future for that */
-		pkt.flags |= PKT_FLAG_KEY;
+		pkt.flags |= AV_PKT_FLAG_KEY;
 		pkt.data   = (uint8_t *)out_picture;
 		pkt.size   = sizeof(AVPicture);
 		ret = av_interleaved_write_frame(o_file, &pkt);
@@ -484,10 +490,10 @@ bool AVIFile::writeVFrame(unsigned char *buffer)
 		{
 			/* write the compressed frame to the media file */
 			/* XXX: in case of B frames, the pts is not yet valid */
-			if(vcodec->coded_frame)
-				pkt.pts = vcodec->coded_frame->pts;
+			if(vcodec->coded_frame && vcodec->coded_frame->pts != AV_NOPTS_VALUE)
+				pkt.pts = av_rescale_q(vcodec->coded_frame->pts, vcodec->time_base, vstream->time_base);
 			if(vcodec->coded_frame->key_frame)
-				pkt.flags |= PKT_FLAG_KEY;
+				pkt.flags |= AV_PKT_FLAG_KEY;
 			pkt.data = vbuffer;
 			pkt.size = out_size;
 			ret = av_interleaved_write_frame(o_file, &pkt);
@@ -525,7 +531,7 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 				pkt.stream_index = astream->index;
 				if(acodec->coded_frame && acodec->coded_frame->pts != AV_NOPTS_VALUE)
 					pkt.pts = av_rescale_q(acodec->coded_frame->pts, acodec->time_base, astream->time_base);
-				pkt.flags |= PKT_FLAG_KEY;
+				pkt.flags |= AV_PKT_FLAG_KEY;
 				pkt.data = abuffer;
 				pkt.size = out_size;
 				ret |= av_interleaved_write_frame(o_file, &pkt);
@@ -571,7 +577,7 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 			pkt.stream_index = astream->index;
 			if(acodec->coded_frame && acodec->coded_frame->pts != AV_NOPTS_VALUE)
 				pkt.pts= av_rescale_q(acodec->coded_frame->pts, acodec->time_base, astream->time_base);
-			pkt.flags |= PKT_FLAG_KEY;
+			pkt.flags |= AV_PKT_FLAG_KEY;
 			pkt.data = abuffer;
 			pkt.size = out_size;
 			ret |= av_interleaved_write_frame(o_file, &pkt);

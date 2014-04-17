@@ -1115,7 +1115,7 @@ void InitBitmaps()
 	}
 
 	/* build [big_]char_arr_ptr table to point to each available ascii */
-	for(i=0; i < sizeof(s_table)/sizeof(struct s_bitmap); i++)
+	for(i=0; i < LEN(s_table); i++)
 	{
 		s_chars[(int)s_table[i].ascii]=&s_table[i].pix[0][0];
 		b_chars[(int)s_table[i].ascii]=&b_table[i].pix[0][0];

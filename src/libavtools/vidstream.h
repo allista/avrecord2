@@ -28,6 +28,7 @@ typedef long long __s64;
 
 #include <time.h>
 #include <linux/videodev2.h>
+#include <libv4lconvert.h>
 
 #include <vector>
 using namespace std;
@@ -49,7 +50,7 @@ struct image_buffer    ///< image buffer structure
 {
 	void* start;       ///< the beginning of a buffer
 	size_t length;     ///< buffer length
-	timeval timestamp; ///< image timestamp as returnd by VIDIOC_DQBUF in v4l2_buffer structure
+	timeval timestamp; ///< image timestamp as returned by VIDIOC_DQBUF in v4l2_buffer structure
 };
 
 ///encapsulates simple grabbing work with v4l device
@@ -89,12 +90,12 @@ public:
 	uint frameperiod_demoninator() const { return standard.frameperiod.denominator; }
 
 	///is it needed at all?
-	uint frame_rate() const
-	{ return standard.frameperiod.denominator/standard.frameperiod.numerator ;}
+	double frame_rate() const
+	{ return standard.frameperiod.denominator/(double)standard.frameperiod.numerator ;}
 
 	///timespan between frames (sec)
 	double frame_interval() const
-	{ return (double)standard.frameperiod.numerator/standard.frameperiod.denominator; }
+	{ return standard.frameperiod.numerator/(double)standard.frameperiod.denominator; }
 
 private:
 	///init stages
@@ -103,39 +104,45 @@ private:
 		INIT_NONE              = 0x000,
   		INIT_VIDEO_DEV_OPENED  = 0x001,
 		INIT_BUFFERS_ALLOCATED = 0x002,
-  		INIT_CAPTURE_STARTED   = 0x004,
+  		INIT_CAPTURE_STARTED   = 0x004
 	};
-	uint init;      ///< bitflag that shows what was inited already
+	uint  init;      ///< bitflag that shows what was inited already
 
-	int  device;    ///< pointer to opened video device
-	io   io_method; ///<input/output method used
-	uint pix_fmt;   ///<chosen pixel format
-	uint width;     ///< width of an image
-	uint height;    ///< height of an image
+	int          device;    ///< pointer to opened video device
+	const char *dev_name;  ///< device name
+	io           io_method; ///< input/output method used
 
-	v4l2_capability cap;     ///< video capabilities
-	v4l2_input input;        ///< grab source
-	v4l2_standard standard;  ///< video standard
-	v4l2_format format;      ///< video format
+	uint  width;     ///< width of an image
+	uint  height;    ///< height of an image
 
-	static const uint NUM_BUFFERS = 4; ///<number of image buffers to request from driver. Hardcoded for now.
-	vector<image_buffer> buffers;      ///< image buffers
+	v4l2_capability cap;      ///< video capabilities
+	v4l2_input      input;    ///< grab source
+	v4l2_standard   standard; ///< video standard
+	v4l2_format     format;   ///< video format
+
+	uint pix_fmt;               ///< chosen pixel format
+	bool convert_format;       ///< if format needs conversion
+	v4l2_format out_format;     ///< output video format used for conversion
+	v4lconvert_data *conv_data; ///< data structure used in format conversion
+
+	static const uint NUM_BUFFERS = 16; ///< number of image buffers to request from driver. Hardcoded for now.
+	vector<image_buffer> buffers;        ///< image buffers
 	uint _bsize; ///< biggest buffer length in bytes
 
 	//functions
+	bool open_device(Setting &video_settings);
+	bool check_capabilities(Setting &video_settings);
+	bool set_standard(Setting &video_settings);
+	bool set_cropping(Setting &video_settings);
+	bool set_format(Setting &video_settings);
+	bool set_IO(Setting &video_settings);
+	bool set_controls(Setting &video_settings);
+
 	///make an ioctl call to device safe from signal interuption
 	int xioctl(int request, void *arg);
 
-	///prepairs to capture a frame 'n'
-	bool fill_buffer(image_buffer &buffer, void *start, uint length, timeval timestamp);
-	///prepairs to capture a frame 'n'
-	void fill_buffer(void* to, uint to_len, void *from, uint from_len);
-
-	///converts yuv422 image to yuv420p
-	//static void yuv422_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h);
-
-	///converts rgb24 image to yuv420p
-	//static void rgb24_to_yuv420p(unsigned char *dest, const unsigned char *src, int w, int h);
+	///copy captured frame to the given buffer with pixel format conversion if needed
+	int copy_captured(void* to, uint to_len, void *from, uint from_len);
 };
 
 #endif

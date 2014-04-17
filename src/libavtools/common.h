@@ -23,7 +23,6 @@
 
 extern "C"
 {
-#define __STDC_CONSTANT_MACROS
 #include <stdint.h>
 #include <libavformat/avformat.h>
 #include <libavcodec/avcodec.h>
@@ -35,11 +34,18 @@ extern "C"
 #include <sys/types.h>
 //typedef unsigned char uint8_t;
 
+#include <initializer_list>
+#include <algorithm>
+#include <map>
+
+using namespace std;
+
 #include <linux/videodev2.h>
 
 #define CLEAR(x) memset (&(x), 0, sizeof (x))
+#define LEN(x) ((int)sizeof(x)/(int)sizeof((x)[0]))
 
-///logs given message to our logfile
+///logs given message to the logfile
 void log_message(int level, const char *fmt, ...);
 
 ///logs given message as error to our logfile, appendig errno and it's description
@@ -47,30 +53,40 @@ static void log_errno(const char *message = NULL)
 { log_message(1, "%s errno: %d, %s.", message, errno, strerror(errno)); }
 
 ///supported pixel formats
-///note, that all these formats are planar, I don't use packed ones because of the text rendering function: for all the planar formats one single function is enough, while each packed format requires it's own function.
+///note, that all these formats are planar, we don't use packed ones because of
+///the text rendering function: for all the planar formats one single function
+///is enough, while each packed format requires it's own function.
 static const uint v4l2_pixel_formats[] =
 {
-	V4L2_PIX_FMT_YUV420,
+    //1/2 chroma
+    V4L2_PIX_FMT_YUV420, //this is the default
+    V4L2_PIX_FMT_YUV422P,
+    V4L2_PIX_FMT_NV12,
+    V4L2_PIX_FMT_NV21,
+    //1/4 chroma
 	V4L2_PIX_FMT_YUV411P,
 	V4L2_PIX_FMT_YUV410,
-	V4L2_PIX_FMT_GREY
+	//greyscale
+	V4L2_PIX_FMT_GREY //8bpp
 };
 
-///names of the supported formats
-static const char *v4l2_pixel_format_names[] =
+static const map<uint, PixelFormat> av_pixel_formats =
 {
-	"V4L2_PIX_FMT_YUV420",
-	"V4L2_PIX_FMT_YUV411P"
-	"V4L2_PIX_FMT_YUV410",
-	"V4L2_PIX_FMT_GREY"
+    {V4L2_PIX_FMT_YUV420,  PIX_FMT_YUV420P},
+    {V4L2_PIX_FMT_YUV422P, PIX_FMT_YUV422P},
+    {V4L2_PIX_FMT_NV12,    PIX_FMT_NV12},
+    {V4L2_PIX_FMT_NV21,    PIX_FMT_NV21},
+    {V4L2_PIX_FMT_YUV411P, PIX_FMT_YUV411P},
+    {V4L2_PIX_FMT_YUV410,  PIX_FMT_YUV410P},
+    {V4L2_PIX_FMT_GREY,    PIX_FMT_GRAY8}
 };
 
-static const PixelFormat av_pixel_formats[] =
+static int supported_format_index(const uint format)
 {
-	PIX_FMT_YUV420P,
-	PIX_FMT_YUV411P,
-	PIX_FMT_YUV410P,
-	PIX_FMT_GRAY8
-};
+    const uint *end = v4l2_pixel_formats+LEN(v4l2_pixel_formats);
+    const uint *it = std::find(v4l2_pixel_formats, end, format);
+    if(it != end) return it-v4l2_pixel_formats; //index of the format
+    return -1;
+}
 
 #endif

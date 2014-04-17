@@ -55,7 +55,7 @@ bool VideoMonitor::Init(Config *_config, Glib::Dispatcher *signal, bool with_mot
 
 	highlight_motion = with_motion;
 
-	recorder = new BaseRecorder<Glib::Mutex>();
+	recorder = new BaseRecorder<Glib::Mutex>(true);
 	if(!recorder->Init(config))
 	{
 			::log_message(1, "CaptureThread: Init: unable to initialize recorder");
@@ -66,7 +66,7 @@ bool VideoMonitor::Init(Config *_config, Glib::Dispatcher *signal, bool with_mot
 	uint size = recorder->getVBSize();
 	width     = recorder->getWidth();
 	height    = recorder->getHeight();
-	in_fmt    = av_pixel_formats[recorder->getPixelFormat()];
+	in_fmt    = av_pixel_formats.find(recorder->getPixelFormat())->second;
 	buffer    = new unsigned char[size];
 
 	if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER))
@@ -186,7 +186,7 @@ void VideoMonitor::capture()
 	if(!recorder) return;
 
 	signal = SIG_RECORDING;
-	recorder->IdleLoop(&signal);
+	recorder->RecordLoop(&signal);
 	recorder->Close();
 }
 

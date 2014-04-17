@@ -23,7 +23,6 @@
 
 extern "C"
 {
-#define __STDC_CONSTANT_MACROS
 #include <libswscale/swscale.h>
 }
 #include <SDL/SDL.h>

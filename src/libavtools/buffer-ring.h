@@ -53,10 +53,10 @@ class BufferRing
 		///Returns number of bytes written in current read buffer
 		unsigned int rsize() const { return written[ir]; };
 
-		///Returns N'th buffer after the write one, or -N'th befor the read one, unless |N| is not grater than csize
+		///Returns N'th buffer after the write one, or -N'th before the read one, unless |N| is not grater than csize
 		unsigned char* operator[](int i);
 
-		///Returns N'th buffer size after the write one, or -N'th befor the read one, unless |N| is not grater than csize
+		///Returns N'th buffer size after the write one, or -N'th before the read one, unless |N| is not grater than csize
 		unsigned int written_size(int i);
 
 		///Pushes current write buffer down the ring

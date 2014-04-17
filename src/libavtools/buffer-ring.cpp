@@ -42,8 +42,9 @@ BufferRing::BufferRing(unsigned int _b_size, unsigned int _r_size)
 BufferRing::~BufferRing()
 {
 	for(unsigned int i = 0; i < r_size; i++)
-		delete[] buffers[i];
+	    delete[] buffers[i];
 	delete[] buffers;
+	delete[] written;
 }
 
 

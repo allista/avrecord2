@@ -1,0 +1,12 @@
+.libs
+.deps
+Makefile.in
+avrecord
+avrecord.cfg
+avrecord-uvc.cfg
+avrecord.log
+avrecord.pid
+main.o
+mask.bmp
+movie-2014-04-17_02-05.avi
+movie-2014-04-17_02-18.avi

@@ -98,6 +98,8 @@ public:
 	{ return standard.frameperiod.numerator/(double)standard.frameperiod.denominator; }
 
 private:
+	///defaults
+	static const uint default_fps = 25;
 	///init stages
 	enum
 	{

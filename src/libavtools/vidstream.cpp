@@ -151,9 +151,9 @@ bool Vidstream::set_standard(Setting &video_settings)
             return false;
         }
     }
-    else //set default framerate to 15fps
+    else //set default frame rate
     {
-        uint fps = 15;
+        uint fps = default_fps;
         try { fps = video_settings["desired_fps"]; }
         catch(SettingNotFoundException)
         { log_message(0, "Vidstream: no <desired_fps> setting was found. Using default %d.", fps); }
@@ -580,6 +580,7 @@ bool Vidstream::StopCapture()
 int Vidstream::Read(void* buffer, uint length)
 {
 	if(!(init & INIT_CAPTURE_STARTED) || !buffer) return -1;
+	int ret = -1;
 
 	/* Block signals during IOCTL */
 	sigset_t  set, old;
@@ -600,7 +601,7 @@ int Vidstream::Read(void* buffer, uint length)
 	timeout.tv_sec = 1;
 	timeout.tv_usec = 0;
 
-	int ret = select(FD_SETSIZE, &fd_set, NULL, NULL, &timeout);
+	ret = select(FD_SETSIZE, &fd_set, NULL, NULL, &timeout);
 	if(-1 == ret && EINTR != errno)
 	{
 		log_errno("Vidstream: error on select");

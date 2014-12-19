@@ -36,7 +36,7 @@ ENV="env -i LANG=C PATH=$PATH_BIN MALLOC_CHECK_=1"
 
 . /lib/lsb/init-functions
 
-test -x $DAEMON || exit 0
+[ -x $DAEMON ] || { echo "$DAEMON not found"; exit 0; }
 
 RET=0
 

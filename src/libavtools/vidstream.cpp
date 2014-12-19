@@ -33,6 +33,7 @@
 #include <signal.h>
 #include <malloc.h>
 #include <assert.h>
+#include <time.h>
 
 #include <iostream>
 #include <algorithm>
@@ -677,6 +678,16 @@ int Vidstream::Read(void* buffer, uint length)
         }
         //copy captured frame
         ret = copy_captured(buffer, length, buffers[buf.index].start, buffers[buf.index].length);
+#ifdef DEBUG_VERSION
+        //test: buf.timestamp
+        log_message(0, "image captured at %ld, %ld\n",
+                    buf.timestamp.tv_sec,
+                    buf.timestamp.tv_usec);
+        timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts);
+        log_message(0, "monotonic time %ld, %ld\n",
+                    ts.tv_sec,
+                    ts.tv_nsec);
+#endif
         //enqueue next buffer
         if(-1 == xioctl(VIDIOC_QBUF, &buf))
         {

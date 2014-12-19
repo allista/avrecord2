@@ -5,7 +5,6 @@ noinst_PROGRAMS = gtkapp v4l2-teset
 noinst_HEADERS = avrtunerwindow.h gtkapp.glade webcamserver.h
 
 
-v4l2_teset_LDFLAGS = $(all_libraries)
 v4l2_teset_SOURCES = v4l2-test.cpp webcamserver.cpp
 v4l2_teset_LDADD = $(top_builddir)/src/libavtools/libavtools.la
 

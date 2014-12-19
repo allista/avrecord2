@@ -1,6 +1,5 @@
 INCLUDES = $(all_includes)
 METASOURCES = AUTO
-libavtools_la_LDFLAGS = $(all_libraries)
 noinst_LTLIBRARIES = libavtools.la
 libavtools_la_SOURCES = avconfig.cpp avifile.cpp buffer-ring.cpp img_tools.cpp \
 	jpegconverter.cpp sndstream.cpp vidstream.cpp

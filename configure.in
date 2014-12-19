@@ -1,15 +1,17 @@
-AC_INIT(configure.in, 2.0.2) dnl a source file from your sub dir
+AC_INIT(configure.in, 2.0.3) dnl a source file from your sub dir
+AC_CONFIG_SRCDIR(src/main.cpp)
 
 dnl This ksh/zsh feature conflicts with `cd blah ; pwd`
 unset CDPATH
 
 dnl Checking host/target/build systems, for make, install etc.
 AC_CANONICAL_SYSTEM
+
 dnl Perform program name transformation
 AC_ARG_PROGRAM
 
 dnl Automake doc recommends to do this only here. (Janos)
-AM_INIT_AUTOMAKE(avrecord, 2.0.2) dnl searches for some needed programs
+AM_INIT_AUTOMAKE
 
 dnl generate the config header
 AM_CONFIG_HEADER(config.h)
@@ -43,6 +45,24 @@ dnl PACKAGE set before
 AC_C_BIGENDIAN
 
 dnl Checks for libraries.
+AC_CHECK_LIB(pthread, 
+       pthread_create,
+       LIBS="$LIBS -lpthread",
+       AC_MSG_ERROR([*** pthread library not found!])
+)
+
+AC_CHECK_LIB(m, 
+       sqrt,
+       LIBS="$LIBS -lm",
+       AC_MSG_ERROR([*** libm library not found!])
+)
+
+AC_CHECK_LIB(stdc++, 
+       main,
+       LIBS="$LIBS -lstdc++",
+       AC_MSG_ERROR([*** libstdc++ library not found!])
+) 
+
 AC_CHECK_LIB(asound,
        snd_pcm_open,
        LIBS="$LIBS -lasound",
@@ -50,7 +70,7 @@ AC_CHECK_LIB(asound,
 )
 
 AC_CHECK_LIB(avcodec,
-       avcodec_init,
+       avcodec_register_all,
        LIBS="$LIBS -lavcodec",
        AC_MSG_ERROR([*** avcodec form FFmpeg library not found!])
 )
@@ -58,6 +78,11 @@ AC_CHECK_LIB(avformat,
        av_get_packet,
        LIBS="$LIBS -lavformat",
        AC_MSG_ERROR([*** avformat from FFmpeg library not found!])
+)
+AC_CHECK_LIB(avutil,
+       av_rescale_q,
+       LIBS="$LIBS -lavutil",
+       AC_MSG_ERROR([*** avutil from FFmpeg library not found!])
 )
 AC_CHECK_LIB(swscale,
        swscale_version,

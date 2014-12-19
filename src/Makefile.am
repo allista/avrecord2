@@ -11,7 +11,6 @@ confdir = /etc/$(PACKAGE)
 
 bin_PROGRAMS = avrecord
 avrecord_SOURCES = main.cpp
-avrecord_LDFLAGS = $(all_libraries)
 avrecord_LDADD   = $(top_builddir)/src/libavtools/libavtools.la
 
 conf_DATA = avrecord.cfg.template

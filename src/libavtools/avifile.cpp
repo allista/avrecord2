@@ -116,7 +116,7 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 	/* Create a new video stream and initialize the codecs */
 	if(o_file->oformat->video_codec != CODEC_ID_NONE)
 	{
-		vstream = av_new_stream(o_file, 0);
+		vstream = avformat_new_stream(o_file, 0);
 		if(!vstream)
 		{
 			log_message(1, "AVIFile: av_new_stream - could not alloc stream");
@@ -238,7 +238,7 @@ bool AVIFile::setVParams(uint numerator, uint denomenator, uint pix_fmt)
 	}
 
 	/* open the codec */
-	if(avcodec_open(vcodec, codec) < 0)
+	if(avcodec_open2(vcodec, codec, NULL) < 0)
 	{
 		log_message(1, "AVIFile: avcodec_open - could not open codec");
 		cleanup();
@@ -285,7 +285,7 @@ bool AVIFile::setAParams()
 	/* Create a new audio stream and initialize the codecs */
 	if(o_file->oformat->audio_codec != CODEC_ID_NONE)
 	{
-		astream = av_new_stream(o_file, 0);
+		astream = avformat_new_stream(o_file, 0);
 		if(!astream)
 		{
 			log_message(1, "AVIFile: av_new_stream - could not alloc stream");
@@ -334,7 +334,7 @@ bool AVIFile::setAParams()
 	}
 
 	/* open the codec */
-	if(avcodec_open(acodec, codec) < 0)
+	if(avcodec_open2(acodec, codec, NULL) < 0)
 	{
 		log_message(1, "AVIFile: avcodec_open - could not open codec");
 		cleanup();
@@ -387,20 +387,12 @@ bool AVIFile::Open(string filename)
 	//store filename
 	snprintf(o_file->filename, sizeof(o_file->filename), "%s", filename.c_str());
 
-	/* set the output parameters (must be done even if no parameters). */
-	if(av_set_parameters(o_file, NULL) < 0)
-	{
-		log_message(1, "AVIFile: ffmpeg av_set_parameters error: Invalid output format parameters");
-		cleanup();
-		return false;
-	}
-
 #ifdef DEBUG_VERSION
 	/* Dump the format settings.  This shows how the various streams relate to each other */
 	dump_format(o_file, 0, filename.c_str(), 1);
 #endif
 
-	if(url_fopen(&o_file->pb, filename.c_str(), URL_WRONLY) < 0)
+	if(avio_open(&o_file->pb, filename.c_str(), AVIO_FLAG_WRITE) < 0)
 	{
 		/* path did not exist? */
 		if(errno == ENOENT)
@@ -426,7 +418,7 @@ bool AVIFile::Open(string filename)
 	else _opened |= INIT_FOPEN;
 
 	/* write the stream header, if any */
-	if(av_write_header(o_file) < 0)
+	if(avformat_write_header(o_file, NULL) < 0)
 	{
 		log_message(1, "AVIFile: cannot write stream header.");
 		cleanup();
@@ -468,7 +460,7 @@ bool AVIFile::writeVFrame(unsigned char *buffer)
 	if(vbr) out_picture->quality = vbr;
 
 	//encode and write a video frame using the av_write_frame API.
-	int out_size, ret;
+	int ret;
 	AVPacket pkt;
 	av_init_packet(&pkt); /* init static structure */
 	pkt.stream_index = vstream->index;
@@ -483,10 +475,13 @@ bool AVIFile::writeVFrame(unsigned char *buffer)
 	else
 	{
 		/* encode the image */
-		out_size = avcodec_encode_video(vcodec, vbuffer, v_bsize, out_picture);
+	    pkt.data = vbuffer;
+	    pkt.size = v_bsize;
+	    int got_pkt = 0;
+		ret = avcodec_encode_video2(vcodec, &pkt, out_picture, &got_pkt);
 
-		/* zero size means the image was buffered */
-		if(out_size != 0)
+		/* zero means success, got_pkt == 1 means the packet is not empty*/
+		if(ret == 0 && got_pkt == 1)
 		{
 			/* write the compressed frame to the media file */
 			/* XXX: in case of B frames, the pts is not yet valid */
@@ -494,12 +489,10 @@ bool AVIFile::writeVFrame(unsigned char *buffer)
 				pkt.pts = av_rescale_q(vcodec->coded_frame->pts, vcodec->time_base, vstream->time_base);
 			if(vcodec->coded_frame->key_frame)
 				pkt.flags |= AV_PKT_FLAG_KEY;
-			pkt.data = vbuffer;
-			pkt.size = out_size;
 			ret = av_interleaved_write_frame(o_file, &pkt);
 		}
-		else ret = 0;
 	}
+	av_free_packet(&pkt);
 
 	if(ret != 0)
 	{
@@ -513,27 +506,45 @@ bool AVIFile::writeVFrame(unsigned char *buffer)
 bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 {
 	if(!opened() || !size) return false;
-	int ret      = 0;
-	int out_size = 0;
+	int got_pkt = 0;
+	int ret = 0;
 	AVPacket pkt;
+	AVFrame *frame;
+
+    frame = avcodec_alloc_frame();
+    if (!frame)
+    {
+        log_message(1, "AVIFile: Could not allocate audio frame");
+        return false;
+    }
+	frame->nb_samples     = acodec->frame_size;
+	frame->format         = acodec->sample_fmt;
+	frame->channel_layout = acodec->channel_layout;
 
 	if(acodec->frame_size > 1)
 	{
-		if(!afifo->write(samples, size)) return false;
+		if(!afifo->write(samples, size))
+		{ avcodec_free_frame(&frame); return false; }
 		uint8_t *tmp = new uint8_t[a_fsize];
 		while(afifo->read(tmp, a_fsize))
 		{
-			av_init_packet(&pkt); // init static structure
-			out_size = avcodec_encode_audio(acodec, abuffer, a_bsize, (short*)tmp);
-			if(out_size != 0)
+		    //fill the frame
+		    ret = avcodec_fill_audio_frame(frame, acodec->channels, acodec->sample_fmt, tmp, a_fsize, 0);
+
+		    /* encode audio */
+		    av_init_packet(&pkt); // init static structure
+			pkt.data = abuffer;
+            pkt.size = a_bsize;
+			ret = avcodec_encode_audio2(acodec, &pkt, frame, &got_pkt);
+
+			/* zero means success, got_pkt == 1 means the packet is not empty*/
+			if(ret == 0 && got_pkt == 1)
 			{
 				//write the compressed frame in the media file
 				pkt.stream_index = astream->index;
 				if(acodec->coded_frame && acodec->coded_frame->pts != AV_NOPTS_VALUE)
 					pkt.pts = av_rescale_q(acodec->coded_frame->pts, acodec->time_base, astream->time_base);
 				pkt.flags |= AV_PKT_FLAG_KEY;
-				pkt.data = abuffer;
-				pkt.size = out_size;
 				ret |= av_interleaved_write_frame(o_file, &pkt);
 			}
 			av_free_packet(&pkt);
@@ -569,21 +580,28 @@ bool AVIFile::writeAFrame(uint8_t * samples, uint size)
 				break;
 		}
 
+		//fill the frame
+        ret = avcodec_fill_audio_frame(frame, acodec->channels, acodec->sample_fmt, samples, size, 0);
+
+		/* encode audio */
 		av_init_packet(&pkt); // init static structure
-		out_size = avcodec_encode_audio(acodec, abuffer, size, (short*)(samples));
-		if(out_size != 0)
+        pkt.data = abuffer;
+        pkt.size = size;
+        ret = avcodec_encode_audio2(acodec, &pkt, frame, &got_pkt);
+
+        /* zero means success, got_pkt == 1 means the packet is not empty*/
+        if(ret == 0 && got_pkt == 1)
 		{
 			//write the compressed frame in the media file
 			pkt.stream_index = astream->index;
 			if(acodec->coded_frame && acodec->coded_frame->pts != AV_NOPTS_VALUE)
 				pkt.pts= av_rescale_q(acodec->coded_frame->pts, acodec->time_base, astream->time_base);
 			pkt.flags |= AV_PKT_FLAG_KEY;
-			pkt.data = abuffer;
-			pkt.size = out_size;
 			ret |= av_interleaved_write_frame(o_file, &pkt);
 		}
 		av_free_packet(&pkt);
 	}
+	avcodec_free_frame(&frame);
 
 	if(ret != 0)
 	{
@@ -649,7 +667,7 @@ void AVIFile::cleanup()
 	if(o_file)
 	{
 		if(_opened & INIT_FOPEN)
-			url_fclose(o_file->pb);
+			avio_close(o_file->pb);
 		av_free(o_file);
 	}
 	o_file  = NULL;

@@ -1068,8 +1068,8 @@ bool BaseRecorder<_mutex>::init_mask(string fname)
 	}
 
 	/* open it */
-	bmp_context = avcodec_alloc_context();
-	if(avcodec_open(bmp_context, bmp_codec) < 0)
+	bmp_context = avcodec_alloc_context3(bmp_codec);
+	if(avcodec_open2(bmp_context, bmp_codec, NULL) < 0)
 	{
 		log_message(1, "Recorder: Could not open BMP codec");
 		goto cleanup;
